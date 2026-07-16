@@ -14,7 +14,8 @@ let themes = new Set();
 let chartInstance = null;
 let currentSector = null;
 let currentChartMode = 'sector'; // 'sector' or 'theme'
-let currentPeriodDays = 1; // 1 = today, >1 = historical period
+let currentPeriodDays = 1; // Global period state
+let currentDetailSort = { column: 'amount', order: 'desc' }; // Detail table sort state
 
 // Global error handler for debugging
 window.onerror = function(message, source, lineno, colno, error) {
@@ -545,15 +546,67 @@ function showChart(identifier, mode = 'sector') {
   renderChart(identifier, mode);
 }
 
-// Bind period buttons
+// --- Event Listeners ---
+
+// Period selector binding
 document.querySelectorAll('.period-btn').forEach(btn => {
   btn.addEventListener('click', (e) => {
+    // Update active class for ALL period buttons
     document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-    e.target.classList.add('active');
-    currentPeriodDays = parseInt(e.target.getAttribute('data-period'));
-    renderChart(currentSector, currentChartMode);
+    
+    // The user might click on one view, we should sync all buttons with the same data-period
+    const selectedPeriod = e.target.getAttribute('data-period');
+    document.querySelectorAll(`.period-btn[data-period="${selectedPeriod}"]`).forEach(b => b.classList.add('active'));
+    
+    currentPeriodDays = parseInt(selectedPeriod);
+    
+    // Only re-render if we are currently viewing a chart
+    if (!document.getElementById('view-chart').classList.contains('hidden') && currentSector) {
+      renderChart(currentSector, currentChartMode);
+    }
   });
 });
+
+// Detail Table Sorting
+document.querySelectorAll('.detail-sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const column = th.getAttribute('data-sort');
+    if (currentDetailSort.column === column) {
+      currentDetailSort.order = currentDetailSort.order === 'desc' ? 'asc' : 'desc';
+    } else {
+      currentDetailSort.column = column;
+      currentDetailSort.order = 'desc';
+    }
+    
+    // Update UI icons
+    document.querySelectorAll('.detail-sortable .sort-icon').forEach(icon => {
+      icon.textContent = '';
+      icon.classList.remove('asc', 'desc');
+    });
+    
+    const icon = document.getElementById(`detail-sort-${column}`);
+    if (icon) {
+      icon.textContent = currentDetailSort.order === 'desc' ? '▼' : '▲';
+      icon.classList.add(currentDetailSort.order);
+    }
+    
+    // Re-render table if data exists
+    if (chartInstance && chartInstance.data && chartInstance.data.datasets.length > 0) {
+      const currentData = chartInstance.data.datasets[0].data.map(d => d.raw);
+      renderDetailTable(currentData);
+    }
+  });
+});
+
+function openChart(identifier, mode = 'sector') {
+  currentSector = identifier;
+  currentChartMode = mode;
+  
+  // Switch Views
+  switchView('view-chart');
+  
+  renderChart(identifier, mode);
+}
 
 async function renderChart(identifier, mode) {
   // 1. Clear existing chart
@@ -618,7 +671,7 @@ async function renderChart(identifier, mode) {
       const startDateStr = period1.toISOString().split('T')[0];
       
       const periodResults = {};
-      const CHUNK_SIZE = 5; // Fetch 5 symbols at a time to respect FinMind rate limits
+      const CHUNK_SIZE = 10; // Fetch 10 symbols at a time to maximize speed while respecting FinMind rate limits
       
       const symbols = baseData.map(s => s['股票代號']);
       
@@ -807,10 +860,64 @@ async function renderChart(identifier, mode) {
       }
     }
   });
+  
+  // Render Detail Table
+  renderDetailTable(sectorData);
+
   } catch (err) {
     console.error("Chart initialization failed:", err);
     return;
   }
+}
+
+function renderDetailTable(data) {
+  const tbody = document.getElementById('detailTableBody');
+  tbody.innerHTML = '';
+  
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center">無資料</td></tr>';
+    return;
+  }
+  
+  // Clone data for sorting
+  let sortedData = [...data];
+  sortedData.sort((a, b) => {
+    let valA, valB;
+    switch(currentDetailSort.column) {
+      case 'return':
+        valA = a.dailyReturn; valB = b.dailyReturn; break;
+      case 'volume':
+        valA = a.volume; valB = b.volume; break;
+      case 'amount':
+        valA = a.amount; valB = b.amount; break;
+      case 'symbol':
+      default:
+        valA = a.symbol; valB = b.symbol; break;
+    }
+    
+    if (valA < valB) return currentDetailSort.order === 'desc' ? 1 : -1;
+    if (valA > valB) return currentDetailSort.order === 'desc' ? -1 : 1;
+    return 0;
+  });
+  
+  sortedData.forEach(item => {
+    const tr = document.createElement('tr');
+    
+    const returnClass = item.dailyReturn > 0 ? 'text-danger' : (item.dailyReturn < 0 ? 'text-success' : '');
+    const returnSign = item.dailyReturn > 0 ? '+' : '';
+    const formattedReturn = `${returnSign}${item.dailyReturn.toFixed(2)}%`;
+    
+    const formattedVolume = Math.round(item.volume).toLocaleString();
+    const formattedAmount = (item.amount / 100000000).toFixed(2);
+    
+    tr.innerHTML = `
+      <td>${item.stock['股票名稱']} (${item.symbol})</td>
+      <td class="text-right font-bold ${returnClass}">${formattedReturn}</td>
+      <td class="text-right">${formattedVolume}</td>
+      <td class="text-right">${formattedAmount}</td>
+    `;
+    tbody.appendChild(tr);
+  });
 }
 
 // Start app

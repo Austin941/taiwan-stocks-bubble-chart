@@ -30,9 +30,17 @@
       <!-- 總表視圖 (Master View) -->
       <section id="view-ranking" class="view active">
         <div class="panel-glass">
-          <div class="panel-header">
-            <h2>全市場成交金額排行 (即時資料)</h2>
-            <p>點擊「產業別」標籤即可查看該族群的泡泡圖分析</p>
+          <div class="panel-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <h2>全市場成交金額排行</h2>
+              <p>點擊「產業別」標籤即可查看該族群的泡泡圖分析</p>
+            </div>
+            <div class="period-selector">
+              <button class="period-btn active" data-period="1">單日(今日)</button>
+              <button class="period-btn" data-period="5">近 5 日</button>
+              <button class="period-btn" data-period="10">近 10 日</button>
+              <button class="period-btn" data-period="20">近 20 日</button>
+            </div>
           </div>
           <div class="table-responsive">
             <table class="ranking-table">
@@ -65,9 +73,17 @@
       <!-- 題材表視圖 (Theme Master View) -->
       <section id="view-theme-ranking" class="view hidden">
         <div class="panel-glass">
-          <div class="panel-header">
-            <h2>全市場題材概念股排行 (即時資料)</h2>
-            <p>點擊「題材別」即可查看該概念股的專屬泡泡圖</p>
+          <div class="panel-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+            <div>
+              <h2>全市場題材概念股排行</h2>
+              <p>點擊「題材別」即可查看該概念股的專屬泡泡圖</p>
+            </div>
+            <div class="period-selector">
+              <button class="period-btn active" data-period="1">單日(今日)</button>
+              <button class="period-btn" data-period="5">近 5 日</button>
+              <button class="period-btn" data-period="10">近 10 日</button>
+              <button class="period-btn" data-period="20">近 20 日</button>
+            </div>
           </div>
           <div class="table-responsive">
             <table class="ranking-table">
@@ -152,6 +168,25 @@
         <div class="chart-container-glass">
           <div class="y-axis-title">當日報酬率</div>
           <canvas id="bubbleChart"></canvas>
+        </div>
+
+        <div class="detail-table-container panel-glass" style="margin-top: 1rem; padding: 1rem;">
+          <h3 style="margin-bottom: 1rem; font-size: 1.1rem; color: #f1f5f9;">個股數據列表</h3>
+          <div class="table-responsive">
+            <table class="ranking-table detail-table">
+              <thead>
+                <tr>
+                  <th class="sortable detail-sortable" data-sort="symbol">股票代號名稱 <span class="sort-icon" id="detail-sort-symbol"></span></th>
+                  <th class="text-right sortable detail-sortable" data-sort="return">漲跌幅 (%) <span class="sort-icon" id="detail-sort-return"></span></th>
+                  <th class="text-right sortable detail-sortable" data-sort="volume">成交量 (張) <span class="sort-icon" id="detail-sort-volume"></span></th>
+                  <th class="text-right sortable detail-sortable" data-sort="amount" data-active="true" data-order="desc">成交額 (億) <span class="sort-icon desc" id="detail-sort-amount">▼</span></th>
+                </tr>
+              </thead>
+              <tbody id="detailTableBody">
+                <!-- Data populated via JS -->
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div class="info-panel">
