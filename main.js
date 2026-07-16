@@ -14,6 +14,7 @@ let themes = new Set();
 let chartInstance = null;
 let currentSector = null;
 let currentChartMode = 'sector'; // 'sector' or 'theme'
+let currentPeriodDays = 1; // 1 = today, >1 = historical period
 
 // Sorting State
 let sortCol = 'amount'; // 'amount', 'volume', or 'return'
@@ -548,45 +549,121 @@ function showChart(identifier, mode = 'sector') {
   const modeText = mode === 'sector' ? '族群' : '題材概念股';
   currentSectorTitle.textContent = `${identifier} ${modeText}分析`;
   
+  // Reset period to 1 (today) when switching sector
+  currentPeriodDays = 1;
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.period-btn[data-period="1"]').classList.add('active');
+  
   renderChart(identifier, mode);
 }
 
+// Bind period buttons
+document.querySelectorAll('.period-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    currentPeriodDays = parseInt(e.target.getAttribute('data-period'));
+    renderChart(currentSector, currentChartMode);
+  });
+});
+
 async function renderChart(identifier, mode) {
-  // Filter stocks
-  let sectorData = [];
-  if (mode === 'sector') {
-    sectorData = allMarketData.filter(d => d.stock['產業別'] === identifier);
-  } else {
-    sectorData = allMarketData.filter(d => {
-      const themes = d.stock['題材清單'];
-      return themes && themes.includes(identifier);
-    });
+  // Clear existing chart if updating
+  if (chartInstance) {
+    chartInstance.destroy();
   }
   
-  // Filter out zero amount/volume stocks to prevent logarithmic scale errors and reduce noise
-  sectorData = sectorData.filter(d => d.amount > 0 && d.volume > 0);
+  let sectorData = [];
   
-  // To avoid hitting Fugle limits (we now have 5 API keys = 300 req/min), 
-  // we pick the top 50 most traded stocks in this sector
-  // to fetch real-time high-frequency data, while the rest uses the snapshot.
-  sectorData.sort((a, b) => b.volume - a.volume);
-  const top50 = sectorData.slice(0, 50);
-  
-  // Try to fetch real-time Fugle quotes for top 50
-  await Promise.all(top50.map(async (d) => {
-    if(d.volume === 0 && d.price === 0) return; // skip inactive
+  if (currentPeriodDays === 1) {
+    // Original intraday snapshot logic
+    if (mode === 'sector') {
+      sectorData = allMarketData.filter(d => d.stock['產業別'] === identifier);
+    } else {
+      sectorData = allMarketData.filter(d => {
+        const themes = d.stock['題材清單'];
+        return themes && themes.includes(identifier);
+      });
+    }
+    
+    sectorData = sectorData.filter(d => d.amount > 0 && d.volume > 0);
+    
+    // Fugle real-time logic (for top 50)
+    sectorData.sort((a, b) => b.volume - a.volume);
+    const top50 = sectorData.slice(0, 50);
+    
+    const promises = top50.map(async (d) => {
+      try {
+        const res = await fetch(`http://localhost:3001/api/fugle/${d.symbol}`);
+        if (res.ok) {
+          const rtd = await res.json();
+          if (rtd.data && rtd.data.quote) {
+            const q = rtd.data.quote;
+            const price = q.trade?.price || q.previousClose;
+            const pClose = q.previousClose;
+            const dailyReturn = ((price - pClose) / pClose) * 100;
+            const vol = q.total?.tradeVolume || 0;
+            const amount = q.total?.tradeValue || (vol * price * 1000);
+            
+            d.price = price;
+            d.prevClose = pClose;
+            d.dailyReturn = dailyReturn;
+            d.volume = vol;
+            d.amount = amount;
+          }
+        }
+      } catch(e) {}
+    });
+    
+    await Promise.all(promises);
+  } else {
+    // Historical Period Logic
+    let baseData = [];
+    if (mode === 'sector') {
+      baseData = allStocks.filter(s => s['產業別'] === identifier);
+    } else {
+      baseData = allStocks.filter(s => s['題材清單'] && s['題材清單'].includes(identifier));
+    }
+    
+    const symbolsWithSuffix = baseData.map(s => {
+      const prefix = s['上市櫃']?.includes('上市') ? 'tse' : 'otc';
+      return `${s['股票代號']}.${prefix === 'tse' ? 'TW' : 'TWO'}`;
+    });
+    
     try {
-      const res = await fetch(`/api/fugle/${d.stock['股票代號']}`);
-      const quote = await res.json();
-      if(quote && quote.changePercent !== undefined) {
-        d.dailyReturn = quote.changePercent;
-        d.volume = quote.total ? quote.total.tradeVolume : d.volume;
-        d.amount = quote.total ? quote.total.tradeValue : d.amount;
-        d.price = quote.lastPrice || quote.closePrice || d.price;
+      const res = await fetch(`http://localhost:3001/api/period_analysis`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbols: symbolsWithSuffix, days: currentPeriodDays })
+      });
+      const periodResults = await res.json();
+      
+      for (const s of baseData) {
+        if (periodResults[s['股票代號']]) {
+          const p = periodResults[s['股票代號']];
+          if (p.totalAmount > 0 && p.totalVolume > 0) {
+            sectorData.push({
+              symbol: s['股票代號'],
+              name: s['股票名稱'],
+              stock: s,
+              dailyReturn: p.cumulativeReturn,
+              volume: p.totalVolume,
+              amount: p.totalAmount
+            });
+          }
+        }
       }
     } catch(e) {
-      console.error('Fugle API error for', d.stock['股票代號']);
+      console.error('Failed to fetch period analysis', e);
     }
+  }
+
+  // Draw chart using sectorData
+  const chartData = sectorData.map(d => ({
+    x: d.amount / 100000000, 
+    y: d.dailyReturn,
+    r: Math.min(Math.max(Math.sqrt(d.volume) * 0.3, 5), 40),
+    raw: d
   }));
 
   const datasets = [{
@@ -653,36 +730,25 @@ async function renderChart(identifier, mode) {
             color: '#f8fafc'
           }
         },
-        tooltip: {
-          backgroundColor: 'rgba(30, 41, 59, 0.95)',
-          titleColor: '#f8fafc',
-          bodyColor: '#e2e8f0',
-          borderColor: 'rgba(255, 255, 255, 0.1)',
-          backgroundColor: 'hsla(219, 44%, 12%, 0.9)', // deep midnight blue
-          titleFont: { size: 16, weight: 'bold', family: 'Inter' },
-          bodyFont: { size: 14, family: 'Inter' },
-          borderColor: 'hsla(199, 89%, 48%, 0.5)',
-          borderWidth: 1,
-          padding: 14,
-          displayColors: false,
-          cornerRadius: 8,
-          boxPadding: 6,
-          callbacks: {
-            title: function(context) {
-              const d = context[0].raw.raw;
-              return `${d.stock['股票名稱']} (${d.stock['股票代號']})`;
-            },
-            label: function(context) {
-              const d = context.raw.raw;
-              const returnSign = d.dailyReturn > 0 ? '+' : '';
-              const amountHundredMillion = (d.amount / 10000).toFixed(2);
-              return [
-                `漲跌幅: ${returnSign}${d.dailyReturn.toFixed(2)}%`,
-                `成交量: ${d.volume.toLocaleString()} 張`,
-                `成交額: ${amountHundredMillion} 億`
-              ];
-            }
+          },
+          align: 'end',
+          anchor: 'end',
+          offset: 2,
+          clip: false,
+          display: function(context) {
+            return context.dataset.data[context.dataIndex].r >= 8;
           }
+        }
+      },
+      onClick: (e, elements) => {
+        if (elements.length > 0) {
+          const index = elements[0].index;
+          const point = chartData[index];
+          const raw = point.raw;
+          const symbol = raw.stock['股票代號'];
+          const name = raw.stock['股票名稱'];
+          const prefix = raw.stock['上市櫃']?.includes('上市') ? 'TW' : 'TWO';
+          openKLinePanel(`${symbol}.${prefix}`, name);
         }
       },
       scales: {
@@ -711,6 +777,119 @@ async function renderChart(identifier, mode) {
       }
     }
   });
+}
+
+// --- K-Line Logic ---
+let lwChart = null;
+let candleSeries = null;
+let volumeSeries = null;
+
+const klinePanel = document.getElementById('kline-panel');
+const klineCloseBtn = document.getElementById('kline-close-btn');
+const klineTitle = document.getElementById('kline-title');
+const klineLoading = document.getElementById('kline-loading');
+const klineContainer = document.getElementById('kline-chart-container');
+
+klineCloseBtn.addEventListener('click', () => {
+  klinePanel.classList.add('translate-x-full');
+});
+
+async function openKLinePanel(symbolWithSuffix, name) {
+  klineTitle.textContent = `${name} (${symbolWithSuffix})`;
+  klinePanel.classList.remove('translate-x-full');
+  klineLoading.classList.remove('hidden');
+
+  if (!lwChart) {
+    initLwChart();
+  } else {
+    candleSeries.setData([]);
+    volumeSeries.setData([]);
+  }
+
+  try {
+    const res = await fetch(`http://localhost:3001/api/historical/${symbolWithSuffix}`);
+    if (!res.ok) throw new Error('API failed');
+    const data = await res.json();
+    
+    // Sort chronologically just in case
+    data.sort((a, b) => new Date(a.time) - new Date(b.time));
+    
+    const candleData = data.map(d => ({
+      time: d.time,
+      open: d.open,
+      high: d.high,
+      low: d.low,
+      close: d.close
+    }));
+    
+    const volumeData = data.map(d => ({
+      time: d.time,
+      value: d.value,
+      color: d.close >= d.open ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)'
+    }));
+
+    candleSeries.setData(candleData);
+    volumeSeries.setData(volumeData);
+    lwChart.timeScale().fitContent();
+  } catch (error) {
+    console.error('K-Line error:', error);
+    klineTitle.textContent = `${name} - 載入失敗`;
+  } finally {
+    klineLoading.classList.add('hidden');
+  }
+}
+
+function initLwChart() {
+  lwChart = LightweightCharts.createChart(klineContainer, {
+    layout: {
+      background: { type: 'solid', color: 'transparent' },
+      textColor: '#94a3b8',
+    },
+    grid: {
+      vertLines: { color: 'rgba(255, 255, 255, 0.05)' },
+      horzLines: { color: 'rgba(255, 255, 255, 0.05)' },
+    },
+    crosshair: {
+      mode: LightweightCharts.CrosshairMode.Normal,
+    },
+    rightPriceScale: {
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+    },
+    timeScale: {
+      borderColor: 'rgba(255, 255, 255, 0.1)',
+      timeVisible: true,
+    },
+  });
+
+  candleSeries = lwChart.addCandlestickSeries({
+    upColor: '#26a69a',
+    downColor: '#ef5350',
+    borderVisible: false,
+    wickUpColor: '#26a69a',
+    wickDownColor: '#ef5350',
+  });
+
+  volumeSeries = lwChart.addHistogramSeries({
+    color: '#26a69a',
+    priceFormat: {
+      type: 'volume',
+    },
+    priceScaleId: '', // overlay
+  });
+  
+  volumeSeries.priceScale().applyOptions({
+    scaleMargins: {
+      top: 0.8, // leave top 80% for candles
+      bottom: 0,
+    },
+  });
+
+  // Handle resize
+  new ResizeObserver(entries => {
+    if (entries.length === 0 || entries[0].target !== klineContainer) { return; }
+    const newRect = entries[0].contentRect;
+    lwChart.applyOptions({ height: newRect.height, width: newRect.width });
+  }).observe(klineContainer);
 }
 
 // Start app

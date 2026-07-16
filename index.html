@@ -128,18 +128,27 @@
       </section>
 
       <!-- 泡泡圖視圖 (Detail View) -->
-      <section id="view-chart" class="view hidden">
-        <div class="controls-glass">
-          <button id="backBtn" class="btn-secondary">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            返回總表
-          </button>
-          
-          <div class="control-group">
-            <h2 id="currentSectorTitle" style="color:var(--text-primary); font-size:1.8rem;">載入中...</h2>
+      <div id="view-chart" class="view panel-glass flex-1 flex flex-col hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold flex items-center gap-2">
+          <span class="text-[var(--accent-primary)]">⦿</span>
+          <span id="current-sector-title">族群分析</span>
+        </h2>
+        
+        <div class="flex items-center gap-4">
+          <!-- Time Period Selector -->
+          <div class="flex gap-1 bg-[#0f172a] p-1 rounded-lg border border-[var(--border-color)]">
+            <button class="period-btn active" data-period="1">單日(今日)</button>
+            <button class="period-btn" data-period="5">近 5 日</button>
+            <button class="period-btn" data-period="10">近 10 日</button>
+            <button class="period-btn" data-period="20">近 20 日</button>
           </div>
+          
+          <button id="back-btn" class="text-sm px-4 py-2 rounded-lg bg-[var(--surface-color)] border border-[var(--border-color)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-colors">
+            ← 返回列表
+          </button>
         </div>
-
+      </div>
         <div class="chart-container-glass">
           <div class="y-axis-title">當日報酬率</div>
           <canvas id="bubbleChart"></canvas>
@@ -154,11 +163,34 @@
             <li><strong>顏色</strong>：<span style="color:var(--positive-color);font-weight:bold;">紅色</span>代表上漲，<span style="color:var(--negative-color);font-weight:bold;">綠色</span>代表下跌</li>
           </ul>
         </div>
-      </section>
+      </div>
 
     </main>
   </div>
   
+  </div>
+
+  <!-- Custom Chart Tooltip -->
+  <div id="chart-tooltip" class="absolute pointer-events-none opacity-0 transition-opacity z-50"></div>
+
+  <!-- K-Line Side Panel (Hidden by default) -->
+  <div id="kline-panel" class="fixed right-0 top-0 h-full w-[400px] md:w-[600px] panel-glass z-50 transform translate-x-full transition-transform duration-300 flex flex-col shadow-2xl border-l border-[var(--border-color)]">
+    <div class="flex items-center justify-between p-4 border-b border-[var(--border-color)]">
+      <h3 id="kline-title" class="text-lg font-bold text-white">股票技術分析</h3>
+      <button id="kline-close-btn" class="text-gray-400 hover:text-white px-2 py-1 text-xl leading-none">&times;</button>
+    </div>
+    <!-- Lightweight Charts Container -->
+    <div id="kline-chart-container" class="flex-1 relative w-full h-full p-2"></div>
+    <div id="kline-loading" class="absolute inset-0 flex items-center justify-center bg-[#090e17] bg-opacity-80 hidden z-10">
+      <div class="animate-pulse text-[var(--accent-primary)]">正在載入歷史資料...</div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <!-- TradingView Lightweight Charts -->
+  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
   <script type="module" src="./main.js"></script>
 </body>
 </html>

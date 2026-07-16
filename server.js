@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import yahooFinance from 'yahoo-finance2';
 
 dotenv.config();
 
@@ -13,6 +14,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
 const FUGLE_API_KEYS = process.env.FUGLE_API_KEYS 
   ? process.env.FUGLE_API_KEYS.split(',') 
@@ -126,7 +128,96 @@ app.get('/api/snapshot', async (req, res) => {
   });
 });
 
-const PORT = 3001;
+// 3. Historical Data for K-Line Chart
+app.get('/api/historical/:symbol', async (req, res) => {
+  try {
+    const symbol = req.params.symbol;
+    // Get last 6 months
+    const period1 = new Date();
+    period1.setMonth(period1.getMonth() - 6);
+    
+    const queryOptions = { period1, interval: '1d' };
+    const result = await yahooFinance.historical(symbol, queryOptions);
+    
+    // Format for Lightweight Charts: { time: 'yyyy-mm-dd', open, high, low, close, value (volume) }
+    const formatted = result.map(d => ({
+      time: d.date.toISOString().split('T')[0],
+      open: d.open,
+      high: d.high,
+      low: d.low,
+      close: d.close,
+      value: d.volume / 1000 // Convert shares to 張
+    }));
+    res.json(formatted);
+  } catch (error) {
+    console.error(`[Backend] Error fetching historical data for ${req.params.symbol}:`, error.message);
+    res.status(500).json({ error: 'Failed to fetch historical data' });
+  }
+});
+
+// 4. Period Analysis for Historical Bubble Chart
+app.post('/api/period_analysis', async (req, res) => {
+  try {
+    const { symbols, days } = req.body;
+    if (!symbols || !Array.isArray(symbols) || !days) {
+      return res.status(400).json({ error: 'Invalid payload' });
+    }
+    
+    const period1 = new Date();
+    period1.setDate(period1.getDate() - (days + 20)); // Add buffer for weekends/holidays
+    
+    const results = {};
+    const CHUNK_SIZE = 10;
+    
+    for (let i = 0; i < symbols.length; i += CHUNK_SIZE) {
+      const chunk = symbols.slice(i, i + CHUNK_SIZE);
+      const promises = chunk.map(async (symbol) => {
+        try {
+          // Add .TW or .TWO suffix. (Usually our UI passes them without suffix if it's from stocks.csv, 
+          // we need to determine if it's TW or TWO. But Yahoo Finance mostly accepts .TW for TSE and .TWO for OTC.
+          // Wait, the client will pass the exact YF symbol if we format it, or just the number.)
+          // Let's assume client passes "2330.TW"
+          const hist = await yahooFinance.historical(symbol, { period1, interval: '1d' });
+          const recent = hist.slice(-days);
+          if (recent.length === 0) return null;
+          
+          const startClose = recent[0].close || recent[0].open;
+          const endClose = recent[recent.length - 1].close;
+          const cumulativeReturn = startClose ? ((endClose - startClose) / startClose) * 100 : 0;
+          
+          let totalVolume = 0;
+          let totalAmount = 0;
+          for (const day of recent) {
+            const vol = day.volume / 1000;
+            totalVolume += vol;
+            totalAmount += (vol * day.close * 1000); // TWD
+          }
+          
+          // Provide symbol without suffix for matching
+          const baseSymbol = symbol.split('.')[0];
+          results[baseSymbol] = {
+            cumulativeReturn,
+            totalVolume,
+            totalAmount
+          };
+        } catch (e) {
+          // ignore failed symbols
+        }
+      });
+      await Promise.all(promises);
+      if (i + CHUNK_SIZE < symbols.length) {
+        await new Promise(resolve => setTimeout(resolve, 300)); // Rate limit buffer
+      }
+    }
+    
+    res.json(results);
+  } catch (error) {
+    console.error('[Backend] Error in period analysis:', error.message);
+    res.status(500).json({ error: 'Failed to analyze period' });
+  }
+});
+
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`[Backend] Server listening on port ${PORT}`);
 });
