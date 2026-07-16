@@ -613,12 +613,32 @@ async function renderChart(identifier, mode) {
     currentSectorTitle.textContent = `${identifier} ${modeText}分析 (歷史資料載入中...)`;
     
     try {
-      const res = await fetch(`/api/period_analysis`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbols: symbolsWithSuffix, days: currentPeriodDays })
-      });
-      const periodResults = await res.json();
+      // Distribute the API calls to prevent Vercel Serverless timeouts and drastically speed up execution.
+      // We chunk the symbols into groups of 10 and fire them off in parallel.
+      const CHUNK_SIZE = 10;
+      const fetchPromises = [];
+      
+      for (let i = 0; i < symbolsWithSuffix.length; i += CHUNK_SIZE) {
+        const chunk = symbolsWithSuffix.slice(i, i + CHUNK_SIZE);
+        fetchPromises.push(
+          fetch(`/api/period_analysis`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ symbols: chunk, days: currentPeriodDays })
+          }).then(res => {
+             if (!res.ok) throw new Error(`API returned status: ${res.status}`);
+             return res.json();
+          })
+        );
+      }
+      
+      const chunkResults = await Promise.all(fetchPromises);
+      
+      // Merge all chunk results into a single periodResults object
+      const periodResults = {};
+      for (const resObj of chunkResults) {
+        Object.assign(periodResults, resObj);
+      }
       
       for (const s of baseData) {
         if (periodResults[s['股票代號']]) {
@@ -642,7 +662,6 @@ async function renderChart(identifier, mode) {
     sectorData.sort((a, b) => b.amount - a.amount);
     sectorData = sectorData.slice(0, 50);
     
-    const modeText = mode === 'sector' ? '族群' : '題材概念股';
     currentSectorTitle.textContent = `${identifier} ${modeText}分析`;
   }
 
