@@ -46,7 +46,7 @@ const navBtns = document.querySelectorAll('.nav-btn');
 // Initialize
 async function init() {
   try {
-    Papa.parse('./stocks.csv', {
+    Papa.parse('./stocks.csv?v=' + new Date().getTime(), {
       download: true,
       header: true,
       complete: function(results) {
