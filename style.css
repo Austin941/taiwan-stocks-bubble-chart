@@ -1,15 +1,16 @@
 :root {
-  /* Dark Theme Colors (Trading Aesthetic) */
-  --bg-color: #0f172a;
-  --panel-bg: rgba(30, 41, 59, 0.7);
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --accent-color: #38bdf8;
-  --accent-hover: #0ea5e9;
-  --border-color: rgba(255, 255, 255, 0.1);
-  --positive-color: #ef4444; /* Taiwan UP is Red */
-  --negative-color: #22c55e; /* Taiwan DOWN is Green */
-  --shadow-color: rgba(0, 0, 0, 0.5);
+  /* Cyber-Finance HSL Theme */
+  --bg-color: hsl(219, 44%, 6%); /* Deep Midnight Blue #090E17 */
+  --panel-bg: hsla(219, 32%, 18%, 0.7);
+  --text-primary: hsl(210, 40%, 98%);
+  --text-secondary: hsl(215, 20%, 65%);
+  --accent-color: hsl(199, 89%, 48%);
+  --accent-hover: hsl(199, 89%, 60%);
+  --border-color: hsla(0, 0%, 100%, 0.1);
+  --positive-color: hsl(3, 100%, 55%); /* Cyber Red */
+  --negative-color: hsl(142, 71%, 45%); /* Neon Green */
+  --shadow-color: hsla(0, 0%, 0%, 0.5);
+  --glass-glow: hsla(199, 89%, 48%, 0.15);
 }
 
 * {
@@ -100,11 +101,11 @@ body {
 /* Panels */
 .panel-glass, .controls-glass, .chart-container-glass {
   background: var(--panel-bg);
+  box-shadow: 0 8px 32px var(--shadow-color), 0 0 15px var(--glass-glow);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-color);
-  border-radius: 16px;
-  box-shadow: 0 10px 40px var(--shadow-color);
+  border-radius: 12px;
 }
 
 .panel-header {
@@ -173,12 +174,36 @@ body {
 
 .ranking-table tbody tr {
   cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.1s ease;
+  transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .ranking-table tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  transform: scale(1.002);
+  background-color: hsla(219, 32%, 30%, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+/* Data Bars (Sparklines) */
+.data-bar-cell {
+  position: relative;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.data-bar {
+  position: absolute;
+  top: 10%;
+  right: 0;
+  height: 80%;
+  border-radius: 4px;
+  z-index: 0;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.data-bar-text {
+  position: relative;
+  z-index: 1;
 }
 
 .text-right { text-align: right; }

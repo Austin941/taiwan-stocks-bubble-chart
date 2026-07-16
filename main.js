@@ -64,21 +64,7 @@ async function init() {
         e.target.classList.add('active');
         
         const targetViewId = e.target.getAttribute('data-target');
-        
-        // Hide all views
-        viewRanking.classList.add('hidden');
-        viewRanking.classList.remove('active');
-        viewThemeRanking.classList.add('hidden');
-        viewThemeRanking.classList.remove('active');
-        viewRadar.classList.add('hidden');
-        viewRadar.classList.remove('active');
-        viewChart.classList.add('hidden');
-        viewChart.classList.remove('active');
-        
-        // Show target view
-        const targetView = document.getElementById(targetViewId);
-        targetView.classList.remove('hidden');
-        targetView.classList.add('active');
+        switchView(targetViewId);
         
         // Reset chart state if leaving chart view
         if (targetViewId !== 'view-chart') {
@@ -90,7 +76,7 @@ async function init() {
     backBtn.addEventListener('click', () => {
       // Find the currently active nav button and trigger click to restore view
       const activeNav = document.querySelector('.nav-btn.active') || navBtns[0];
-      activeNav.click();
+      switchView(activeNav.getAttribute('data-target'));
       currentSector = null; // Clear chart state
     });
 
@@ -216,11 +202,11 @@ async function processData() {
       const sector = d.stock['產業別'];
       if (sector && sector !== '無' && sector !== '') {
         if (!sectorMap[sector]) {
-          sectorMap[sector] = { sector: sector, totalVolume: 0, totalAmount: 0, sumReturn: 0, count: 0 };
+          sectorMap[sector] = { sector: sector, totalVolume: 0, totalAmount: 0, weightedReturnSum: 0, count: 0 };
         }
         sectorMap[sector].totalVolume += d.volume;
         sectorMap[sector].totalAmount += d.amount;
-        sectorMap[sector].sumReturn += d.dailyReturn;
+        sectorMap[sector].weightedReturnSum += (d.dailyReturn * d.amount);
         sectorMap[sector].count += 1;
       }
 
@@ -234,11 +220,11 @@ async function processData() {
           
         themesArr.forEach(theme => {
           if (!themeMap[theme]) {
-            themeMap[theme] = { theme: theme, totalVolume: 0, totalAmount: 0, sumReturn: 0, count: 0 };
+            themeMap[theme] = { theme: theme, totalVolume: 0, totalAmount: 0, weightedReturnSum: 0, count: 0 };
           }
           themeMap[theme].totalVolume += d.volume;
           themeMap[theme].totalAmount += d.amount;
-          themeMap[theme].sumReturn += d.dailyReturn;
+          themeMap[theme].weightedReturnSum += (d.dailyReturn * d.amount);
           themeMap[theme].count += 1;
         });
       }
@@ -246,13 +232,13 @@ async function processData() {
 
     sectorRankingData = Object.keys(sectorMap).map(sector => {
       const data = sectorMap[sector];
-      const avgReturn = data.sumReturn / data.count;
+      const avgReturn = data.totalAmount > 0 ? (data.weightedReturnSum / data.totalAmount) : 0;
       return { sector, totalVolume: data.totalVolume, totalAmount: data.totalAmount, avgReturn };
     });
 
     themeRankingData = Object.keys(themeMap).map(theme => {
       const data = themeMap[theme];
-      const avgReturn = data.sumReturn / data.count;
+      const avgReturn = data.totalAmount > 0 ? (data.weightedReturnSum / data.totalAmount) : 0;
       return { theme, totalVolume: data.totalVolume, totalAmount: data.totalAmount, avgReturn };
     });
 
@@ -282,6 +268,9 @@ function renderThemeRanking() {
     return themeSortDesc ? valB - valA : valA - valB;
   });
 
+  const maxAmount = Math.max(...themeRankingData.map(d => d.totalAmount), 1);
+  const maxReturn = Math.max(...themeRankingData.map(d => Math.abs(d.avgReturn)), 1);
+
   themeRankingData.forEach((d, index) => {
     const tr = document.createElement('tr');
     
@@ -293,12 +282,22 @@ function renderThemeRanking() {
     const returnSign = d.avgReturn > 0 ? '+' : '';
     const amountHundredMillion = (d.totalAmount / 10000).toFixed(2);
 
+    const amountPct = (d.totalAmount / maxAmount) * 100;
+    const returnPct = (Math.abs(d.avgReturn) / maxReturn) * 100;
+    const returnBarColor = d.avgReturn > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
+
     tr.innerHTML = `
       <td>${index + 1}</td>
       <td><span class="badge-sector">${d.theme}</span></td>
-      <td class="text-right ${returnClass}"><strong>${returnSign}${d.avgReturn.toFixed(2)}%</strong></td>
+      <td class="text-right ${returnClass} data-bar-cell">
+        <div class="data-bar" style="width: ${returnPct}%; background: ${returnBarColor};"></div>
+        <strong class="data-bar-text">${returnSign}${d.avgReturn.toFixed(2)}%</strong>
+      </td>
       <td class="text-right">${d.totalVolume.toLocaleString()}</td>
-      <td class="text-right">${amountHundredMillion}</td>
+      <td class="text-right data-bar-cell">
+        <div class="data-bar" style="width: ${amountPct}%; background: rgba(56, 189, 248, 0.15);"></div>
+        <span class="data-bar-text">${amountHundredMillion}</span>
+      </td>
     `;
 
     // Click on a row goes to the chart
@@ -344,13 +343,28 @@ function renderRadar() {
     const returnSign = stock.dailyReturn > 0 ? '+' : '';
     const amountHundredMillion = (stock.amount / 10000).toFixed(2);
     
+    // Calculate Data Bar percentages
+    // Radar is sorted by amount or volume, we can use an absolute max or just max of top 100
+    const maxRadarAmount = Math.max(...sortedStocks.map(s => s.amount), 1);
+    const maxRadarReturn = Math.max(...sortedStocks.map(s => Math.abs(s.dailyReturn)), 1);
+    
+    const amountPct = (stock.amount / maxRadarAmount) * 100;
+    const returnPct = (Math.abs(stock.dailyReturn) / maxRadarReturn) * 100;
+    const returnBarColor = stock.dailyReturn > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
+    
     tr.innerHTML = `
       <td>${index + 1}</td>
       <td>${stock.stock['股票名稱']} <span style="font-size:0.9em;color:var(--text-secondary)">${stock.stock['股票代號']}</span></td>
       <td class="text-right"><span class="badge-sector">${stock.stock['產業別']}</span></td>
-      <td class="text-right ${returnClass}"><strong>${returnSign}${stock.dailyReturn.toFixed(2)}%</strong></td>
+      <td class="text-right ${returnClass} data-bar-cell">
+        <div class="data-bar" style="width: ${returnPct}%; background: ${returnBarColor};"></div>
+        <strong class="data-bar-text">${returnSign}${stock.dailyReturn.toFixed(2)}%</strong>
+      </td>
       <td class="text-right">${stock.volume.toLocaleString()}</td>
-      <td class="text-right">${amountHundredMillion}</td>
+      <td class="text-right data-bar-cell">
+        <div class="data-bar" style="width: ${amountPct}%; background: rgba(56, 189, 248, 0.15);"></div>
+        <span class="data-bar-text">${amountHundredMillion}</span>
+      </td>
     `;
     
     // Click on a radar row goes to the sector chart
@@ -359,6 +373,58 @@ function renderRadar() {
     });
     
     radarTableBody.appendChild(tr);
+  });
+}
+
+function renderRanking() {
+  rankingTableBody.innerHTML = '';
+  
+  // Sort the data
+  sectorRankingData.sort((a, b) => {
+    let valA, valB;
+    if (sortCol === 'amount') {
+      valA = a.totalAmount; valB = b.totalAmount;
+    } else if (sortCol === 'volume') {
+      valA = a.totalVolume; valB = b.totalVolume;
+    } else {
+      valA = a.avgReturn; valB = b.avgReturn;
+    }
+    return sortDesc ? valB - valA : valA - valB;
+  });
+
+  const maxAmount = Math.max(...sectorRankingData.map(d => d.totalAmount), 1);
+  const maxReturn = Math.max(...sectorRankingData.map(d => Math.abs(d.avgReturn)), 1);
+
+  sectorRankingData.forEach((d, index) => {
+    const tr = document.createElement('tr');
+    tr.setAttribute('data-sector', d.sector);
+    
+    // Animation flash for update
+    tr.classList.add('flash-up');
+    setTimeout(() => tr.classList.remove('flash-up'), 1000);
+
+    const returnClass = d.avgReturn > 0 ? 'color-positive' : (d.avgReturn < 0 ? 'color-negative' : '');
+    const returnSign = d.avgReturn > 0 ? '+' : '';
+    const amountHundredMillion = (d.totalAmount / 10000).toFixed(2);
+    
+    const amountPct = (d.totalAmount / maxAmount) * 100;
+    const returnPct = (Math.abs(d.avgReturn) / maxReturn) * 100;
+    const returnBarColor = d.avgReturn > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
+
+    tr.innerHTML = `
+      <td>${index + 1}</td>
+      <td><span class="badge-sector">${d.sector}</span></td>
+      <td class="text-right ${returnClass} data-bar-cell">
+        <div class="data-bar" style="width: ${returnPct}%; background: ${returnBarColor};"></div>
+        <strong class="data-bar-text">${returnSign}${d.avgReturn.toFixed(2)}%</strong>
+      </td>
+      <td class="text-right">${d.totalVolume.toLocaleString()}</td>
+      <td class="text-right data-bar-cell">
+        <div class="data-bar" style="width: ${amountPct}%; background: rgba(56, 189, 248, 0.15);"></div>
+        <span class="data-bar-text">${amountHundredMillion}</span>
+      </td>
+    `;
+    rankingTableBody.appendChild(tr);
   });
 }
 
@@ -431,6 +497,33 @@ function updateRadarSortUI() {
   });
 }
 
+function switchView(targetViewId) {
+  // Update Nav Buttons
+  if (targetViewId !== 'view-chart') {
+    navBtns.forEach(b => {
+      if (b.getAttribute('data-target') === targetViewId) {
+        b.classList.add('active');
+      } else {
+        b.classList.remove('active');
+      }
+    });
+  }
+
+  // Hide all views
+  const views = [viewRanking, viewThemeRanking, viewRadar, viewChart];
+  views.forEach(v => {
+    v.classList.add('hidden');
+    v.classList.remove('active');
+  });
+
+  // Show target view
+  const targetView = document.getElementById(targetViewId);
+  if (targetView) {
+    targetView.classList.remove('hidden');
+    targetView.classList.add('active');
+  }
+}
+
 function updateThemeSortUI() {
   themeSortableHeaders.forEach(header => {
     const col = header.getAttribute('data-sort');
@@ -450,14 +543,7 @@ function showChart(identifier, mode = 'sector') {
   currentChartMode = mode;
   
   // Switch Views
-  viewRanking.classList.add('hidden');
-  viewRanking.classList.remove('active');
-  viewThemeRanking.classList.add('hidden');
-  viewThemeRanking.classList.remove('active');
-  viewRadar.classList.add('hidden');
-  viewRadar.classList.remove('active');
-  viewChart.classList.remove('hidden');
-  viewChart.classList.add('active');
+  switchView('view-chart');
   
   const modeText = mode === 'sector' ? '族群' : '題材概念股';
   currentSectorTitle.textContent = `${identifier} ${modeText}分析`;
@@ -476,6 +562,9 @@ async function renderChart(identifier, mode) {
       return themes && themes.includes(identifier);
     });
   }
+  
+  // Filter out zero amount/volume stocks to prevent logarithmic scale errors and reduce noise
+  sectorData = sectorData.filter(d => d.amount > 0 && d.volume > 0);
   
   // To avoid hitting Fugle limits (we now have 5 API keys = 300 req/min), 
   // we pick the top 50 most traded stocks in this sector
@@ -503,9 +592,9 @@ async function renderChart(identifier, mode) {
   const datasets = [{
     label: `${identifier} 族群`,
     data: sectorData.map(d => ({
-      x: d.volume,
-      y: d.dailyReturn,
-      r: Math.max(4, Math.min(d.amount / 80000, 22)), // Reduced max radius to 22 and base to 4
+      x: d.amount / 100000000, // X 軸：成交金額 (億)
+      y: d.dailyReturn,        // Y 軸：漲跌幅
+      r: Math.max(4, Math.min(d.volume / 2000, 25)), // R：成交量 (張數)
       raw: d 
     })),
     backgroundColor: sectorData.map(d => 
@@ -542,21 +631,21 @@ async function renderChart(identifier, mode) {
       },
       plugins: {
         datalabels: {
-          color: '#cbd5e1', // Slate-300
+          color: 'rgba(255, 255, 255, 0.9)',
           font: {
-            family: 'Inter, sans-serif',
-            size: window.innerWidth < 768 ? 9 : 11,
-            weight: window.innerWidth < 768 ? 500 : 600
+            family: 'Inter',
+            size: 11,
+            weight: 'bold'
           },
-          align: 'bottom', // Put label under the bubble
-          offset: window.innerWidth < 768 ? 2 : 4,       // Add some spacing
+          align: 'bottom',
+          offset: window.innerWidth < 768 ? 2 : 4,
           formatter: function(value, context) {
-            // Limit labels to top 5 on mobile, top 10 on desktop to prevent heavy overlapping
+            // 只顯示成交量最大的前幾名，避免重疊
             const limit = window.innerWidth < 768 ? 5 : 10;
             if (context.dataIndex >= limit) {
               return null;
             }
-            return value.raw.stock['股票名稱']; // Access the stock name from raw data
+            return value.raw.stock['股票名稱'];
           }
         },
         legend: {
@@ -569,23 +658,28 @@ async function renderChart(identifier, mode) {
           titleColor: '#f8fafc',
           bodyColor: '#e2e8f0',
           borderColor: 'rgba(255, 255, 255, 0.1)',
+          backgroundColor: 'hsla(219, 44%, 12%, 0.9)', // deep midnight blue
+          titleFont: { size: 16, weight: 'bold', family: 'Inter' },
+          bodyFont: { size: 14, family: 'Inter' },
+          borderColor: 'hsla(199, 89%, 48%, 0.5)',
           borderWidth: 1,
-          padding: 12,
-          boxPadding: 6,
-          titleFont: { size: 16, weight: 'bold' },
-          bodyFont: { size: 14 },
+          padding: 14,
           displayColors: false,
+          cornerRadius: 8,
+          boxPadding: 6,
           callbacks: {
-            title: (context) => {
-              const data = context[0].raw.raw;
-              return `${data.stock['股票代號']} ${data.stock['股票名稱']}`;
+            title: function(context) {
+              const d = context[0].raw.raw;
+              return `${d.stock['股票名稱']} (${d.stock['股票代號']})`;
             },
-            label: (context) => {
-              const data = context.raw.raw;
+            label: function(context) {
+              const d = context.raw.raw;
+              const returnSign = d.dailyReturn > 0 ? '+' : '';
+              const amountHundredMillion = (d.amount / 10000).toFixed(2);
               return [
-                `報酬率: ${data.dailyReturn > 0 ? '+' : ''}${data.dailyReturn.toFixed(2)}%`,
-                `成交量: ${data.volume.toLocaleString()} 張`,
-                `成交額: ${(data.amount / 10000).toFixed(2)} 億`
+                `漲跌幅: ${returnSign}${d.dailyReturn.toFixed(2)}%`,
+                `成交量: ${d.volume.toLocaleString()} 張`,
+                `成交額: ${amountHundredMillion} 億`
               ];
             }
           }
@@ -596,26 +690,11 @@ async function renderChart(identifier, mode) {
           type: 'logarithmic',
           title: {
             display: true,
-            text: '成交量 (張) - 對數刻度',
-            color: '#94a3b8',
-            font: { size: 14, weight: '500' }
+            text: '成交金額 (億) - 對數級距',
+            color: 'rgba(255, 255, 255, 0.7)'
           },
-          ticks: {
-            color: '#94a3b8',
-            font: { size: 12 },
-            callback: function(value, index, values) {
-              // Only show major log scale ticks to avoid clutter
-              if (value === 10 || value === 100 || value === 1000 || value === 10000 || value === 100000 || value === 1000000) {
-                return value.toLocaleString();
-              }
-              // Allow the first and last tick or very large numbers to show if needed
-              if (index === 0 || index === values.length - 1) return value.toLocaleString();
-              return '';
-            }
-          },
-          grid: {
-            color: 'rgba(255, 255, 255, 0.05)'
-          }
+          grid: { color: 'rgba(255, 255, 255, 0.1)' },
+          ticks: { color: 'rgba(255, 255, 255, 0.7)' }
         },
         y: {
           title: {
