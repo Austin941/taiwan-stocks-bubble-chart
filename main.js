@@ -62,18 +62,32 @@ async function init() {
 
   // Render Initial View
   updateSortUI();
-  // renderRanking is called after processData finishes
+  // Set up auto-refresh every 30 seconds for the Ranking view
+  setInterval(() => {
+    // Only refresh if we are currently looking at the ranking view
+    if (currentSector === null) {
+      processData();
+    }
+  }, 30000);
 }
 
 async function processData() {
   try {
     const response = await fetch('/api/snapshot');
-    const marketCache = await response.json();
+    const result = await response.json();
+    
+    // Check if it's the new format with metadata, or old raw format
+    const marketCache = result.data || result;
+    const isMarketOpen = result.isMarketOpen !== undefined ? result.isMarketOpen : true;
     
     // Update timestamp
     const now = new Date();
-    document.getElementById('last-updated').textContent = `最後更新時間：${now.toLocaleTimeString('zh-TW', { hour12: false })}`;
+    const marketStatus = isMarketOpen ? '' : ' (已收盤)';
+    document.getElementById('last-updated').textContent = `最後更新時間：${now.toLocaleTimeString('zh-TW', { hour12: false })}${marketStatus}`;
     
+    // Clear sectors set for fresh repopulation
+    sectors.clear();
+
     // 1. Generate individual stock market data from backend snapshot
     allMarketData = allStocks.map(stock => {
       const symbol = stock['股票代號'];

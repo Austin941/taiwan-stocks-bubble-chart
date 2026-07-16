@@ -41,9 +41,11 @@ app.get('/api/fugle/:symbol', async (req, res) => {
   }
 });
 
-// 2. Market Snapshot (TWSE MIS API - Background Polling)
+// 2. Market Snapshot (Concurrent Fetch with Market Hours Logic)
 let marketCache = {};
 let allSymbols = [];
+let lastCacheTime = 0;
+const CACHE_TTL = 5000; // 5 seconds
 
 // Read stocks from CSV
 try {
@@ -54,9 +56,8 @@ try {
     if (!line.trim()) continue;
     const cols = line.split(',');
     const symbol = cols[0];
-    const market = cols[3]; // '上市' or '上櫃'
+    const market = cols[3];
     if (symbol && market) {
-      // TWSE format: tse_2330.tw, OTC format: otc_6547.tw
       const prefix = market.includes('上市') ? 'tse' : 'otc';
       allSymbols.push(`${prefix}_${symbol}.tw`);
     }
@@ -66,52 +67,63 @@ try {
   console.error('[Backend] Error loading CSV:', e.message);
 }
 
-// Background poller
-let currentChunkIndex = 0;
-const CHUNK_SIZE = 100; // TWSE MIS allows ~100 symbols per request
-
-async function pollMarketData() {
-  if (allSymbols.length === 0) return;
-
-  const chunk = allSymbols.slice(currentChunkIndex, currentChunkIndex + CHUNK_SIZE);
-  currentChunkIndex += CHUNK_SIZE;
-  if (currentChunkIndex >= allSymbols.length) {
-    currentChunkIndex = 0; // Wrap around
-  }
-
-  const queryUrl = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${chunk.join('|')}&json=1&delay=0`;
-  try {
-    const response = await axios.get(queryUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    });
-
-    if (response.data && response.data.msgArray) {
-      response.data.msgArray.forEach(item => {
-        if (item.c) { // symbol is in 'c'
-          // Extract necessary fields: z=latest price, y=previous close, v=volume
-          marketCache[item.c] = {
-            price: parseFloat(item.z) || parseFloat(item.y), // use previous close if latest is null (e.g. before open)
-            prevClose: parseFloat(item.y),
-            volume: parseInt(item.v) || 0
-          };
-        }
-      });
-      // console.log(`[Backend] Updated snapshot chunk. Cache size: ${Object.keys(marketCache).length}`);
-    }
-  } catch (error) {
-    console.error('[Backend] Error fetching MIS TWSE:', error.message);
-  }
+function isMarketOpen() {
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+  const time = now.getHours() * 60 + now.getMinutes();
+  // Taiwan Stock Market Open + After-market: 08:30 to 14:30
+  return time >= 510 && time <= 870;
 }
 
-// Poll one chunk every 3 seconds
-// Total 2000 stocks = 20 chunks = 60 seconds to update entire market
-setInterval(pollMarketData, 3000);
-pollMarketData(); // Start immediately
+async function fetchEntireMarket() {
+  if (allSymbols.length === 0) return;
+  
+  const CHUNK_SIZE = 100;
+  const promises = [];
+  
+  for (let i = 0; i < allSymbols.length; i += CHUNK_SIZE) {
+    const chunk = allSymbols.slice(i, i + CHUNK_SIZE);
+    const queryUrl = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${chunk.join('|')}&json=1&delay=0`;
+    
+    promises.push(
+      axios.get(queryUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+        timeout: 5000
+      }).then(response => {
+        if (response.data && response.data.msgArray) {
+          response.data.msgArray.forEach(item => {
+            if (item.c) {
+              marketCache[item.c] = {
+                price: parseFloat(item.z) || parseFloat(item.y),
+                prevClose: parseFloat(item.y),
+                volume: parseInt(item.v) || 0
+              };
+            }
+          });
+        }
+      }).catch(err => console.error('[Backend] Fetch Chunk Error:', err.message))
+    );
+  }
+  
+  await Promise.all(promises);
+  lastCacheTime = Date.now();
+  console.log(`[Backend] Fetched full market snapshot. Cache size: ${Object.keys(marketCache).length}. Market Open: ${isMarketOpen()}`);
+}
 
-app.get('/api/snapshot', (req, res) => {
-  res.json(marketCache);
+app.get('/api/snapshot', async (req, res) => {
+  const now = Date.now();
+  
+  // Fetch if cache is empty OR (market is open AND cache is older than TTL)
+  const needsUpdate = (Object.keys(marketCache).length === 0) || (isMarketOpen() && (now - lastCacheTime > CACHE_TTL));
+  
+  if (needsUpdate) {
+    await fetchEntireMarket();
+  }
+  
+  res.json({
+    data: marketCache,
+    isMarketOpen: isMarketOpen(),
+    timestamp: lastCacheTime
+  });
 });
 
 const PORT = 3001;
