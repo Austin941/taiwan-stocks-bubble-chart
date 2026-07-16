@@ -534,15 +534,17 @@ document.querySelectorAll('.period-btn').forEach(btn => {
 });
 
 async function renderChart(identifier, mode) {
-  // Clear existing chart if updating
+  // 1. Clear existing chart
   if (chartInstance) {
     chartInstance.destroy();
+    chartInstance = null;
   }
   
   let sectorData = [];
   
+  // 2. Data Gathering
   if (currentPeriodDays === 1) {
-    // Original intraday snapshot logic
+    // Filter snapshot data
     if (mode === 'sector') {
       sectorData = allMarketData.filter(d => d.stock['產業別'] === identifier);
     } else {
@@ -552,60 +554,31 @@ async function renderChart(identifier, mode) {
       });
     }
     
-    sectorData = sectorData.filter(d => d.amount > 0 && d.volume > 0);
+    // Safety filter
+    sectorData = sectorData.filter(d => d && d.amount > 0 && d.volume > 0 && !isNaN(d.dailyReturn));
     
-    // Sort by amount and slice top 50 for initial display to avoid cluttered charts
+    // Sort and slice top 50
     sectorData.sort((a, b) => b.amount - a.amount);
     sectorData = sectorData.slice(0, 50);
     
-    // Asynchronously fetch Fugle real-time data (do not block rendering)
-    const promises = sectorData.map(async (d) => {
-      try {
-        const res = await fetch(`/api/fugle/${d.symbol}`);
-        if (res.ok) {
-          const rtd = await res.json();
-          if (rtd.data && rtd.data.quote) {
-            const q = rtd.data.quote;
-            const price = q.trade?.price || q.previousClose;
-            const pClose = q.previousClose;
-            const dailyReturn = ((price - pClose) / pClose) * 100;
-            const vol = q.total?.tradeVolume || 0;
-            const amount = q.total?.tradeValue || (vol * price * 1000);
-            
-            d.price = price;
-            d.prevClose = pClose;
-            d.dailyReturn = dailyReturn;
-            d.volume = vol;
-            d.amount = amount;
-            
-            // Update the specific data point in the chart instance if it exists
-            if (chartInstance) {
-              const pointIndex = chartInstance.data.datasets[0].data.findIndex(p => p.raw.symbol === d.symbol);
-              if (pointIndex !== -1) {
-                chartInstance.data.datasets[0].data[pointIndex].x = d.amount / 100000000;
-                chartInstance.data.datasets[0].data[pointIndex].y = d.dailyReturn;
-                chartInstance.data.datasets[0].data[pointIndex].r = Math.min(Math.max(Math.sqrt(d.volume) * 0.3, 5), 40);
-                chartInstance.update('active'); // Use 'active' mode for smooth performance update
-              }
-            }
-          }
-        }
-      } catch(e) {}
-    });
+    // Deep clone to prevent mutating global cache
+    sectorData = JSON.parse(JSON.stringify(sectorData));
     
-    // We do NOT await Promise.all(promises) here so the initial chart renders instantly
   } else {
-    // Historical Period Logic
+    // Historical Data Gathering
     let baseData = [];
     if (mode === 'sector') {
-      baseData = allStocks.filter(s => s['產業別'] === identifier);
+      baseData = allMarketData.filter(d => d.stock['產業別'] === identifier).map(d => d.stock);
     } else {
-      baseData = allStocks.filter(s => s['題材清單'] && s['題材清單'].includes(identifier));
+      baseData = allMarketData.filter(d => {
+        const themes = d.stock['題材清單'];
+        return themes && themes.includes(identifier);
+      }).map(d => d.stock);
     }
     
     const symbolsWithSuffix = baseData.map(s => {
-      const prefix = s['上市櫃']?.includes('上市') ? 'tse' : 'otc';
-      return `${s['股票代號']}.${prefix === 'tse' ? 'TW' : 'TWO'}`;
+      const market = s['市場別'];
+      return market.includes('上市') ? `${s['股票代號']}.TW` : `${s['股票代號']}.TWO`;
     });
     
     try {
@@ -624,7 +597,7 @@ async function renderChart(identifier, mode) {
               symbol: s['股票代號'],
               name: s['股票名稱'],
               stock: s,
-              dailyReturn: p.cumulativeReturn,
+              dailyReturn: p.cumulativeReturn || 0,
               volume: p.totalVolume,
               amount: p.totalAmount
             });
@@ -634,34 +607,27 @@ async function renderChart(identifier, mode) {
     } catch(e) {
       console.error('Failed to fetch period analysis', e);
     }
+    
+    sectorData.sort((a, b) => b.amount - a.amount);
+    sectorData = sectorData.slice(0, 50);
   }
 
-  // Draw chart using sectorData
-  // Sort again by amount to ensure consistency
-  sectorData.sort((a, b) => b.amount - a.amount);
-  
-  const chartData = sectorData.map(d => ({
-    x: d.amount / 100000000, 
-    y: d.dailyReturn,
-    r: Math.min(Math.max(Math.sqrt(d.volume) * 0.3, 5), 40),
-    raw: d
-  }));
-
+  // 3. Render Chart Initial State
   const datasets = [{
-    label: `${identifier} 族群`,
+    label: `${identifier} ${mode === 'sector' ? '族群' : '題材'}`,
     data: sectorData.map(d => ({
-      x: d.amount / 100000000, // X 軸：成交金額 (億)
-      y: d.dailyReturn,        // Y 軸：漲跌幅
-      r: Math.max(4, Math.min(d.volume / 2000, 25)), // R：成交量 (張數)
+      x: (d.amount / 100000000) || 0, 
+      y: d.dailyReturn || 0,
+      r: Math.max(4, Math.min((d.volume || 0) / 2000, 25)), 
       raw: d 
     })),
     backgroundColor: sectorData.map(d => 
-      d.dailyReturn >= 0 
-        ? 'rgba(239, 68, 68, 0.75)'  // Dark theme Red
-        : 'rgba(34, 197, 94, 0.75)'  // Dark theme Green
+      (d.dailyReturn || 0) >= 0 
+        ? 'rgba(239, 68, 68, 0.75)'  // Red
+        : 'rgba(34, 197, 94, 0.75)'  // Green
     ),
     borderColor: sectorData.map(d => 
-      d.dailyReturn >= 0 
+      (d.dailyReturn || 0) >= 0 
         ? 'rgba(239, 68, 68, 1)' 
         : 'rgba(34, 197, 94, 1)'
     ),
@@ -670,11 +636,7 @@ async function renderChart(identifier, mode) {
     hoverBorderColor: '#fff'
   }];
 
-  if (chartInstance) {
-    chartInstance.destroy();
-  }
-
-  Chart.defaults.color = '#475569'; // Light theme text color
+  Chart.defaults.color = '#475569';
   Chart.defaults.font.family = 'Inter, sans-serif';
 
   chartInstance = new Chart(canvas, {
