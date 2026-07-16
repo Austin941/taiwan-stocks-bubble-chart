@@ -745,7 +745,8 @@ async function renderChart(identifier, mode) {
       onClick: (e, elements) => {
         if (elements.length > 0) {
           const index = elements[0].index;
-          const point = chartData[index];
+          // Retrieve point from the chart's actual dataset array to guarantee consistency
+          const point = chartInstance.data.datasets[0].data[index];
           const raw = point.raw;
           const symbol = raw.stock['股票代號'];
           const name = raw.stock['股票名稱'];
