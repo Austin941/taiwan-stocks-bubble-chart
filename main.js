@@ -224,10 +224,14 @@ async function processData() {
         sectorMap[sector].count += 1;
       }
 
-      // Parse themes
+      // Parse themes with a filter for redundant/generic tags
       const themesStr = d.stock['題材清單'];
       if (themesStr && themesStr !== '') {
-        const themesArr = themesStr.split('、').map(t => t.trim()).filter(t => t.length > 0);
+        const blacklist = ['半導體', '電子零組件', '電子代工', '通信網路', '其他電子', '光電', '電腦及週邊設備'];
+        const themesArr = themesStr.split('、')
+          .map(t => t.trim())
+          .filter(t => t.length > 0 && t !== d.stock['產業別'] && !blacklist.includes(t)); // 過濾掉與產業別完全相同的標籤，或過於廣泛的黑名單標籤
+          
         themesArr.forEach(theme => {
           if (!themeMap[theme]) {
             themeMap[theme] = { theme: theme, totalVolume: 0, totalAmount: 0, sumReturn: 0, count: 0 };
