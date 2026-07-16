@@ -740,9 +740,6 @@ async function renderChart(identifier, mode) {
                   <span style="color: #94a3b8;">成交額:</span>
                   <span style="color: #fff; text-align: right;">${amountHundredMillion} 億</span>
                 </div>
-                <div style="margin-top: 10px; font-size: 0.8rem; color: var(--accent-primary); text-align: center;">
-                  👆 點擊查看技術線圖
-                </div>
               `;
               
               tooltipEl.innerHTML = innerHtml;
@@ -773,18 +770,6 @@ async function renderChart(identifier, mode) {
           }
         }
       },
-      onClick: (e, elements) => {
-        if (elements.length > 0) {
-          const index = elements[0].index;
-          // Retrieve point from the chart's actual dataset array to guarantee consistency
-          const point = chartInstance.data.datasets[0].data[index];
-          const raw = point.raw;
-          const symbol = raw.stock['股票代號'];
-          const name = raw.stock['股票名稱'];
-          const prefix = raw.stock['上市櫃']?.includes('上市') ? 'TW' : 'TWO';
-          openKLinePanel(`${symbol}.${prefix}`, name);
-        }
-      },
       scales: {
         x: {
           type: 'linear',
@@ -804,119 +789,6 @@ async function renderChart(identifier, mode) {
     console.error("Chart initialization failed:", err);
     return;
   }
-}
-
-// --- K-Line Logic ---
-let lwChart = null;
-let candleSeries = null;
-let volumeSeries = null;
-
-const klinePanel = document.getElementById('kline-panel');
-const klineCloseBtn = document.getElementById('kline-close-btn');
-const klineTitle = document.getElementById('kline-title');
-const klineLoading = document.getElementById('kline-loading');
-const klineContainer = document.getElementById('kline-chart-container');
-
-klineCloseBtn.addEventListener('click', () => {
-  klinePanel.classList.add('closed');
-});
-
-async function openKLinePanel(symbolWithSuffix, name) {
-  klineTitle.textContent = `${name} (${symbolWithSuffix})`;
-  klinePanel.classList.remove('closed');
-  klineLoading.classList.remove('hidden');
-
-  if (!lwChart) {
-    initLwChart();
-  } else {
-    candleSeries.setData([]);
-    volumeSeries.setData([]);
-  }
-
-  try {
-    const res = await fetch(`/api/historical/${symbolWithSuffix}`);
-    if (!res.ok) throw new Error('API failed');
-    const data = await res.json();
-    
-    // Sort chronologically just in case
-    data.sort((a, b) => new Date(a.time) - new Date(b.time));
-    
-    const candleData = data.map(d => ({
-      time: d.time,
-      open: d.open,
-      high: d.high,
-      low: d.low,
-      close: d.close
-    }));
-    
-    const volumeData = data.map(d => ({
-      time: d.time,
-      value: d.value,
-      color: d.close >= d.open ? 'rgba(38, 166, 154, 0.5)' : 'rgba(239, 83, 80, 0.5)'
-    }));
-
-    candleSeries.setData(candleData);
-    volumeSeries.setData(volumeData);
-    lwChart.timeScale().fitContent();
-  } catch (error) {
-    console.error('K-Line error:', error);
-    klineTitle.textContent = `${name} - 載入失敗`;
-  } finally {
-    klineLoading.classList.add('hidden');
-  }
-}
-
-function initLwChart() {
-  lwChart = LightweightCharts.createChart(klineContainer, {
-    layout: {
-      background: { type: 'solid', color: 'transparent' },
-      textColor: '#94a3b8',
-    },
-    grid: {
-      vertLines: { color: 'rgba(255, 255, 255, 0.05)' },
-      horzLines: { color: 'rgba(255, 255, 255, 0.05)' },
-    },
-    crosshair: {
-      mode: LightweightCharts.CrosshairMode.Normal,
-    },
-    rightPriceScale: {
-      borderColor: 'rgba(255, 255, 255, 0.1)',
-    },
-    timeScale: {
-      borderColor: 'rgba(255, 255, 255, 0.1)',
-      timeVisible: true,
-    },
-  });
-
-  candleSeries = lwChart.addCandlestickSeries({
-    upColor: '#26a69a',
-    downColor: '#ef5350',
-    borderVisible: false,
-    wickUpColor: '#26a69a',
-    wickDownColor: '#ef5350',
-  });
-
-  volumeSeries = lwChart.addHistogramSeries({
-    color: '#26a69a',
-    priceFormat: {
-      type: 'volume',
-    },
-    priceScaleId: '', // overlay
-  });
-  
-  volumeSeries.priceScale().applyOptions({
-    scaleMargins: {
-      top: 0.8, // leave top 80% for candles
-      bottom: 0,
-    },
-  });
-
-  // Handle resize
-  new ResizeObserver(entries => {
-    if (entries.length === 0 || entries[0].target !== klineContainer) { return; }
-    const newRect = entries[0].contentRect;
-    lwChart.applyOptions({ height: newRect.height, width: newRect.width });
-  }).observe(klineContainer);
 }
 
 // Start app
