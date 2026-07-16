@@ -17,7 +17,7 @@ let sortDesc = true;
 const viewRanking = document.getElementById('view-ranking');
 const viewChart = document.getElementById('view-chart');
 const rankingTableBody = document.getElementById('rankingTableBody');
-const sectorSelect = document.getElementById('sectorSelect');
+const currentSectorTitle = document.getElementById('currentSectorTitle');
 const canvas = document.getElementById('bubbleChart');
 const backBtn = document.getElementById('backBtn');
 const sortableHeaders = document.querySelectorAll('.sortable');
@@ -69,6 +69,10 @@ async function processData() {
   try {
     const response = await fetch('/api/snapshot');
     const marketCache = await response.json();
+    
+    // Update timestamp
+    const now = new Date();
+    document.getElementById('last-updated').textContent = `最後更新時間：${now.toLocaleTimeString('zh-TW', { hour12: false })}`;
     
     // 1. Generate individual stock market data from backend snapshot
     allMarketData = allStocks.map(stock => {
@@ -139,11 +143,8 @@ async function processData() {
   const sortedSectors = Array.from(sectors).sort();
   sectorSelect.innerHTML = sortedSectors.map(s => `<option value="${s}">${s}</option>`).join('');
 
-  // Setup Event Listeners
-  sectorSelect.addEventListener('change', (e) => {
-    currentSector = e.target.value;
-    renderChart(currentSector);
-  });
+  // (Dropdown listener removed)
+  
   // Render Ranking after processing data
   renderRanking();
   } catch(e) {
@@ -181,12 +182,13 @@ function renderRanking() {
 
   rankingTableBody.innerHTML = sortedData.map((d, index) => {
     const returnClass = d.avgReturn >= 0 ? 'color-positive' : 'color-negative';
+    const flashClass = d.avgReturn >= 0 ? 'flash-up' : 'flash-down';
     const returnSign = d.avgReturn >= 0 ? '+' : '';
     
     return `
-      <tr>
+      <tr data-sector="${d.sector}" class="${flashClass}">
         <td>${index + 1}</td>
-        <td><span class="badge-sector" data-sector="${d.sector}">${d.sector}</span></td>
+        <td><span class="badge-sector">${d.sector}</span></td>
         <td class="text-right ${returnClass}"><strong style="font-size:1.1rem">${returnSign}${d.avgReturn.toFixed(2)}%</strong></td>
         <td class="text-right">${d.totalVolume.toLocaleString()}</td>
         <td class="text-right"><strong style="color:var(--text-primary)">${(d.totalAmount / 10000).toFixed(2)}</strong></td>
@@ -194,13 +196,13 @@ function renderRanking() {
     `;
   }).join('');
 
-  // Add click events to sector badges
-  document.querySelectorAll('.badge-sector').forEach(badge => {
-    badge.addEventListener('click', (e) => {
-      const sector = e.target.getAttribute('data-sector');
+  // Add click events to entire row
+  document.querySelectorAll('.ranking-table tbody tr').forEach(row => {
+    row.addEventListener('click', (e) => {
+      const sector = row.getAttribute('data-sector');
       if (sector) {
         currentSector = sector;
-        sectorSelect.value = sector;
+        if(currentSectorTitle) currentSectorTitle.textContent = sector;
         showView('chart');
         renderChart(sector);
       }
@@ -259,13 +261,13 @@ async function renderChart(sector) {
     })),
     backgroundColor: sectorData.map(d => 
       d.dailyReturn >= 0 
-        ? 'rgba(220, 38, 38, 0.65)'  // Red for positive (Taiwan)
-        : 'rgba(22, 163, 74, 0.65)'  // Green for negative
+        ? 'rgba(239, 68, 68, 0.75)'  // Dark theme Red
+        : 'rgba(34, 197, 94, 0.75)'  // Dark theme Green
     ),
-    borderColor: marketData.map(d => 
+    borderColor: sectorData.map(d => 
       d.dailyReturn >= 0 
-        ? 'rgba(220, 38, 38, 1)' 
-        : 'rgba(22, 163, 74, 1)'
+        ? 'rgba(239, 68, 68, 1)' 
+        : 'rgba(34, 197, 94, 1)'
     ),
     borderWidth: 1.5,
     hoverBorderWidth: 3,
@@ -291,19 +293,21 @@ async function renderChart(sector) {
       },
       plugins: {
         legend: {
-          display: false
+          labels: {
+            color: '#f8fafc'
+          }
         },
         tooltip: {
-          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-          titleColor: '#0f172a',
-          bodyColor: '#334155',
-          titleFont: { size: 16, weight: 'bold' },
-          bodyFont: { size: 14, weight: '500' },
-          padding: 14,
-          borderColor: 'rgba(148, 163, 184, 0.4)',
+          backgroundColor: 'rgba(30, 41, 59, 0.95)',
+          titleColor: '#f8fafc',
+          bodyColor: '#e2e8f0',
+          borderColor: 'rgba(255, 255, 255, 0.1)',
           borderWidth: 1,
+          padding: 12,
+          boxPadding: 6,
+          titleFont: { size: 16, weight: 'bold' },
+          bodyFont: { size: 14 },
           displayColors: false,
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
           callbacks: {
             title: (context) => {
               const data = context[0].raw.raw;
@@ -329,23 +333,23 @@ async function renderChart(sector) {
             font: { size: 16, weight: '600' }
           },
           ticks: {
-            font: { size: 14, weight: '500' },
-            color: '#475569'
+            color: '#94a3b8',
+            font: { size: 14 }
           },
           grid: {
-            color: 'rgba(0, 0, 0, 0.06)'
+            color: 'rgba(255, 255, 255, 0.1)'
           }
         },
         y: {
           title: {
-            display: false,
+            display: false
           },
           ticks: {
-            font: { size: 14, weight: '500' },
-            color: '#475569'
+            color: '#94a3b8',
+            font: { size: 14 }
           },
           grid: {
-            color: 'rgba(0, 0, 0, 0.06)'
+            color: 'rgba(255, 255, 255, 0.1)'
           }
         }
       }

@@ -1,15 +1,15 @@
 :root {
-  /* Light Theme Colors */
-  --bg-color: #f1f5f9;
-  --panel-bg: rgba(255, 255, 255, 0.85);
-  --text-primary: #1e293b;
-  --text-secondary: #475569;
-  --accent-color: #0284c7;
-  --accent-hover: #0369a1;
-  --border-color: rgba(148, 163, 184, 0.3);
-  --positive-color: #dc2626; /* Taiwan UP is Red */
-  --negative-color: #16a34a; /* Taiwan DOWN is Green */
-  --shadow-color: rgba(51, 65, 85, 0.1);
+  /* Dark Theme Colors (Trading Aesthetic) */
+  --bg-color: #0f172a;
+  --panel-bg: rgba(30, 41, 59, 0.7);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --accent-color: #38bdf8;
+  --accent-hover: #0ea5e9;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --positive-color: #ef4444; /* Taiwan UP is Red */
+  --negative-color: #22c55e; /* Taiwan DOWN is Green */
+  --shadow-color: rgba(0, 0, 0, 0.5);
 }
 
 * {
@@ -21,7 +21,7 @@
 body {
   font-family: 'Inter', sans-serif;
   font-size: 1.15rem;
-  background: radial-gradient(circle at top right, #e2e8f0, #f8fafc);
+  background: radial-gradient(circle at top right, #1e293b, #020617);
   color: var(--text-primary);
   min-height: 100vh;
   display: flex;
@@ -45,7 +45,7 @@ body {
 .app-header h1 {
   font-size: 3rem;
   font-weight: 800;
-  color: #0f172a;
+  color: #ffffff;
   margin-bottom: 0.75rem;
   letter-spacing: -0.025em;
 }
@@ -136,32 +136,52 @@ body {
   border-bottom: 1px solid var(--border-color);
   color: var(--text-primary);
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  transition: background-color 0.3s ease;
+}
+
+.ranking-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
 .ranking-table tbody tr:hover {
-  background-color: rgba(241, 245, 249, 0.6);
+  background-color: rgba(255, 255, 255, 0.05);
+  transform: scale(1.002);
 }
 
 .text-right { text-align: right; }
 .text-center { text-align: center; }
 
+/* Real-time Flash Animations */
+@keyframes flashUpdateGreen {
+  0% { background-color: rgba(34, 197, 94, 0.4); }
+  100% { background-color: transparent; }
+}
+@keyframes flashUpdateRed {
+  0% { background-color: rgba(239, 68, 68, 0.4); }
+  100% { background-color: transparent; }
+}
+.flash-up { animation: flashUpdateRed 1s ease-out; }
+.flash-down { animation: flashUpdateGreen 1s ease-out; }
+
 .badge-sector {
   display: inline-block;
-  background: #e0f2fe;
-  color: #0369a1;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
   padding: 0.4rem 1rem;
   border-radius: 20px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: 1px solid #bae6fd;
+  border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
 .badge-sector:hover {
-  background: #bae6fd;
+  background: rgba(56, 189, 248, 0.25);
   transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(2, 132, 199, 0.1);
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
 }
 
 /* Controls */
@@ -187,28 +207,8 @@ body {
   color: var(--text-primary);
 }
 
-select {
-  background: #fff;
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  padding: 0.75rem 1.2rem;
-  border-radius: 8px;
-  font-size: 1.2rem;
-  font-weight: 500;
-  outline: none;
-  cursor: pointer;
-  min-width: 220px;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-}
-
-select:focus {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
-}
-
 .btn-secondary {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
   padding: 0.75rem 1.5rem;
@@ -220,12 +220,11 @@ select:focus {
   align-items: center;
   gap: 0.5rem;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
 .btn-secondary:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--text-secondary);
   transform: translateX(-2px);
 }
 
@@ -252,12 +251,12 @@ select:focus {
   letter-spacing: 0.1em;
   font-size: 1.15rem;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--text-secondary);
   user-select: none;
 }
 
 .info-panel {
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(30, 41, 59, 0.5);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 1.5rem 2rem;

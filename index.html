@@ -14,6 +14,9 @@
     <header class="app-header">
       <h1>台股動態排行與族群分析</h1>
       <p class="subtitle">洞察全市場成交重心與各族群資金流向</p>
+      <div id="last-updated" style="margin-top:0.5rem; font-size:0.9rem; color:var(--accent-color); font-variant-numeric: tabular-nums;">
+        最後更新時間：載入中...
+      </div>
     </header>
     
     <main class="main-content">
@@ -22,7 +25,7 @@
       <section id="view-ranking" class="view active">
         <div class="panel-glass">
           <div class="panel-header">
-            <h2>全市場成交金額排行 (模擬及時資料)</h2>
+            <h2>全市場成交金額排行 (即時資料)</h2>
             <p>點擊「產業別」標籤即可查看該族群的泡泡圖分析</p>
           </div>
           <div class="table-responsive">
@@ -62,10 +65,7 @@
           </button>
           
           <div class="control-group">
-            <label for="sectorSelect">切換產業族群</label>
-            <select id="sectorSelect">
-              <option value="">載入中...</option>
-            </select>
+            <h2 id="currentSectorTitle" style="color:var(--text-primary); font-size:1.8rem;">載入中...</h2>
           </div>
         </div>
 
@@ -77,9 +77,9 @@
         <div class="info-panel">
           <h3>圖表說明</h3>
           <ul>
-            <li><strong>X 軸</strong>：成交量 (模擬資料)</li>
-            <li><strong>Y 軸</strong>：當日報酬率 % (模擬資料)</li>
-            <li><strong>氣泡大小</strong>：成交金額 (模擬資料)</li>
+            <li><strong>X 軸</strong>：成交量 (即時)</li>
+            <li><strong>Y 軸</strong>：當日報酬率 % (即時)</li>
+            <li><strong>氣泡大小</strong>：成交金額 (即時)</li>
             <li><strong>顏色</strong>：<span style="color:var(--positive-color);font-weight:bold;">紅色</span>代表上漲，<span style="color:var(--negative-color);font-weight:bold;">綠色</span>代表下跌</li>
           </ul>
         </div>
