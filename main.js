@@ -554,11 +554,12 @@ async function renderChart(identifier, mode) {
     
     sectorData = sectorData.filter(d => d.amount > 0 && d.volume > 0);
     
-    // Fugle real-time logic (for top 50)
-    sectorData.sort((a, b) => b.volume - a.volume);
-    const top50 = sectorData.slice(0, 50);
+    // Sort by amount and slice top 50 for initial display to avoid cluttered charts
+    sectorData.sort((a, b) => b.amount - a.amount);
+    sectorData = sectorData.slice(0, 50);
     
-    const promises = top50.map(async (d) => {
+    // Asynchronously fetch Fugle real-time data (do not block rendering)
+    const promises = sectorData.map(async (d) => {
       try {
         const res = await fetch(`/api/fugle/${d.symbol}`);
         if (res.ok) {
@@ -576,12 +577,23 @@ async function renderChart(identifier, mode) {
             d.dailyReturn = dailyReturn;
             d.volume = vol;
             d.amount = amount;
+            
+            // Update the specific data point in the chart instance if it exists
+            if (chartInstance) {
+              const pointIndex = chartInstance.data.datasets[0].data.findIndex(p => p.raw.symbol === d.symbol);
+              if (pointIndex !== -1) {
+                chartInstance.data.datasets[0].data[pointIndex].x = d.amount / 100000000;
+                chartInstance.data.datasets[0].data[pointIndex].y = d.dailyReturn;
+                chartInstance.data.datasets[0].data[pointIndex].r = Math.min(Math.max(Math.sqrt(d.volume) * 0.3, 5), 40);
+                chartInstance.update('active'); // Use 'active' mode for smooth performance update
+              }
+            }
           }
         }
       } catch(e) {}
     });
     
-    await Promise.all(promises);
+    // We do NOT await Promise.all(promises) here so the initial chart renders instantly
   } else {
     // Historical Period Logic
     let baseData = [];
@@ -624,11 +636,10 @@ async function renderChart(identifier, mode) {
     }
   }
 
-  // Ensure we only show the top 50 by trading amount to avoid cluttered charts
-  sectorData.sort((a, b) => b.amount - a.amount);
-  sectorData = sectorData.slice(0, 50);
-
   // Draw chart using sectorData
+  // Sort again by amount to ensure consistency
+  sectorData.sort((a, b) => b.amount - a.amount);
+  
   const chartData = sectorData.map(d => ({
     x: d.amount / 100000000, 
     y: d.dailyReturn,
