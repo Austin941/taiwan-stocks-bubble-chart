@@ -17,6 +17,9 @@ let currentChartMode = 'sector'; // 'sector' or 'theme'
 let currentPeriodDays = 1; // Global period state
 let currentDetailSort = { column: 'amount', order: 'desc' }; // Detail table sort state
 
+let currentFetchId = 0;
+const historicalDataCache = {}; // Cache format: { "2330-5": { cumulativeReturn, totalVolume, totalAmount } }
+
 // Global error handler for debugging
 window.onerror = function(message, source, lineno, colno, error) {
   const chartContainer = document.querySelector('.chart-container-glass');
@@ -590,11 +593,8 @@ document.querySelectorAll('.detail-sortable').forEach(th => {
       icon.classList.add(currentDetailSort.order);
     }
     
-    // Re-render table if data exists
-    if (chartInstance && chartInstance.data && chartInstance.data.datasets.length > 0) {
-      const currentData = chartInstance.data.datasets[0].data.map(d => d.raw);
-      renderDetailTable(currentData);
-    }
+    // Re-render table using raw sectorData, not just plotted data (so missing shows up)
+    renderDetailTable(sectorData);
   });
 });
 
@@ -609,60 +609,48 @@ function openChart(identifier, mode = 'sector') {
 }
 
 async function renderChart(identifier, mode) {
+  currentFetchId++;
+  const fetchId = currentFetchId;
+  
   // 1. Clear existing chart
   if (chartInstance) {
     chartInstance.destroy();
     chartInstance = null;
   }
   
+  const currentSectorTitle = document.getElementById('current-sector-title');
+  const modeText = mode === 'sector' ? '族群' : '題材';
+  currentSectorTitle.textContent = `${identifier} ${modeText}分析`;
+
+  // Filter stocks
+  const baseData = currentChartMode === 'sector' 
+    ? allMarketData.filter(d => d.stock['產業別'] === identifier)
+    : allMarketData.filter(d => {
+        const themes = d.stock['題材清單'];
+        return themes && themes.includes(identifier);
+      });
+    
+  if (baseData.length === 0) return;
+  
+  const overlay = document.getElementById('chart-loading-overlay');
+  
+  // Base daily data preparation
   let sectorData = [];
   
-  // 2. Data Gathering
   if (currentPeriodDays === 1) {
-    // Filter snapshot data
-    if (mode === 'sector') {
-      sectorData = allMarketData.filter(d => d.stock['產業別'] === identifier);
-    } else {
-      sectorData = allMarketData.filter(d => {
-        const themes = d.stock['題材清單'];
-        return themes && themes.includes(identifier);
-      });
-    }
-    
-    // Safety filter
-    sectorData = sectorData.filter(d => d && d.amount > 0 && d.volume > 0 && !isNaN(d.dailyReturn));
-    
-    // Sort and slice top 50
-    sectorData.sort((a, b) => b.amount - a.amount);
-    sectorData = sectorData.slice(0, 50);
-    
-    // Deep clone to prevent mutating global cache
-    sectorData = JSON.parse(JSON.stringify(sectorData));
-    
+    // Single Day Mode
+    overlay.classList.add('hidden');
+    sectorData = baseData.map(d => ({
+        symbol: d.stock['股票代號'],
+        name: d.stock['股票名稱'],
+        stock: d.stock,
+        dailyReturn: d.dailyReturn || 0,
+        volume: d.volume,
+        amount: d.amount
+    }));
   } else {
-    // Historical Data Gathering
-    // To prevent Vercel serverless timeouts (10s limit), we pre-sort by today's amount
-    // and ONLY fetch historical data for the top 50 stocks in the sector/theme.
-    let baseData = [];
-    if (mode === 'sector') {
-      baseData = allMarketData.filter(d => d.stock['產業別'] === identifier);
-    } else {
-      baseData = allMarketData.filter(d => {
-        const themes = d.stock['題材清單'];
-        return themes && themes.includes(identifier);
-      });
-    }
-    
-    // Sort by today's amount and slice to top 50 BEFORE sending to backend
-    baseData.sort((a, b) => b.amount - a.amount);
-    baseData = baseData.slice(0, 50).map(d => d.stock);
-    
-    const symbolsWithSuffix = baseData.map(s => {
-      const market = s['市場別'];
-      return market.includes('上市') ? `${s['股票代號']}.TW` : `${s['股票代號']}.TWO`;
-    });
-    
-    const modeText = mode === 'sector' ? '族群' : '題材概念股';
+    // Historical Period Mode
+    overlay.classList.remove('hidden');
     currentSectorTitle.textContent = `${identifier} ${modeText}分析 (歷史資料載入中...)`;
     
     try {
@@ -671,16 +659,25 @@ async function renderChart(identifier, mode) {
       const startDateStr = period1.toISOString().split('T')[0];
       
       const periodResults = {};
-      const CHUNK_SIZE = 10; // Fetch 10 symbols at a time to maximize speed while respecting FinMind rate limits
+      const CHUNK_SIZE = 10; 
       
-      const symbols = baseData.map(s => s['股票代號']);
+      const symbols = baseData.map(d => d.stock['股票代號']);
       
       for (let i = 0; i < symbols.length; i += CHUNK_SIZE) {
+        if (fetchId !== currentFetchId) return;
+        
         const chunk = symbols.slice(i, i + CHUNK_SIZE);
         const promises = chunk.map(async symbol => {
+          const cacheKey = `${symbol}-${currentPeriodDays}`;
+          if (historicalDataCache[cacheKey]) {
+            return { symbol, data: historicalDataCache[cacheKey] };
+          }
+          
           try {
             const res = await fetch(`https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${symbol}&start_date=${startDateStr}`);
             const json = await res.json();
+            if (fetchId !== currentFetchId) return null;
+            
             if (json.msg === 'success' && json.data.length > 0) {
               const recent = json.data.slice(-currentPeriodDays);
               if (recent.length === 0) return null;
@@ -696,7 +693,9 @@ async function renderChart(identifier, mode) {
                 totalAmount += day.Trading_money;
               }
               
-              return { symbol, data: { cumulativeReturn, totalVolume, totalAmount } };
+              const resultData = { cumulativeReturn, totalVolume, totalAmount };
+              historicalDataCache[cacheKey] = resultData;
+              return { symbol, data: resultData };
             }
           } catch(e) {
             console.error(`Failed to fetch ${symbol} from FinMind`, e);
@@ -709,25 +708,37 @@ async function renderChart(identifier, mode) {
           if (res) periodResults[res.symbol] = res.data;
         }
         
-        // Add a small delay between chunks to avoid HTTP 429 Too Many Requests
         if (i + CHUNK_SIZE < symbols.length) {
           await new Promise(resolve => setTimeout(resolve, 300));
         }
       }
       
-      for (const s of baseData) {
-        if (periodResults[s['股票代號']]) {
-          const p = periodResults[s['股票代號']];
-          if (p.totalAmount > 0 && p.totalVolume > 0) {
-            sectorData.push({
-              symbol: s['股票代號'],
-              name: s['股票名稱'],
-              stock: s,
+      if (fetchId !== currentFetchId) return;
+      
+      currentSectorTitle.textContent = `${identifier} ${modeText}分析 (${currentPeriodDays}日)`;
+      
+      for (const d of baseData) {
+        const symbol = d.stock['股票代號'];
+        if (periodResults[symbol]) {
+          const p = periodResults[symbol];
+          sectorData.push({
+              symbol: symbol,
+              name: d.stock['股票名稱'],
+              stock: d.stock,
               dailyReturn: p.cumulativeReturn || 0,
               volume: p.totalVolume,
               amount: p.totalAmount
-            });
-          }
+          });
+        } else {
+          sectorData.push({
+            symbol: symbol,
+            name: d.stock['股票名稱'],
+            stock: d.stock,
+            dailyReturn: 0,
+            volume: 0,
+            amount: 0,
+            isMissing: true
+          });
         }
       }
     } catch(e) {
@@ -741,20 +752,22 @@ async function renderChart(identifier, mode) {
   }
 
   // 3. Render Chart Initial State
+  const chartPlotData = sectorData.filter(d => !d.isMissing);
+
   const datasets = [{
     label: `${identifier} ${mode === 'sector' ? '族群' : '題材'}`,
-    data: sectorData.map(d => ({
+    data: chartPlotData.map(d => ({
       x: Math.max((d.amount / 100000000) || 0.1, 0.1), // Ensure x > 0 for log scale safety
       y: d.dailyReturn || 0,
       r: Math.max(4, Math.min((d.volume || 0) / 2000, 25)), 
       raw: d 
     })),
-    backgroundColor: sectorData.map(d => 
+    backgroundColor: chartPlotData.map(d => 
       (d.dailyReturn || 0) >= 0 
         ? 'rgba(239, 68, 68, 0.75)'  // Red
         : 'rgba(34, 197, 94, 0.75)'  // Green
     ),
-    borderColor: sectorData.map(d => 
+    borderColor: chartPlotData.map(d => 
       (d.dailyReturn || 0) >= 0 
         ? 'rgba(239, 68, 68, 1)' 
         : 'rgba(34, 197, 94, 1)'
@@ -903,22 +916,34 @@ function renderDetailTable(data) {
   sortedData.forEach(item => {
     const tr = document.createElement('tr');
     
-    const returnClass = item.dailyReturn > 0 ? 'text-danger' : (item.dailyReturn < 0 ? 'text-success' : '');
-    const returnSign = item.dailyReturn > 0 ? '+' : '';
-    const formattedReturn = `${returnSign}${item.dailyReturn.toFixed(2)}%`;
-    
-    const formattedVolume = Math.round(item.volume).toLocaleString();
-    const formattedAmount = (item.amount / 100000000).toFixed(2);
-    
-    tr.innerHTML = `
-      <td>${item.stock['股票名稱']} (${item.symbol})</td>
-      <td class="text-right font-bold ${returnClass}">${formattedReturn}</td>
-      <td class="text-right">${formattedVolume}</td>
-      <td class="text-right">${formattedAmount}</td>
-    `;
+    if (item.isMissing) {
+      tr.innerHTML = `
+        <td>${item.stock['股票名稱']} (${item.symbol})</td>
+        <td class="text-right text-slate-500">無資料</td>
+        <td class="text-right text-slate-500">-</td>
+        <td class="text-right text-slate-500">-</td>
+      `;
+    } else {
+      const returnClass = item.dailyReturn > 0 ? 'text-danger' : (item.dailyReturn < 0 ? 'text-success' : '');
+      const returnSign = item.dailyReturn > 0 ? '+' : '';
+      const formattedReturn = `${returnSign}${item.dailyReturn.toFixed(2)}%`;
+      
+      const formattedVolume = Math.round(item.volume).toLocaleString();
+      const formattedAmount = (item.amount / 100000000).toFixed(2);
+      
+      tr.innerHTML = `
+        <td>${item.stock['股票名稱']} (${item.symbol})</td>
+        <td class="text-right font-bold ${returnClass}">${formattedReturn}</td>
+        <td class="text-right">${formattedVolume}</td>
+        <td class="text-right">${formattedAmount}</td>
+      `;
+    }
     tbody.appendChild(tr);
   });
 }
+
+// Global variable to keep sector data around for detail table sorting without re-fetching
+let globalSectorDataForTable = [];
 
 // Start app
 init();

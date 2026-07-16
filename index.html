@@ -165,7 +165,11 @@
           </button>
         </div>
       </div>
-        <div class="chart-container-glass">
+        <div class="chart-container-glass" style="position: relative;">
+          <div id="chart-loading-overlay" class="chart-loading-overlay hidden">
+            <div class="spinner"></div>
+            <div class="loading-text">正在分析歷史大數據...</div>
+          </div>
           <div class="y-axis-title">當日報酬率</div>
           <canvas id="bubbleChart"></canvas>
         </div>
