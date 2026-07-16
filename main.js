@@ -792,12 +792,12 @@ const klineLoading = document.getElementById('kline-loading');
 const klineContainer = document.getElementById('kline-chart-container');
 
 klineCloseBtn.addEventListener('click', () => {
-  klinePanel.classList.add('translate-x-full');
+  klinePanel.classList.add('closed');
 });
 
 async function openKLinePanel(symbolWithSuffix, name) {
   klineTitle.textContent = `${name} (${symbolWithSuffix})`;
-  klinePanel.classList.remove('translate-x-full');
+  klinePanel.classList.remove('closed');
   klineLoading.classList.remove('hidden');
 
   if (!lwChart) {

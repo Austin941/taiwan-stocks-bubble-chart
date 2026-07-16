@@ -129,22 +129,22 @@
 
       <!-- 泡泡圖視圖 (Detail View) -->
       <div id="view-chart" class="view panel-glass flex-1 flex flex-col hidden">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-xl font-bold flex items-center gap-2">
-          <span class="text-[var(--accent-primary)]">⦿</span>
+      <div class="view-header">
+        <h2 class="view-title">
+          <span class="accent-dot">⦿</span>
           <span id="current-sector-title">族群分析</span>
         </h2>
         
-        <div class="flex items-center gap-4">
+        <div class="view-actions">
           <!-- Time Period Selector -->
-          <div class="flex gap-1 bg-[#0f172a] p-1 rounded-lg border border-[var(--border-color)]">
+          <div class="period-selector">
             <button class="period-btn active" data-period="1">單日(今日)</button>
             <button class="period-btn" data-period="5">近 5 日</button>
             <button class="period-btn" data-period="10">近 10 日</button>
             <button class="period-btn" data-period="20">近 20 日</button>
           </div>
           
-          <button id="back-btn" class="text-sm px-4 py-2 rounded-lg bg-[var(--surface-color)] border border-[var(--border-color)] hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] transition-colors">
+          <button id="back-btn" class="btn-back">
             ← 返回列表
           </button>
         </div>
@@ -171,18 +171,18 @@
   </div>
 
   <!-- Custom Chart Tooltip -->
-  <div id="chart-tooltip" class="absolute pointer-events-none opacity-0 transition-opacity z-50"></div>
+  <div id="chart-tooltip" class="chart-tooltip"></div>
 
-  <!-- K-Line Side Panel (Hidden by default) -->
-  <div id="kline-panel" class="fixed right-0 top-0 h-full w-[400px] md:w-[600px] panel-glass z-50 transform translate-x-full transition-transform duration-300 flex flex-col shadow-2xl border-l border-[var(--border-color)]">
-    <div class="flex items-center justify-between p-4 border-b border-[var(--border-color)]">
-      <h3 id="kline-title" class="text-lg font-bold text-white">股票技術分析</h3>
-      <button id="kline-close-btn" class="text-gray-400 hover:text-white px-2 py-1 text-xl leading-none">&times;</button>
+  <!-- K-Line Side Panel -->
+  <div id="kline-panel" class="kline-panel panel-glass closed">
+    <div class="kline-header">
+      <h3 id="kline-title" class="kline-title">股票技術分析</h3>
+      <button id="kline-close-btn" class="kline-close-btn">&times;</button>
     </div>
     <!-- Lightweight Charts Container -->
-    <div id="kline-chart-container" class="flex-1 relative w-full h-full p-2"></div>
-    <div id="kline-loading" class="absolute inset-0 flex items-center justify-center bg-[#090e17] bg-opacity-80 hidden z-10">
-      <div class="animate-pulse text-[var(--accent-primary)]">正在載入歷史資料...</div>
+    <div id="kline-chart-container" class="kline-chart-container"></div>
+    <div id="kline-loading" class="kline-loading hidden">
+      <div class="kline-loading-text">正在載入歷史資料...</div>
     </div>
   </div>
 
