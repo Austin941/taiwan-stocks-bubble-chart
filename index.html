@@ -21,6 +21,7 @@
     
     <nav class="app-nav">
       <button class="nav-btn active" data-target="view-ranking">族群資金流向</button>
+      <button class="nav-btn" data-target="view-theme-ranking">🎯 題材資金流向</button>
       <button class="nav-btn" data-target="view-radar">🔥 全市場爆量雷達</button>
     </nav>
     
@@ -54,6 +55,38 @@
                 </tr>
               </thead>
               <tbody id="rankingTableBody">
+                <tr><td colspan="5" class="text-center">資料載入中...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 題材表視圖 (Theme Master View) -->
+      <section id="view-theme-ranking" class="view hidden">
+        <div class="panel-glass">
+          <div class="panel-header">
+            <h2>全市場題材概念股排行 (即時資料)</h2>
+            <p>點擊「題材別」即可查看該概念股的專屬泡泡圖</p>
+          </div>
+          <div class="table-responsive">
+            <table class="ranking-table">
+              <thead>
+                <tr>
+                  <th>排名</th>
+                  <th>題材別</th>
+                  <th class="text-right sortable theme-sortable" data-sort="return">
+                    題材平均漲幅 <span class="sort-icon" id="theme-sort-return"></span>
+                  </th>
+                  <th class="text-right sortable theme-sortable" data-sort="volume">
+                    總成交量 (張) <span class="sort-icon" id="theme-sort-volume"></span>
+                  </th>
+                  <th class="text-right sortable theme-sortable" data-sort="amount" data-active="true" data-order="desc">
+                    總成交額 (億) <span class="sort-icon desc" id="theme-sort-amount">▼</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="themeRankingTableBody">
                 <tr><td colspan="5" class="text-center">資料載入中...</td></tr>
               </tbody>
             </table>

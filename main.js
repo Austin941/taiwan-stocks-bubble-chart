@@ -8,9 +8,12 @@ Chart.register(ChartDataLabels);
 let allStocks = [];
 let allMarketData = [];
 let sectorRankingData = [];
+let themeRankingData = [];
 let sectors = new Set();
+let themes = new Set();
 let chartInstance = null;
-let currentSector = '';
+let currentSector = null;
+let currentChartMode = 'sector'; // 'sector' or 'theme'
 
 // Sorting State
 let sortCol = 'amount'; // 'amount', 'volume', or 'return'
@@ -20,16 +23,23 @@ let sortDesc = true;
 let radarSortCol = 'amount'; // 'amount', 'volume', or 'return'
 let radarSortDesc = true;
 
+// Theme Sorting State
+let themeSortCol = 'amount';
+let themeSortDesc = true;
+
 // DOM Elements
 const viewRanking = document.getElementById('view-ranking');
+const viewThemeRanking = document.getElementById('view-theme-ranking');
 const viewRadar = document.getElementById('view-radar');
 const viewChart = document.getElementById('view-chart');
 const rankingTableBody = document.getElementById('rankingTableBody');
+const themeRankingTableBody = document.getElementById('themeRankingTableBody');
 const radarTableBody = document.getElementById('radarTableBody');
 const currentSectorTitle = document.getElementById('currentSectorTitle');
 const canvas = document.getElementById('bubbleChart');
 const backBtn = document.getElementById('backBtn');
-const sortableHeaders = document.querySelectorAll('.ranking-table th.sortable:not(.radar-sortable)');
+const sortableHeaders = document.querySelectorAll('.ranking-table th.sortable:not(.radar-sortable):not(.theme-sortable)');
+const themeSortableHeaders = document.querySelectorAll('.theme-sortable');
 const radarSortableHeaders = document.querySelectorAll('.radar-sortable');
 const navBtns = document.querySelectorAll('.nav-btn');
 
@@ -58,6 +68,8 @@ async function init() {
         // Hide all views
         viewRanking.classList.add('hidden');
         viewRanking.classList.remove('active');
+        viewThemeRanking.classList.add('hidden');
+        viewThemeRanking.classList.remove('active');
         viewRadar.classList.add('hidden');
         viewRadar.classList.remove('active');
         viewChart.classList.add('hidden');
@@ -97,6 +109,21 @@ async function init() {
       });
     });
 
+    // Setup Sorting Listeners for Theme
+    themeSortableHeaders.forEach(header => {
+      header.addEventListener('click', () => {
+        const col = header.getAttribute('data-sort');
+        if (themeSortCol === col) {
+          themeSortDesc = !themeSortDesc;
+        } else {
+          themeSortCol = col;
+          themeSortDesc = true;
+        }
+        updateThemeSortUI();
+        renderThemeRanking();
+      });
+    });
+
     // Setup Sorting Listeners for Radar
     radarSortableHeaders.forEach(header => {
       header.addEventListener('click', () => {
@@ -114,6 +141,7 @@ async function init() {
 
     // Render Initial View
     updateSortUI();
+    updateThemeSortUI();
     updateRadarSortUI();
     // Set up auto-refresh every 30 seconds for the Ranking view
     setInterval(() => {
@@ -182,33 +210,51 @@ async function processData() {
     });
 
     const sectorMap = {};
+    const themeMap = {};
+
     allMarketData.forEach(d => {
       const sector = d.stock['產業別'];
-      if (!sector || sector === '無' || sector === '') return;
-      
-      if (!sectorMap[sector]) {
-        sectorMap[sector] = {
-          sector: sector,
-          totalVolume: 0,
-          totalAmount: 0,
-          sumReturn: 0,
-          count: 0
-        };
+      if (sector && sector !== '無' && sector !== '') {
+        if (!sectorMap[sector]) {
+          sectorMap[sector] = { sector: sector, totalVolume: 0, totalAmount: 0, sumReturn: 0, count: 0 };
+        }
+        sectorMap[sector].totalVolume += d.volume;
+        sectorMap[sector].totalAmount += d.amount;
+        sectorMap[sector].sumReturn += d.dailyReturn;
+        sectorMap[sector].count += 1;
       }
-      sectorMap[sector].totalVolume += d.volume;
-      sectorMap[sector].totalAmount += d.amount;
-      sectorMap[sector].sumReturn += d.dailyReturn;
-      sectorMap[sector].count += 1;
+
+      // Parse themes
+      const themesStr = d.stock['題材清單'];
+      if (themesStr && themesStr !== '') {
+        const themesArr = themesStr.split('、').map(t => t.trim()).filter(t => t.length > 0);
+        themesArr.forEach(theme => {
+          if (!themeMap[theme]) {
+            themeMap[theme] = { theme: theme, totalVolume: 0, totalAmount: 0, sumReturn: 0, count: 0 };
+          }
+          themeMap[theme].totalVolume += d.volume;
+          themeMap[theme].totalAmount += d.amount;
+          themeMap[theme].sumReturn += d.dailyReturn;
+          themeMap[theme].count += 1;
+        });
+      }
     });
 
     sectorRankingData = Object.keys(sectorMap).map(sector => {
       const data = sectorMap[sector];
-      const avgReturn = data.sumReturn / (data.count || 1);
+      const avgReturn = data.sumReturn / data.count;
       return { sector, totalVolume: data.totalVolume, totalAmount: data.totalAmount, avgReturn };
+    });
+
+    themeRankingData = Object.keys(themeMap).map(theme => {
+      const data = themeMap[theme];
+      const avgReturn = data.sumReturn / data.count;
+      return { theme, totalVolume: data.totalVolume, totalAmount: data.totalAmount, avgReturn };
     });
 
     // Render Ranking and Radar after processing data
     renderRanking();
+    renderThemeRanking();
     renderRadar();
 
   } catch (error) {
@@ -216,7 +262,49 @@ async function processData() {
     document.getElementById('last-updated').textContent = '最後更新時間：載入失敗，請稍後再試。';
   }
 }
+function renderThemeRanking() {
+  themeRankingTableBody.innerHTML = '';
+  
+  // Sort the data
+  themeRankingData.sort((a, b) => {
+    let valA, valB;
+    if (themeSortCol === 'amount') {
+      valA = a.totalAmount; valB = b.totalAmount;
+    } else if (themeSortCol === 'volume') {
+      valA = a.totalVolume; valB = b.totalVolume;
+    } else {
+      valA = a.avgReturn; valB = b.avgReturn;
+    }
+    return themeSortDesc ? valB - valA : valA - valB;
+  });
 
+  themeRankingData.forEach((d, index) => {
+    const tr = document.createElement('tr');
+    
+    // Animation flash for update
+    tr.classList.add('flash-up');
+    setTimeout(() => tr.classList.remove('flash-up'), 1000);
+
+    const returnClass = d.avgReturn > 0 ? 'color-positive' : (d.avgReturn < 0 ? 'color-negative' : '');
+    const returnSign = d.avgReturn > 0 ? '+' : '';
+    const amountHundredMillion = (d.totalAmount / 10000).toFixed(2);
+
+    tr.innerHTML = `
+      <td>${index + 1}</td>
+      <td><span class="badge-sector">${d.theme}</span></td>
+      <td class="text-right ${returnClass}"><strong>${returnSign}${d.avgReturn.toFixed(2)}%</strong></td>
+      <td class="text-right">${d.totalVolume.toLocaleString()}</td>
+      <td class="text-right">${amountHundredMillion}</td>
+    `;
+
+    // Click on a row goes to the chart
+    tr.addEventListener('click', () => {
+      showChart(d.theme, 'theme');
+    });
+
+    themeRankingTableBody.appendChild(tr);
+  });
+}
 function renderRadar() {
   radarTableBody.innerHTML = '';
   
@@ -263,7 +351,7 @@ function renderRadar() {
     
     // Click on a radar row goes to the sector chart
     tr.addEventListener('click', () => {
-      showSectorChart(stock.stock['產業別']);
+      showChart(stock.stock['產業別'], 'sector');
     });
     
     radarTableBody.appendChild(tr);
@@ -319,7 +407,7 @@ function renderRanking() {
     row.addEventListener('click', (e) => {
       const sector = row.getAttribute('data-sector');
       if (sector) {
-        showSectorChart(sector);
+        showChart(sector, 'sector');
       }
     });
   });
@@ -339,25 +427,51 @@ function updateRadarSortUI() {
   });
 }
 
-function showSectorChart(sector) {
-  currentSector = sector;
+function updateThemeSortUI() {
+  themeSortableHeaders.forEach(header => {
+    const col = header.getAttribute('data-sort');
+    const icon = header.querySelector('.sort-icon');
+    if (col === themeSortCol) {
+      header.setAttribute('data-active', 'true');
+      icon.textContent = themeSortDesc ? '▼' : '▲';
+    } else {
+      header.removeAttribute('data-active');
+      icon.textContent = '';
+    }
+  });
+}
+
+function showChart(identifier, mode = 'sector') {
+  currentSector = identifier;
+  currentChartMode = mode;
   
   // Switch Views
   viewRanking.classList.add('hidden');
   viewRanking.classList.remove('active');
+  viewThemeRanking.classList.add('hidden');
+  viewThemeRanking.classList.remove('active');
   viewRadar.classList.add('hidden');
   viewRadar.classList.remove('active');
   viewChart.classList.remove('hidden');
   viewChart.classList.add('active');
   
-  currentSectorTitle.textContent = `${sector} 族群分析`;
+  const modeText = mode === 'sector' ? '族群' : '題材概念股';
+  currentSectorTitle.textContent = `${identifier} ${modeText}分析`;
   
-  renderChart(sector);
+  renderChart(identifier, mode);
 }
 
-async function renderChart(sector) {
-  // Filter stocks in sector
-  let sectorData = allMarketData.filter(d => d.stock['產業別'] === sector);
+async function renderChart(identifier, mode) {
+  // Filter stocks
+  let sectorData = [];
+  if (mode === 'sector') {
+    sectorData = allMarketData.filter(d => d.stock['產業別'] === identifier);
+  } else {
+    sectorData = allMarketData.filter(d => {
+      const themes = d.stock['題材清單'];
+      return themes && themes.includes(identifier);
+    });
+  }
   
   // To avoid hitting Fugle limits (we now have 5 API keys = 300 req/min), 
   // we pick the top 50 most traded stocks in this sector
@@ -383,7 +497,7 @@ async function renderChart(sector) {
   }));
 
   const datasets = [{
-    label: `${sector} 族群`,
+    label: `${identifier} 族群`,
     data: sectorData.map(d => ({
       x: d.volume,
       y: d.dailyReturn,
