@@ -1,5 +1,8 @@
 import Chart from 'chart.js/auto';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import Papa from 'papaparse';
+
+Chart.register(ChartDataLabels);
 
 // State
 let allStocks = [];
@@ -299,6 +302,19 @@ async function renderChart(sector) {
         easing: 'easeOutQuart'
       },
       plugins: {
+        datalabels: {
+          color: '#cbd5e1', // Slate-300
+          font: {
+            family: 'Inter, sans-serif',
+            size: 11,
+            weight: 600
+          },
+          align: 'bottom', // Put label under the bubble
+          offset: 4,       // Add some spacing
+          formatter: function(value, context) {
+            return value.raw.stock['股票名稱']; // Access the stock name from raw data
+          }
+        },
         legend: {
           labels: {
             color: '#f8fafc'
