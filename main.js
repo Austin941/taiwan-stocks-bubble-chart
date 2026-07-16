@@ -132,19 +132,12 @@ async function processData() {
     sectorMap[sector].count += 1;
   });
 
-  sectorRankingData = Object.values(sectorMap).map(s => ({
-    sector: s.sector,
-    totalVolume: s.totalVolume,
-    totalAmount: s.totalAmount,
-    avgReturn: s.sumReturn / s.count
-  }));
+    sectorRankingData = Object.keys(sectorMap).map(sector => {
+      const data = sectorMap[sector];
+      const avgReturn = data.sumReturn / (data.count || 1);
+      return { sector, totalVolume: data.totalVolume, totalAmount: data.totalAmount, avgReturn };
+    });
 
-  // Populate Select
-  const sortedSectors = Array.from(sectors).sort();
-  sectorSelect.innerHTML = sortedSectors.map(s => `<option value="${s}">${s}</option>`).join('');
-
-  // (Dropdown listener removed)
-  
   // Render Ranking after processing data
   renderRanking();
   } catch(e) {
