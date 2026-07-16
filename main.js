@@ -588,20 +588,29 @@ async function renderChart(identifier, mode) {
     
   } else {
     // Historical Data Gathering
+    // To prevent Vercel serverless timeouts (10s limit), we pre-sort by today's amount
+    // and ONLY fetch historical data for the top 50 stocks in the sector/theme.
     let baseData = [];
     if (mode === 'sector') {
-      baseData = allMarketData.filter(d => d.stock['產業別'] === identifier).map(d => d.stock);
+      baseData = allMarketData.filter(d => d.stock['產業別'] === identifier);
     } else {
       baseData = allMarketData.filter(d => {
         const themes = d.stock['題材清單'];
         return themes && themes.includes(identifier);
-      }).map(d => d.stock);
+      });
     }
+    
+    // Sort by today's amount and slice to top 50 BEFORE sending to backend
+    baseData.sort((a, b) => b.amount - a.amount);
+    baseData = baseData.slice(0, 50).map(d => d.stock);
     
     const symbolsWithSuffix = baseData.map(s => {
       const market = s['市場別'];
       return market.includes('上市') ? `${s['股票代號']}.TW` : `${s['股票代號']}.TWO`;
     });
+    
+    const modeText = mode === 'sector' ? '族群' : '題材概念股';
+    currentSectorTitle.textContent = `${identifier} ${modeText}分析 (歷史資料載入中...)`;
     
     try {
       const res = await fetch(`/api/period_analysis`, {
@@ -632,6 +641,9 @@ async function renderChart(identifier, mode) {
     
     sectorData.sort((a, b) => b.amount - a.amount);
     sectorData = sectorData.slice(0, 50);
+    
+    const modeText = mode === 'sector' ? '族群' : '題材概念股';
+    currentSectorTitle.textContent = `${identifier} ${modeText}分析`;
   }
 
   // 3. Render Chart Initial State
