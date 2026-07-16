@@ -353,18 +353,28 @@ async function renderChart(sector) {
       },
       scales: {
         x: {
+          type: 'logarithmic',
           title: {
             display: true,
-            text: '成交量 (張)',
-            color: '#1e293b',
-            font: { size: 16, weight: '600' }
+            text: '成交量 (張) - 對數刻度',
+            color: '#94a3b8',
+            font: { size: 14, weight: '500' }
           },
           ticks: {
             color: '#94a3b8',
-            font: { size: 14 }
+            font: { size: 12 },
+            callback: function(value, index, values) {
+              // Only show major log scale ticks to avoid clutter
+              if (value === 10 || value === 100 || value === 1000 || value === 10000 || value === 100000 || value === 1000000) {
+                return value.toLocaleString();
+              }
+              // Allow the first and last tick or very large numbers to show if needed
+              if (index === 0 || index === values.length - 1) return value.toLocaleString();
+              return '';
+            }
           },
           grid: {
-            color: 'rgba(255, 255, 255, 0.1)'
+            color: 'rgba(255, 255, 255, 0.05)'
           }
         },
         y: {
