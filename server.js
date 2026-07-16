@@ -14,18 +14,29 @@ const __dirname = path.dirname(__filename);
 const app = express();
 app.use(cors());
 
-const FUGLE_API_KEY = process.env.FUGLE_API_KEY;
+const FUGLE_API_KEYS = process.env.FUGLE_API_KEYS 
+  ? process.env.FUGLE_API_KEYS.split(',') 
+  : [];
+let currentKeyIndex = 0;
 
-// 1. Fugle API Proxy (High frequency, 60 req/min limit)
+// 1. Fugle API Proxy (High frequency, load balanced across multiple keys)
 app.get('/api/fugle/:symbol', async (req, res) => {
+  if (FUGLE_API_KEYS.length === 0) {
+    return res.status(500).json({ error: 'No Fugle API Keys configured' });
+  }
+
+  // Round-robin key selection
+  const apiKey = FUGLE_API_KEYS[currentKeyIndex];
+  currentKeyIndex = (currentKeyIndex + 1) % FUGLE_API_KEYS.length;
+
   try {
     const { symbol } = req.params;
     const response = await axios.get(`https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote/${symbol}`, {
-      headers: { 'X-API-KEY': FUGLE_API_KEY }
+      headers: { 'X-API-KEY': apiKey }
     });
     res.json(response.data);
   } catch (error) {
-    console.error(`[Fugle Proxy] Error fetching ${req.params.symbol}:`, error.message);
+    console.error(`[Fugle Proxy] Error fetching ${req.params.symbol} with key index ${currentKeyIndex}:`, error.message);
     res.status(500).json({ error: 'Failed to fetch Fugle data' });
   }
 });

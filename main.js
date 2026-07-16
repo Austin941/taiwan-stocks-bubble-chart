@@ -226,13 +226,14 @@ async function renderChart(sector) {
   // Filter stocks in sector
   let sectorData = allMarketData.filter(d => d.stock['產業別'] === sector);
   
-  // To avoid hitting Fugle limits (60/min), we pick the top 10 most traded stocks in this sector
+  // To avoid hitting Fugle limits (we now have 5 API keys = 300 req/min), 
+  // we pick the top 50 most traded stocks in this sector
   // to fetch real-time high-frequency data, while the rest uses the snapshot.
   sectorData.sort((a, b) => b.volume - a.volume);
-  const top10 = sectorData.slice(0, 10);
+  const top50 = sectorData.slice(0, 50);
   
-  // Try to fetch real-time Fugle quotes for top 10
-  await Promise.all(top10.map(async (d) => {
+  // Try to fetch real-time Fugle quotes for top 50
+  await Promise.all(top50.map(async (d) => {
     if(d.volume === 0 && d.price === 0) return; // skip inactive
     try {
       const res = await fetch(`/api/fugle/${d.stock['股票代號']}`);
