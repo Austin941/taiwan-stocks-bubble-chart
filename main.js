@@ -16,6 +16,28 @@ let currentSector = null;
 let currentChartMode = 'sector'; // 'sector' or 'theme'
 let currentPeriodDays = 1; // 1 = today, >1 = historical period
 
+// Global error handler for debugging
+window.onerror = function(message, source, lineno, colno, error) {
+  const chartContainer = document.querySelector('.chart-container-glass');
+  if (chartContainer) {
+    chartContainer.innerHTML = `<div style="color: red; padding: 20px;">
+      <h3>Error Occurred:</h3>
+      <p>${message}</p>
+      <p>Line: ${lineno}:${colno}</p>
+      <pre>${error ? error.stack : ''}</pre>
+    </div>`;
+  }
+};
+window.addEventListener('unhandledrejection', function(event) {
+  const chartContainer = document.querySelector('.chart-container-glass');
+  if (chartContainer) {
+    chartContainer.innerHTML = `<div style="color: red; padding: 20px;">
+      <h3>Unhandled Promise Rejection:</h3>
+      <pre>${event.reason ? event.reason.stack || event.reason : 'Unknown Error'}</pre>
+    </div>`;
+  }
+});
+
 // Sorting State
 let sortCol = 'amount'; // 'amount', 'volume', or 'return'
 let sortDesc = true;
@@ -616,7 +638,7 @@ async function renderChart(identifier, mode) {
   const datasets = [{
     label: `${identifier} ${mode === 'sector' ? '族群' : '題材'}`,
     data: sectorData.map(d => ({
-      x: (d.amount / 100000000) || 0, 
+      x: Math.max((d.amount / 100000000) || 0.1, 0.1), // Ensure x > 0 for log scale safety
       y: d.dailyReturn || 0,
       r: Math.max(4, Math.min((d.volume || 0) / 2000, 25)), 
       raw: d 
@@ -639,7 +661,9 @@ async function renderChart(identifier, mode) {
   Chart.defaults.color = '#475569';
   Chart.defaults.font.family = 'Inter, sans-serif';
 
-  chartInstance = new Chart(canvas, {
+  try {
+    const ctx = document.getElementById('bubbleChart').getContext('2d');
+    chartInstance = new Chart(ctx, {
     type: 'bubble',
     data: { datasets },
     options: {
@@ -731,30 +755,23 @@ async function renderChart(identifier, mode) {
       },
       scales: {
         x: {
-          type: 'logarithmic',
-          title: {
-            display: true,
-            text: '成交金額 (億) - 對數級距',
-            color: 'rgba(255, 255, 255, 0.7)'
-          },
-          grid: { color: 'rgba(255, 255, 255, 0.1)' },
-          ticks: { color: 'rgba(255, 255, 255, 0.7)' }
+          type: 'linear',
+          title: { display: true, text: '成交金額 (億)', color: '#94a3b8' },
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: { color: '#94a3b8' }
         },
         y: {
-          title: {
-            display: false
-          },
-          ticks: {
-            color: '#94a3b8',
-            font: { size: 14 }
-          },
-          grid: {
-            color: 'rgba(255, 255, 255, 0.1)'
-          }
+          title: { display: true, text: '報酬率 (%)', color: '#94a3b8' },
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: { color: '#94a3b8' }
         }
       }
     }
   });
+  } catch (err) {
+    console.error("Chart initialization failed:", err);
+    return;
+  }
 }
 
 // --- K-Line Logic ---
