@@ -75,9 +75,15 @@
                   <th>排名</th>
                   <th>股票名稱 (代號)</th>
                   <th class="text-right">產業別</th>
-                  <th class="text-right">當日漲跌幅</th>
-                  <th class="text-right">成交量 (張)</th>
-                  <th class="text-right">成交額 (億)</th>
+                  <th class="text-right sortable radar-sortable" data-sort="return">
+                    當日漲跌幅 <span class="sort-icon" id="radar-sort-return"></span>
+                  </th>
+                  <th class="text-right sortable radar-sortable" data-sort="volume">
+                    成交量 (張) <span class="sort-icon" id="radar-sort-volume"></span>
+                  </th>
+                  <th class="text-right sortable radar-sortable" data-sort="amount" data-active="true" data-order="desc">
+                    成交額 (億) <span class="sort-icon desc" id="radar-sort-amount">▼</span>
+                  </th>
                 </tr>
               </thead>
               <tbody id="radarTableBody">

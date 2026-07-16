@@ -16,6 +16,10 @@ let currentSector = '';
 let sortCol = 'amount'; // 'amount', 'volume', or 'return'
 let sortDesc = true;
 
+// Radar Sorting State
+let radarSortCol = 'amount'; // 'amount', 'volume', or 'return'
+let radarSortDesc = true;
+
 // DOM Elements
 const viewRanking = document.getElementById('view-ranking');
 const viewRadar = document.getElementById('view-radar');
@@ -25,7 +29,8 @@ const radarTableBody = document.getElementById('radarTableBody');
 const currentSectorTitle = document.getElementById('currentSectorTitle');
 const canvas = document.getElementById('bubbleChart');
 const backBtn = document.getElementById('backBtn');
-const sortableHeaders = document.querySelectorAll('.ranking-table th.sortable');
+const sortableHeaders = document.querySelectorAll('.ranking-table th.sortable:not(.radar-sortable)');
+const radarSortableHeaders = document.querySelectorAll('.radar-sortable');
 const navBtns = document.querySelectorAll('.nav-btn');
 
 // Initialize
@@ -77,7 +82,7 @@ async function init() {
       currentSector = null; // Clear chart state
     });
 
-    // Setup Sorting Listeners
+    // Setup Sorting Listeners for Ranking
     sortableHeaders.forEach(header => {
       header.addEventListener('click', () => {
         const col = header.getAttribute('data-sort');
@@ -92,8 +97,24 @@ async function init() {
       });
     });
 
+    // Setup Sorting Listeners for Radar
+    radarSortableHeaders.forEach(header => {
+      header.addEventListener('click', () => {
+        const col = header.getAttribute('data-sort');
+        if (radarSortCol === col) {
+          radarSortDesc = !radarSortDesc;
+        } else {
+          radarSortCol = col;
+          radarSortDesc = true;
+        }
+        updateRadarSortUI();
+        renderRadar();
+      });
+    });
+
     // Render Initial View
     updateSortUI();
+    updateRadarSortUI();
     // Set up auto-refresh every 30 seconds for the Ranking view
     setInterval(() => {
       // Only refresh if we are currently looking at the ranking view
@@ -199,10 +220,20 @@ async function processData() {
 function renderRadar() {
   radarTableBody.innerHTML = '';
   
-  // Sort all stocks by amount (descending)
+  // Sort all stocks by selected column
   const sortedStocks = [...allMarketData]
     .filter(d => d.amount > 0) // Only show active stocks
-    .sort((a, b) => b.amount - a.amount)
+    .sort((a, b) => {
+      let valA, valB;
+      if (radarSortCol === 'amount') {
+        valA = a.amount; valB = b.amount;
+      } else if (radarSortCol === 'volume') {
+        valA = a.volume; valB = b.volume;
+      } else {
+        valA = a.dailyReturn; valB = b.dailyReturn;
+      }
+      return radarSortDesc ? valB - valA : valA - valB;
+    })
     .slice(0, 100); // Top 100
     
   if (sortedStocks.length === 0) {
@@ -294,7 +325,19 @@ function renderRanking() {
   });
 }
 
-// Obsolete showView function removed
+function updateRadarSortUI() {
+  radarSortableHeaders.forEach(header => {
+    const col = header.getAttribute('data-sort');
+    const icon = header.querySelector('.sort-icon');
+    if (col === radarSortCol) {
+      header.setAttribute('data-active', 'true');
+      icon.textContent = radarSortDesc ? '▼' : '▲';
+    } else {
+      header.removeAttribute('data-active');
+      icon.textContent = '';
+    }
+  });
+}
 
 function showSectorChart(sector) {
   currentSector = sector;
