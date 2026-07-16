@@ -582,18 +582,27 @@ body {
 }
 
 .kline-close-btn {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: #f8fafc;
   font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
-  padding: 0 0.5rem;
-  transition: color 0.2s;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .kline-close-btn:hover {
-  color: #fff;
+  background: rgba(239, 68, 68, 0.8);
+  border-color: rgba(239, 68, 68, 1);
+  color: #ffffff;
+  transform: scale(1.05);
 }
 
 .kline-chart-container {
