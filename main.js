@@ -624,6 +624,10 @@ async function renderChart(identifier, mode) {
     }
   }
 
+  // Ensure we only show the top 50 by trading amount to avoid cluttered charts
+  sectorData.sort((a, b) => b.amount - a.amount);
+  sectorData = sectorData.slice(0, 50);
+
   // Draw chart using sectorData
   const chartData = sectorData.map(d => ({
     x: d.amount / 100000000, 
