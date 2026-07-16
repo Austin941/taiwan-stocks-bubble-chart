@@ -56,7 +56,38 @@ body {
   font-weight: 500;
 }
 
-/* View Control */
+/* View Control & Navigation */
+.app-nav {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.nav-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1.15rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.nav-btn.active {
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--accent-color);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
 .view {
   display: none;
   animation: fadeIn 0.4s ease-out forwards;
@@ -359,6 +390,28 @@ body {
   .ranking-table td:nth-child(5) { grid-area: amount; font-size: 1.15rem; text-align: left; }
   .ranking-table td:nth-child(5)::before { content: "成交額(億): "; color: var(--text-secondary); font-size: 0.95rem;}
   
+  /* Radar Table Mobile Adjustments (6 columns) */
+  .radar-table tr {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: 
+      "rank sector"
+      "name name"
+      "amount return"
+      "volume return";
+  }
+  .radar-table td:nth-child(1) { grid-area: rank; font-size: 0.95rem; color: var(--text-secondary); text-align: left;}
+  .radar-table td:nth-child(1)::before { content: "排行 #"; }
+  .radar-table td:nth-child(2) { grid-area: name; font-size: 1.3rem; font-weight: bold; text-align: left; padding: 0.5rem 0;}
+  .radar-table td:nth-child(2)::before { content: ""; }
+  .radar-table td:nth-child(3) { grid-area: sector; text-align: right; }
+  .radar-table td:nth-child(3)::before { content: ""; }
+  .radar-table td:nth-child(4) { grid-area: return; display: flex; align-items: center; justify-content: flex-end; }
+  .radar-table td:nth-child(4)::before { content: ""; }
+  .radar-table td:nth-child(5) { grid-area: volume; text-align: left;}
+  .radar-table td:nth-child(5)::before { content: "張數: "; }
+  .radar-table td:nth-child(6) { grid-area: amount; font-size: 1.15rem; text-align: left;}
+  .radar-table td:nth-child(6)::before { content: "成交額(億): "; color: var(--text-secondary); font-size: 0.95rem;}
+
   .chart-container-glass {
     height: 70vh; /* Taller on mobile */
     padding-left: 1rem;

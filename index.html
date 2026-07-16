@@ -19,6 +19,11 @@
       </div>
     </header>
     
+    <nav class="app-nav">
+      <button class="nav-btn active" data-target="view-ranking">族群資金流向</button>
+      <button class="nav-btn" data-target="view-radar">🔥 全市場爆量雷達</button>
+    </nav>
+    
     <main class="main-content">
       
       <!-- 總表視圖 (Master View) -->
@@ -50,6 +55,33 @@
               </thead>
               <tbody id="rankingTableBody">
                 <tr><td colspan="5" class="text-center">資料載入中...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 爆量雷達視圖 (Radar View) -->
+      <section id="view-radar" class="view hidden">
+        <div class="panel-glass">
+          <div class="panel-header">
+            <h2>全市場爆量雷達 (即時熱門榜)</h2>
+            <p>顯示全市場即時成交金額最高的前 100 檔個股</p>
+          </div>
+          <div class="table-responsive">
+            <table class="ranking-table radar-table">
+              <thead>
+                <tr>
+                  <th>排名</th>
+                  <th>股票名稱 (代號)</th>
+                  <th class="text-right">產業別</th>
+                  <th class="text-right">當日漲跌幅</th>
+                  <th class="text-right">成交量 (張)</th>
+                  <th class="text-right">成交額 (億)</th>
+                </tr>
+              </thead>
+              <tbody id="radarTableBody">
+                <tr><td colspan="6" class="text-center">資料載入中...</td></tr>
               </tbody>
             </table>
           </div>

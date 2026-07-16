@@ -18,60 +18,93 @@ let sortDesc = true;
 
 // DOM Elements
 const viewRanking = document.getElementById('view-ranking');
+const viewRadar = document.getElementById('view-radar');
 const viewChart = document.getElementById('view-chart');
 const rankingTableBody = document.getElementById('rankingTableBody');
+const radarTableBody = document.getElementById('radarTableBody');
 const currentSectorTitle = document.getElementById('currentSectorTitle');
 const canvas = document.getElementById('bubbleChart');
 const backBtn = document.getElementById('backBtn');
-const sortableHeaders = document.querySelectorAll('.sortable');
+const sortableHeaders = document.querySelectorAll('.ranking-table th.sortable');
+const navBtns = document.querySelectorAll('.nav-btn');
 
 // Initialize
 async function init() {
   try {
-    const response = await fetch('./stocks.csv');
-    const csvText = await response.text();
-    
-    Papa.parse(csvText, {
+    Papa.parse('./stocks.csv', {
+      download: true,
       header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        allStocks = results.data;
+      complete: function(results) {
+        allStocks = results.data.filter(d => d['股票代號'] && d['股票名稱']); // 確保不收空行
         processData();
       }
     });
+
+    // Setup Navigation Tabs
+    navBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        // Remove active from all
+        navBtns.forEach(b => b.classList.remove('active'));
+        // Add active to clicked
+        e.target.classList.add('active');
+        
+        const targetViewId = e.target.getAttribute('data-target');
+        
+        // Hide all views
+        viewRanking.classList.add('hidden');
+        viewRanking.classList.remove('active');
+        viewRadar.classList.add('hidden');
+        viewRadar.classList.remove('active');
+        viewChart.classList.add('hidden');
+        viewChart.classList.remove('active');
+        
+        // Show target view
+        const targetView = document.getElementById(targetViewId);
+        targetView.classList.remove('hidden');
+        targetView.classList.add('active');
+        
+        // Reset chart state if leaving chart view
+        if (targetViewId !== 'view-chart') {
+          currentSector = null;
+        }
+      });
+    });
+
+    backBtn.addEventListener('click', () => {
+      // Find the currently active nav button and trigger click to restore view
+      const activeNav = document.querySelector('.nav-btn.active') || navBtns[0];
+      activeNav.click();
+      currentSector = null; // Clear chart state
+    });
+
+    // Setup Sorting Listeners
+    sortableHeaders.forEach(header => {
+      header.addEventListener('click', () => {
+        const col = header.getAttribute('data-sort');
+        if (sortCol === col) {
+          sortDesc = !sortDesc; // toggle order
+        } else {
+          sortCol = col;
+          sortDesc = true; // default to descending for new column
+        }
+        updateSortUI();
+        renderRanking();
+      });
+    });
+
+    // Render Initial View
+    updateSortUI();
+    // Set up auto-refresh every 30 seconds for the Ranking view
+    setInterval(() => {
+      // Only refresh if we are currently looking at the ranking view
+      if (currentSector === null) {
+        processData();
+      }
+    }, 30000);
   } catch (error) {
     console.error('Failed to load data:', error);
     rankingTableBody.innerHTML = '<tr><td colspan="5" class="text-center">載入資料失敗</td></tr>';
   }
-
-  backBtn.addEventListener('click', () => {
-    showView('ranking');
-  });
-
-  // Setup Sorting Listeners
-  sortableHeaders.forEach(header => {
-    header.addEventListener('click', () => {
-      const col = header.getAttribute('data-sort');
-      if (sortCol === col) {
-        sortDesc = !sortDesc; // toggle order
-      } else {
-        sortCol = col;
-        sortDesc = true; // default to descending for new column
-      }
-      updateSortUI();
-      renderRanking();
-    });
-  });
-
-  // Render Initial View
-  updateSortUI();
-  // Set up auto-refresh every 30 seconds for the Ranking view
-  setInterval(() => {
-    // Only refresh if we are currently looking at the ranking view
-    if (currentSector === null) {
-      processData();
-    }
-  }, 30000);
 }
 
 async function processData() {
@@ -100,7 +133,6 @@ async function processData() {
       let price = 0;
 
       // Extract raw data from cache if available
-      // The TWSE backend returns { price, prevClose, volume }
       if (marketCache[symbol]) {
         const data = marketCache[symbol];
         price = data.price;
@@ -108,9 +140,8 @@ async function processData() {
         if (data.prevClose && data.prevClose > 0) {
           dailyReturn = ((price - data.prevClose) / data.prevClose) * 100;
         }
-        amount = price * volume * 1000; // rough estimation if real amount is not there
+        amount = price * volume * 1000;
       } else {
-        // Fallback for missing stocks (e.g., suspended or no trade)
         dailyReturn = 0;
         volume = 0;
         amount = 0;
@@ -129,25 +160,25 @@ async function processData() {
       };
     });
 
-  const sectorMap = {};
-  allMarketData.forEach(d => {
-    const sector = d.stock['產業別'];
-    if (!sector || sector === '無' || sector === '') return;
-    
-    if (!sectorMap[sector]) {
-      sectorMap[sector] = {
-        sector: sector,
-        totalVolume: 0,
-        totalAmount: 0,
-        sumReturn: 0,
-        count: 0
-      };
-    }
-    sectorMap[sector].totalVolume += d.volume;
-    sectorMap[sector].totalAmount += d.amount;
-    sectorMap[sector].sumReturn += d.dailyReturn;
-    sectorMap[sector].count += 1;
-  });
+    const sectorMap = {};
+    allMarketData.forEach(d => {
+      const sector = d.stock['產業別'];
+      if (!sector || sector === '無' || sector === '') return;
+      
+      if (!sectorMap[sector]) {
+        sectorMap[sector] = {
+          sector: sector,
+          totalVolume: 0,
+          totalAmount: 0,
+          sumReturn: 0,
+          count: 0
+        };
+      }
+      sectorMap[sector].totalVolume += d.volume;
+      sectorMap[sector].totalAmount += d.amount;
+      sectorMap[sector].sumReturn += d.dailyReturn;
+      sectorMap[sector].count += 1;
+    });
 
     sectorRankingData = Object.keys(sectorMap).map(sector => {
       const data = sectorMap[sector];
@@ -155,11 +186,57 @@ async function processData() {
       return { sector, totalVolume: data.totalVolume, totalAmount: data.totalAmount, avgReturn };
     });
 
-  // Render Ranking after processing data
-  renderRanking();
-  } catch(e) {
-    console.error("Error processing data", e);
+    // Render Ranking and Radar after processing data
+    renderRanking();
+    renderRadar();
+
+  } catch (error) {
+    console.error('Error fetching market snapshot:', error);
+    document.getElementById('last-updated').textContent = '最後更新時間：載入失敗，請稍後再試。';
   }
+}
+
+function renderRadar() {
+  radarTableBody.innerHTML = '';
+  
+  // Sort all stocks by amount (descending)
+  const sortedStocks = [...allMarketData]
+    .filter(d => d.amount > 0) // Only show active stocks
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 100); // Top 100
+    
+  if (sortedStocks.length === 0) {
+    radarTableBody.innerHTML = '<tr><td colspan="6" class="text-center">目前無交易資料</td></tr>';
+    return;
+  }
+  
+  sortedStocks.forEach((stock, index) => {
+    const tr = document.createElement('tr');
+    
+    // Animation flash for update
+    tr.classList.add('flash-up');
+    setTimeout(() => tr.classList.remove('flash-up'), 1000);
+    
+    const returnClass = stock.dailyReturn > 0 ? 'color-positive' : (stock.dailyReturn < 0 ? 'color-negative' : '');
+    const returnSign = stock.dailyReturn > 0 ? '+' : '';
+    const amountHundredMillion = (stock.amount / 10000).toFixed(2);
+    
+    tr.innerHTML = `
+      <td>${index + 1}</td>
+      <td>${stock.stock['股票名稱']} <span style="font-size:0.9em;color:var(--text-secondary)">${stock.stock['股票代號']}</span></td>
+      <td class="text-right"><span class="badge-sector">${stock.stock['產業別']}</span></td>
+      <td class="text-right ${returnClass}"><strong>${returnSign}${stock.dailyReturn.toFixed(2)}%</strong></td>
+      <td class="text-right">${stock.volume.toLocaleString()}</td>
+      <td class="text-right">${amountHundredMillion}</td>
+    `;
+    
+    // Click on a radar row goes to the sector chart
+    tr.addEventListener('click', () => {
+      showSectorChart(stock.stock['產業別']);
+    });
+    
+    radarTableBody.appendChild(tr);
+  });
 }
 
 function updateSortUI() {
@@ -211,27 +288,28 @@ function renderRanking() {
     row.addEventListener('click', (e) => {
       const sector = row.getAttribute('data-sector');
       if (sector) {
-        currentSector = sector;
-        if(currentSectorTitle) currentSectorTitle.textContent = sector;
-        showView('chart');
-        renderChart(sector);
+        showSectorChart(sector);
       }
     });
   });
 }
 
-function showView(viewName) {
-  if (viewName === 'ranking') {
-    viewRanking.classList.add('active');
-    viewRanking.classList.remove('hidden');
-    viewChart.classList.add('hidden');
-    viewChart.classList.remove('active');
-  } else if (viewName === 'chart') {
-    viewChart.classList.add('active');
-    viewChart.classList.remove('hidden');
-    viewRanking.classList.add('hidden');
-    viewRanking.classList.remove('active');
-  }
+// Obsolete showView function removed
+
+function showSectorChart(sector) {
+  currentSector = sector;
+  
+  // Switch Views
+  viewRanking.classList.add('hidden');
+  viewRanking.classList.remove('active');
+  viewRadar.classList.add('hidden');
+  viewRadar.classList.remove('active');
+  viewChart.classList.remove('hidden');
+  viewChart.classList.add('active');
+  
+  currentSectorTitle.textContent = `${sector} 族群分析`;
+  
+  renderChart(sector);
 }
 
 async function renderChart(sector) {
@@ -266,7 +344,7 @@ async function renderChart(sector) {
     data: sectorData.map(d => ({
       x: d.volume,
       y: d.dailyReturn,
-      r: Math.max(5, Math.min(d.amount / 50000, 35)), 
+      r: Math.max(4, Math.min(d.amount / 80000, 22)), // Reduced max radius to 22 and base to 4
       raw: d 
     })),
     backgroundColor: sectorData.map(d => 
@@ -312,8 +390,9 @@ async function renderChart(sector) {
           align: 'bottom', // Put label under the bubble
           offset: window.innerWidth < 768 ? 2 : 4,       // Add some spacing
           formatter: function(value, context) {
-            // On mobile screens, only show labels for the top 15 bubbles to avoid text overlapping
-            if (window.innerWidth < 768 && context.dataIndex >= 15) {
+            // Limit labels to top 5 on mobile, top 10 on desktop to prevent heavy overlapping
+            const limit = window.innerWidth < 768 ? 5 : 10;
+            if (context.dataIndex >= limit) {
               return null;
             }
             return value.raw.stock['股票名稱']; // Access the stock name from raw data
