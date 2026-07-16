@@ -291,10 +291,89 @@ body {
 .color-positive { color: var(--positive-color) !important; }
 .color-negative { color: var(--negative-color) !important; }
 
-/* Responsive */
+/* Responsive RWD */
+@media (max-width: 1024px) {
+  body {
+    padding: 1rem;
+    font-size: 1.05rem;
+  }
+  .app-header h1 {
+    font-size: 2.2rem;
+  }
+  .ranking-table td {
+    padding: 1rem 0.5rem;
+  }
+  .chart-container-glass {
+    height: 50vh;
+    min-height: 450px;
+    padding: 1rem;
+    padding-left: 2rem;
+  }
+}
+
 @media (max-width: 768px) {
+  /* Convert Table to Card List */
+  .ranking-table, .ranking-table tbody, .ranking-table tr, .ranking-table td {
+    display: block;
+    width: 100%;
+  }
+  .ranking-table thead {
+    display: none; /* Hide headers */
+  }
+  .ranking-table tr {
+    margin-bottom: 1rem;
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: 
+      "rank sector"
+      "amount return"
+      "volume return";
+    gap: 0.5rem;
+  }
+  .ranking-table tr:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+  
+  /* Map columns to grid areas */
+  .ranking-table td {
+    padding: 0;
+    border: none;
+  }
+  
+  .ranking-table td:nth-child(1) { grid-area: rank; font-size: 0.95rem; color: var(--text-secondary); text-align: left; }
+  .ranking-table td:nth-child(1)::before { content: "排名 #"; }
+  
+  .ranking-table td:nth-child(2) { grid-area: sector; text-align: right; }
+  .ranking-table td:nth-child(2) .badge-sector { padding: 0.2rem 0.8rem; font-size: 0.9rem; }
+  
+  .ranking-table td:nth-child(3) { grid-area: return; display: flex; align-items: center; justify-content: flex-end; }
+  .ranking-table td:nth-child(3) strong { font-size: 1.6rem !important; }
+  
+  .ranking-table td:nth-child(4) { grid-area: volume; font-size: 0.95rem; color: var(--text-secondary); text-align: left;}
+  .ranking-table td:nth-child(4)::before { content: "張數: "; }
+  
+  .ranking-table td:nth-child(5) { grid-area: amount; font-size: 1.15rem; text-align: left; }
+  .ranking-table td:nth-child(5)::before { content: "成交額(億): "; color: var(--text-secondary); font-size: 0.95rem;}
+  
+  .chart-container-glass {
+    height: 70vh; /* Taller on mobile */
+    padding-left: 1rem;
+  }
+  .y-axis-title {
+    display: none; /* Hide vertical title on mobile to save space */
+  }
+  
   .controls-glass {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+    padding: 1rem;
+  }
+  .btn-secondary {
+    width: 100%;
+    justify-content: center;
   }
 }

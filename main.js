@@ -306,12 +306,16 @@ async function renderChart(sector) {
           color: '#cbd5e1', // Slate-300
           font: {
             family: 'Inter, sans-serif',
-            size: 11,
-            weight: 600
+            size: window.innerWidth < 768 ? 9 : 11,
+            weight: window.innerWidth < 768 ? 500 : 600
           },
           align: 'bottom', // Put label under the bubble
-          offset: 4,       // Add some spacing
+          offset: window.innerWidth < 768 ? 2 : 4,       // Add some spacing
           formatter: function(value, context) {
+            // On mobile screens, only show labels for the top 15 bubbles to avoid text overlapping
+            if (window.innerWidth < 768 && context.dataIndex >= 15) {
+              return null;
+            }
             return value.raw.stock['股票名稱']; // Access the stock name from raw data
           }
         },
