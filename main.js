@@ -594,7 +594,9 @@ document.querySelectorAll('.detail-sortable').forEach(th => {
     }
     
     // Re-render table using raw sectorData, not just plotted data (so missing shows up)
-    renderDetailTable(sectorData);
+    if (globalSectorDataForTable && globalSectorDataForTable.length > 0) {
+      renderDetailTable(globalSectorDataForTable);
+    }
   });
 });
 
@@ -623,12 +625,19 @@ async function renderChart(identifier, mode) {
   currentSectorTitle.textContent = `${identifier} ${modeText}分析`;
 
   // Filter stocks
-  const baseData = currentChartMode === 'sector' 
+  let baseData = currentChartMode === 'sector' 
     ? allMarketData.filter(d => d.stock['產業別'] === identifier)
     : allMarketData.filter(d => {
         const themes = d.stock['題材清單'];
         return themes && themes.includes(identifier);
       });
+      
+  // Safety filter to prevent undefined symbols and 0 volume stocks
+  baseData = baseData.filter(d => d && d.stock && d.stock['股票代號'] && d.amount > 0 && d.volume > 0 && !isNaN(d.dailyReturn));
+  
+  // Sort by today's amount and limit to top 50
+  baseData.sort((a, b) => b.amount - a.amount);
+  baseData = baseData.slice(0, 50);
     
   if (baseData.length === 0) return;
   
@@ -875,6 +884,7 @@ async function renderChart(identifier, mode) {
   });
   
   // Render Detail Table
+  globalSectorDataForTable = sectorData;
   renderDetailTable(sectorData);
 
   } catch (err) {
