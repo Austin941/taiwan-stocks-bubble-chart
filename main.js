@@ -40,28 +40,74 @@ async function init() {
     console.error('Failed to load data:', error);
     rankingTableBody.innerHTML = '<tr><td colspan="5" class="text-center">載入資料失敗</td></tr>';
   }
-}
 
-function processData() {
-  // 1. Generate individual stock market data
-  allMarketData = allStocks.map(stock => {
-    const dailyReturn = (Math.random() * 20) - 10;
-    const volume = Math.floor(Math.random() * 99000) + 1000;
-    const amount = volume * (Math.random() * 50 + 10); 
-    
-    if (stock['產業別'] && stock['產業別'] !== '無' && stock['產業別'] !== '') {
-      sectors.add(stock['產業別']);
-    }
-
-    return {
-      stock,
-      dailyReturn,
-      volume,
-      amount
-    };
+  backBtn.addEventListener('click', () => {
+    showView('ranking');
   });
 
-  // 2. Aggregate data by sector
+  // Setup Sorting Listeners
+  sortableHeaders.forEach(header => {
+    header.addEventListener('click', () => {
+      const col = header.getAttribute('data-sort');
+      if (sortCol === col) {
+        sortDesc = !sortDesc; // toggle order
+      } else {
+        sortCol = col;
+        sortDesc = true; // default to descending for new column
+      }
+      updateSortUI();
+      renderRanking();
+    });
+  });
+
+  // Render Initial View
+  updateSortUI();
+  // renderRanking is called after processData finishes
+}
+
+async function processData() {
+  try {
+    const response = await fetch('/api/snapshot');
+    const marketCache = await response.json();
+    
+    // 1. Generate individual stock market data from backend snapshot
+    allMarketData = allStocks.map(stock => {
+      const symbol = stock['股票代號'];
+      let dailyReturn = 0;
+      let volume = 0;
+      let amount = 0;
+      let price = 0;
+
+      // Extract raw data from cache if available
+      // The TWSE backend returns { price, prevClose, volume }
+      if (marketCache[symbol]) {
+        const data = marketCache[symbol];
+        price = data.price;
+        volume = data.volume;
+        if (data.prevClose && data.prevClose > 0) {
+          dailyReturn = ((price - data.prevClose) / data.prevClose) * 100;
+        }
+        amount = price * volume * 1000; // rough estimation if real amount is not there
+      } else {
+        // Fallback for missing stocks (e.g., suspended or no trade)
+        dailyReturn = 0;
+        volume = 0;
+        amount = 0;
+      }
+      
+      if (stock['產業別'] && stock['產業別'] !== '無' && stock['產業別'] !== '') {
+        sectors.add(stock['產業別']);
+      }
+
+      return {
+        stock,
+        dailyReturn,
+        volume,
+        amount,
+        price
+      };
+    });
+
   const sectorMap = {};
   allMarketData.forEach(d => {
     const sector = d.stock['產業別'];
@@ -98,29 +144,11 @@ function processData() {
     currentSector = e.target.value;
     renderChart(currentSector);
   });
-
-  backBtn.addEventListener('click', () => {
-    showView('ranking');
-  });
-
-  // Setup Sorting Listeners
-  sortableHeaders.forEach(header => {
-    header.addEventListener('click', () => {
-      const col = header.getAttribute('data-sort');
-      if (sortCol === col) {
-        sortDesc = !sortDesc; // toggle order
-      } else {
-        sortCol = col;
-        sortDesc = true; // default to descending for new column
-      }
-      updateSortUI();
-      renderRanking();
-    });
-  });
-
-  // Render Initial View
-  updateSortUI();
+  // Render Ranking after processing data
   renderRanking();
+  } catch(e) {
+    console.error("Error processing data", e);
+  }
 }
 
 function updateSortUI() {
@@ -194,19 +222,41 @@ function showView(viewName) {
   }
 }
 
-function renderChart(sector) {
-  // Filter data for the selected sector
-  const marketData = allMarketData.filter(d => d.stock['產業別'] === sector);
+async function renderChart(sector) {
+  // Filter stocks in sector
+  let sectorData = allMarketData.filter(d => d.stock['產業別'] === sector);
+  
+  // To avoid hitting Fugle limits (60/min), we pick the top 10 most traded stocks in this sector
+  // to fetch real-time high-frequency data, while the rest uses the snapshot.
+  sectorData.sort((a, b) => b.volume - a.volume);
+  const top10 = sectorData.slice(0, 10);
+  
+  // Try to fetch real-time Fugle quotes for top 10
+  await Promise.all(top10.map(async (d) => {
+    if(d.volume === 0 && d.price === 0) return; // skip inactive
+    try {
+      const res = await fetch(`/api/fugle/${d.stock['股票代號']}`);
+      const quote = await res.json();
+      if(quote && quote.changePercent !== undefined) {
+        d.dailyReturn = quote.changePercent;
+        d.volume = quote.total ? quote.total.tradeVolume : d.volume;
+        d.amount = quote.total ? quote.total.tradeValue : d.amount;
+        d.price = quote.lastPrice || quote.closePrice || d.price;
+      }
+    } catch(e) {
+      console.error('Fugle API error for', d.stock['股票代號']);
+    }
+  }));
 
   const datasets = [{
     label: `${sector} 族群`,
-    data: marketData.map(d => ({
+    data: sectorData.map(d => ({
       x: d.volume,
       y: d.dailyReturn,
       r: Math.max(5, Math.min(d.amount / 50000, 35)), 
       raw: d 
     })),
-    backgroundColor: marketData.map(d => 
+    backgroundColor: sectorData.map(d => 
       d.dailyReturn >= 0 
         ? 'rgba(220, 38, 38, 0.65)'  // Red for positive (Taiwan)
         : 'rgba(22, 163, 74, 0.65)'  // Green for negative
