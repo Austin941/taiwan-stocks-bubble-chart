@@ -613,31 +613,53 @@ async function renderChart(identifier, mode) {
     currentSectorTitle.textContent = `${identifier} ${modeText}分析 (歷史資料載入中...)`;
     
     try {
-      // Distribute the API calls to prevent Vercel Serverless timeouts and drastically speed up execution.
-      // We chunk the symbols into groups of 10 and fire them off in parallel.
-      const CHUNK_SIZE = 10;
-      const fetchPromises = [];
+      const period1 = new Date();
+      period1.setDate(period1.getDate() - (currentPeriodDays + 20));
+      const startDateStr = period1.toISOString().split('T')[0];
       
-      for (let i = 0; i < symbolsWithSuffix.length; i += CHUNK_SIZE) {
-        const chunk = symbolsWithSuffix.slice(i, i + CHUNK_SIZE);
-        fetchPromises.push(
-          fetch(`/api/period_analysis`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ symbols: chunk, days: currentPeriodDays })
-          }).then(res => {
-             if (!res.ok) throw new Error(`API returned status: ${res.status}`);
-             return res.json();
-          })
-        );
-      }
-      
-      const chunkResults = await Promise.all(fetchPromises);
-      
-      // Merge all chunk results into a single periodResults object
       const periodResults = {};
-      for (const resObj of chunkResults) {
-        Object.assign(periodResults, resObj);
+      const CHUNK_SIZE = 5; // Fetch 5 symbols at a time to respect FinMind rate limits
+      
+      const symbols = baseData.map(s => s['股票代號']);
+      
+      for (let i = 0; i < symbols.length; i += CHUNK_SIZE) {
+        const chunk = symbols.slice(i, i + CHUNK_SIZE);
+        const promises = chunk.map(async symbol => {
+          try {
+            const res = await fetch(`https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${symbol}&start_date=${startDateStr}`);
+            const json = await res.json();
+            if (json.msg === 'success' && json.data.length > 0) {
+              const recent = json.data.slice(-currentPeriodDays);
+              if (recent.length === 0) return null;
+              
+              const startClose = recent[0].open || recent[0].close;
+              const endClose = recent[recent.length - 1].close;
+              const cumulativeReturn = startClose ? ((endClose - startClose) / startClose) * 100 : 0;
+              
+              let totalVolume = 0;
+              let totalAmount = 0;
+              for (const day of recent) {
+                totalVolume += day.Trading_Volume / 1000;
+                totalAmount += day.Trading_money;
+              }
+              
+              return { symbol, data: { cumulativeReturn, totalVolume, totalAmount } };
+            }
+          } catch(e) {
+            console.error(`Failed to fetch ${symbol} from FinMind`, e);
+          }
+          return null;
+        });
+        
+        const chunkResults = await Promise.all(promises);
+        for (const res of chunkResults) {
+          if (res) periodResults[res.symbol] = res.data;
+        }
+        
+        // Add a small delay between chunks to avoid HTTP 429 Too Many Requests
+        if (i + CHUNK_SIZE < symbols.length) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
       }
       
       for (const s of baseData) {
