@@ -232,10 +232,28 @@ select:focus {
 /* Chart Area */
 .chart-container-glass {
   padding: 2rem;
+  padding-left: 3rem; /* Extra space for vertical Y axis title */
   height: 65vh;
   min-height: 550px;
   position: relative;
   margin-bottom: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.y-axis-title {
+  position: absolute;
+  left: 0.8rem;
+  top: 50%;
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: 0.1em;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1e293b;
+  user-select: none;
 }
 
 .info-panel {

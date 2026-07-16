@@ -287,10 +287,7 @@ function renderChart(sector) {
         },
         y: {
           title: {
-            display: true,
-            text: ['當', '日', '報', '酬', '率', '(%)'], // Vertical Text
-            color: '#1e293b',
-            font: { size: 15, weight: '700' }
+            display: false,
           },
           ticks: {
             font: { size: 14, weight: '500' },
