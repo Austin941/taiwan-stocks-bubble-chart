@@ -425,6 +425,12 @@ function renderRanking() {
         <span class="data-bar-text">${amountHundredMillion}</span>
       </td>
     `;
+    
+    // Add click event listener to the row
+    tr.addEventListener('click', () => {
+      showChart(d.sector, 'sector');
+    });
+    
     rankingTableBody.appendChild(tr);
   });
 }
@@ -443,46 +449,6 @@ function updateSortUI() {
   });
 }
 
-function renderRanking() {
-  // Sort aggregated sector data
-  const sortedData = [...sectorRankingData].sort((a, b) => {
-    let valA, valB;
-    if (sortCol === 'volume') {
-      valA = a.totalVolume; valB = b.totalVolume;
-    } else if (sortCol === 'return') {
-      valA = a.avgReturn; valB = b.avgReturn;
-    } else {
-      valA = a.totalAmount; valB = b.totalAmount;
-    }
-    return sortDesc ? valB - valA : valA - valB;
-  });
-
-  rankingTableBody.innerHTML = sortedData.map((d, index) => {
-    const returnClass = d.avgReturn >= 0 ? 'color-positive' : 'color-negative';
-    const flashClass = d.avgReturn >= 0 ? 'flash-up' : 'flash-down';
-    const returnSign = d.avgReturn >= 0 ? '+' : '';
-    
-    return `
-      <tr data-sector="${d.sector}" class="${flashClass}">
-        <td>${index + 1}</td>
-        <td><span class="badge-sector">${d.sector}</span></td>
-        <td class="text-right ${returnClass}"><strong style="font-size:1.1rem">${returnSign}${d.avgReturn.toFixed(2)}%</strong></td>
-        <td class="text-right">${d.totalVolume.toLocaleString()}</td>
-        <td class="text-right"><strong style="color:var(--text-primary)">${(d.totalAmount / 10000).toFixed(2)}</strong></td>
-      </tr>
-    `;
-  }).join('');
-
-  // Add click events to entire row
-  document.querySelectorAll('.ranking-table tbody tr').forEach(row => {
-    row.addEventListener('click', (e) => {
-      const sector = row.getAttribute('data-sector');
-      if (sector) {
-        showChart(sector, 'sector');
-      }
-    });
-  });
-}
 
 function updateRadarSortUI() {
   radarSortableHeaders.forEach(header => {
@@ -594,7 +560,7 @@ async function renderChart(identifier, mode) {
     
     const promises = top50.map(async (d) => {
       try {
-        const res = await fetch(`http://localhost:3001/api/fugle/${d.symbol}`);
+        const res = await fetch(`/api/fugle/${d.symbol}`);
         if (res.ok) {
           const rtd = await res.json();
           if (rtd.data && rtd.data.quote) {
@@ -631,7 +597,7 @@ async function renderChart(identifier, mode) {
     });
     
     try {
-      const res = await fetch(`http://localhost:3001/api/period_analysis`, {
+      const res = await fetch(`/api/period_analysis`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ symbols: symbolsWithSuffix, days: currentPeriodDays })
@@ -707,29 +673,64 @@ async function renderChart(identifier, mode) {
         easing: 'easeOutQuart'
       },
       plugins: {
+        legend: { display: false },
+        tooltip: {
+          enabled: false,
+          external: function(context) {
+            const tooltipEl = document.getElementById('chart-tooltip');
+            const tooltipModel = context.tooltip;
+            
+            if (tooltipModel.opacity === 0) {
+              tooltipEl.style.opacity = 0;
+              return;
+            }
+
+            if (tooltipModel.body) {
+              const dataPoint = tooltipModel.dataPoints[0];
+              const d = dataPoint.raw.raw;
+              
+              const returnSign = d.dailyReturn > 0 ? '+' : '';
+              const returnColor = d.dailyReturn > 0 ? 'var(--positive-color)' : (d.dailyReturn < 0 ? 'var(--negative-color)' : 'white');
+              const amountHundredMillion = (d.amount / 100000000).toFixed(2);
+              
+              const innerHtml = `
+                <div style="margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;">
+                  <strong style="font-size: 1.1rem; color: #fff;">${d.stock['股票名稱']}</strong> 
+                  <span style="color: #94a3b8; font-size: 0.9rem;">(${d.stock['股票代號']})</span>
+                </div>
+                <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 0.95rem;">
+                  <span style="color: #94a3b8;">當日報酬:</span>
+                  <span style="color: ${returnColor}; font-weight: bold; text-align: right;">${returnSign}${d.dailyReturn.toFixed(2)}%</span>
+                  
+                  <span style="color: #94a3b8;">成交量:</span>
+                  <span style="color: #fff; text-align: right;">${d.volume.toLocaleString()} 張</span>
+                  
+                  <span style="color: #94a3b8;">成交額:</span>
+                  <span style="color: #fff; text-align: right;">${amountHundredMillion} 億</span>
+                </div>
+                <div style="margin-top: 10px; font-size: 0.8rem; color: var(--accent-primary); text-align: center;">
+                  👆 點擊查看技術線圖
+                </div>
+              `;
+              
+              tooltipEl.innerHTML = innerHtml;
+            }
+
+            const position = context.chart.canvas.getBoundingClientRect();
+            
+            let tooltipX = position.left + window.scrollX + tooltipModel.caretX + 15;
+            let tooltipY = position.top + window.scrollY + tooltipModel.caretY - 15;
+            
+            tooltipEl.style.opacity = 1;
+            tooltipEl.style.left = tooltipX + 'px';
+            tooltipEl.style.top = tooltipY + 'px';
+          }
+        },
         datalabels: {
           color: 'rgba(255, 255, 255, 0.9)',
-          font: {
-            family: 'Inter',
-            size: 11,
-            weight: 'bold'
-          },
-          align: 'bottom',
-          offset: window.innerWidth < 768 ? 2 : 4,
-          formatter: function(value, context) {
-            // 只顯示成交量最大的前幾名，避免重疊
-            const limit = window.innerWidth < 768 ? 5 : 10;
-            if (context.dataIndex >= limit) {
-              return null;
-            }
+          font: { weight: 'bold', size: 12 },
+          formatter: function(value) {
             return value.raw.stock['股票名稱'];
-          }
-        },
-        legend: {
-          labels: {
-            color: '#f8fafc'
-          }
-        },
           },
           align: 'end',
           anchor: 'end',
@@ -807,7 +808,7 @@ async function openKLinePanel(symbolWithSuffix, name) {
   }
 
   try {
-    const res = await fetch(`http://localhost:3001/api/historical/${symbolWithSuffix}`);
+    const res = await fetch(`/api/historical/${symbolWithSuffix}`);
     if (!res.ok) throw new Error('API failed');
     const data = await res.json();
     
