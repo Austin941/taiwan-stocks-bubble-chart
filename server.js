@@ -5,9 +5,10 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import YahooFinance from 'yahoo-finance2';
+import https from 'https';
 
-const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey', 'ripHistorical'] });
+// Keep-Alive Agent to drastically reduce TLS handshake latency for multiple requests
+const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 50 });
 
 dotenv.config();
 
@@ -83,36 +84,43 @@ const CLOSING_TTL   = 3600000; // 1 hour after close
 //   v = volume (張)
 // ============================================================
 async function fetchIntraday() {
-  const CHUNK_SIZE = 1000;
+  const CHUNK_SIZE = 150; // Increased chunk size to reduce total requests
   const promises = [];
 
-  for (let i = 0; i < yfSymbols.length; i += CHUNK_SIZE) {
-    const chunk = yfSymbols.slice(i, i + CHUNK_SIZE);
+  for (let i = 0; i < allSymbols.length; i += CHUNK_SIZE) {
+    const chunk = allSymbols.slice(i, i + CHUNK_SIZE);
+    const url = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${chunk.join('|')}&json=1&delay=0`;
     promises.push(
-      yahooFinance.quote(chunk)
-        .then(results => {
-          results.forEach(quote => {
-            const code = quote.symbol.split('.')[0];
-            const price = quote.regularMarketPrice;
-            const prevClose = quote.regularMarketPreviousClose;
-            const volume = (quote.regularMarketVolume || 0) / 1000; // Convert to 張
-
-            if (code && price && prevClose > 0) {
-              marketCache[code] = {
-                price: price,
-                prevClose: prevClose,
-                volume: Math.round(volume)
-              };
+      axios.get(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+        timeout: 6000,
+        httpsAgent: httpsAgent // Reuses TCP connections
+      }).then(response => {
+        if (response.data?.msgArray) {
+          response.data.msgArray.forEach(item => {
+            if (!item.c) return;
+            const prevClose = parseFloat(item.y) || 0; // Adjusted reference price!
+            let price = parseFloat(item.z);
+            if (isNaN(price) || price <= 0) {
+              if (marketCache[item.c] && marketCache[item.c].price > 0) {
+                price = marketCache[item.c].price;
+              } else {
+                price = prevClose;
+              }
+            }
+            const volume = parseInt(item.v) || 0;
+            if (prevClose > 0) {
+              marketCache[item.c] = { price, prevClose, volume };
             }
           });
-        })
-        .catch(err => console.error('[Intraday] Yahoo fetch error:', err.message))
+        }
+      }).catch(err => console.error('[Intraday] Chunk fetch error:', err.message))
     );
   }
 
   await Promise.all(promises);
   lastCacheTime = Date.now();
-  console.log(`[Intraday] Updated via Yahoo Finance. Cache size: ${Object.keys(marketCache).length}`);
+  console.log(`[Intraday] Updated via TWSE MIS. Cache size: ${Object.keys(marketCache).length}`);
 }
 
 // ============================================================
