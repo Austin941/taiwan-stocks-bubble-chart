@@ -5,6 +5,9 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import YahooFinance from 'yahoo-finance2';
+
+const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey', 'ripHistorical'] });
 
 dotenv.config();
 
@@ -21,6 +24,7 @@ app.use(express.json());
 let allSymbols = [];     // ['tse_2330.tw', 'otc_6547.tw', ...]
 let tseSymbols = [];     // only TSE (上市)
 let otcSymbols = [];     // only OTC (上櫃)
+let yfSymbols = [];      // ['2330.TW', '6547.TWO'] for Yahoo Finance
 
 try {
   const csvPath = path.join(__dirname, 'public', 'stocks.csv');
@@ -35,9 +39,11 @@ try {
     if (market.includes('上市')) {
       allSymbols.push(`tse_${symbol}.tw`);
       tseSymbols.push(symbol);
+      yfSymbols.push(`${symbol}.TW`);
     } else {
       allSymbols.push(`otc_${symbol}.tw`);
       otcSymbols.push(symbol);
+      yfSymbols.push(`${symbol}.TWO`);
     }
   }
   console.log(`[Backend] Loaded ${tseSymbols.length} TSE + ${otcSymbols.length} OTC symbols.`);
@@ -51,7 +57,10 @@ try {
 function isMarketOpen() {
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
   const time = now.getHours() * 60 + now.getMinutes();
-  return time >= 510 && time <= 870; // 08:30 ~ 14:30
+  // Market trades until 13:30 (after-hours matching until 14:30).
+  // However, official OpenAPI doesn't update until ~15:30-16:00.
+  // We keep using TWSE MIS API until 16:30 to ensure we don't fetch yesterday's data.
+  return time >= 510 && time <= 990; // 08:30 ~ 16:30
 }
 
 // ============================================================
@@ -74,46 +83,36 @@ const CLOSING_TTL   = 3600000; // 1 hour after close
 //   v = volume (張)
 // ============================================================
 async function fetchIntraday() {
-  const CHUNK_SIZE = 100;
+  const CHUNK_SIZE = 1000;
   const promises = [];
 
-  for (let i = 0; i < allSymbols.length; i += CHUNK_SIZE) {
-    const chunk = allSymbols.slice(i, i + CHUNK_SIZE);
-    const url = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${chunk.join('|')}&json=1&delay=0`;
+  for (let i = 0; i < yfSymbols.length; i += CHUNK_SIZE) {
+    const chunk = yfSymbols.slice(i, i + CHUNK_SIZE);
     promises.push(
-      axios.get(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-        timeout: 6000
-      }).then(response => {
-        if (response.data?.msgArray) {
-          response.data.msgArray.forEach(item => {
-            if (!item.c) return;
-            const prevClose = parseFloat(item.y) || 0;
-            // z is the last deal price; it can be "-" if not yet traded
-            let price = parseFloat(item.z);
-            // Fallback: use midpoint of high and low if z is not a number
-            if (isNaN(price) || price <= 0) {
-              const h = parseFloat(item.h);
-              const l = parseFloat(item.l);
-              if (!isNaN(h) && !isNaN(l) && h > 0 && l > 0) {
-                price = (h + l) / 2; // Best estimate from bid/ask range
-              } else {
-                price = prevClose; // Last resort: use prevClose (return = 0)
-              }
-            }
-            const volume = parseInt(item.v) || 0;
-            if (prevClose > 0) {
-              marketCache[item.c] = { price, prevClose, volume };
+      yahooFinance.quote(chunk)
+        .then(results => {
+          results.forEach(quote => {
+            const code = quote.symbol.split('.')[0];
+            const price = quote.regularMarketPrice;
+            const prevClose = quote.regularMarketPreviousClose;
+            const volume = (quote.regularMarketVolume || 0) / 1000; // Convert to 張
+
+            if (code && price && prevClose > 0) {
+              marketCache[code] = {
+                price: price,
+                prevClose: prevClose,
+                volume: Math.round(volume)
+              };
             }
           });
-        }
-      }).catch(err => console.error('[Intraday] Chunk fetch error:', err.message))
+        })
+        .catch(err => console.error('[Intraday] Yahoo fetch error:', err.message))
     );
   }
 
   await Promise.all(promises);
   lastCacheTime = Date.now();
-  console.log(`[Intraday] Updated. Cache size: ${Object.keys(marketCache).length}`);
+  console.log(`[Intraday] Updated via Yahoo Finance. Cache size: ${Object.keys(marketCache).length}`);
 }
 
 // ============================================================
@@ -237,11 +236,15 @@ app.get('/api/health', (req, res) => {
 });
 
 // ============================================================
-// START SERVER
+// START SERVER OR EXPORT FOR VERCEL
 // ============================================================
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`[Backend] Server listening on port ${PORT}`);
-  // Pre-warm the cache on startup
-  fetchMarketData().catch(e => console.error('[Backend] Pre-warm error:', e.message));
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`[Backend] Server listening on port ${PORT}`);
+    // Pre-warm the cache on startup
+    fetchMarketData().catch(e => console.error('[Backend] Pre-warm error:', e.message));
+  });
+}
+
+export default app;
