@@ -4,57 +4,36 @@ import Papa from 'papaparse';
 
 Chart.register(ChartDataLabels);
 
-// State
+// ============================================================
+// STATE
+// ============================================================
 let allStocks = [];
 let allMarketData = [];
 let sectorRankingData = [];
 let themeRankingData = [];
-let sectors = new Set();
-let themes = new Set();
 let chartInstance = null;
 let currentSector = null;
-let currentChartMode = 'sector'; // 'sector' or 'theme'
-let currentPeriodDays = 1; // Global period state
-let currentDetailSort = { column: 'amount', order: 'desc' }; // Detail table sort state
+let currentChartMode = 'sector';
+let currentPeriodDays = 1;
+let currentDetailSort = { column: 'amount', order: 'desc' };
+let globalSectorDataForTable = [];
+let historicalRanking = null; // Pre-calculated 5/10/20 day ranking data
+let liveSnapshotCache = {}; // Latest live market cache
+let isMarketOpenNow = false;
 
+// Race condition prevention
 let currentFetchId = 0;
-const historicalDataCache = {}; // Cache format: { "2330-5": { cumulativeReturn, totalVolume, totalAmount } }
+// Per-sector historical cache for chart view
+const historicalDataCache = {};
 
-// Global error handler for debugging
-window.onerror = function(message, source, lineno, colno, error) {
-  const chartContainer = document.querySelector('.chart-container-glass');
-  if (chartContainer) {
-    chartContainer.innerHTML = `<div style="color: red; padding: 20px;">
-      <h3>Error Occurred:</h3>
-      <p>${message}</p>
-      <p>Line: ${lineno}:${colno}</p>
-      <pre>${error ? error.stack : ''}</pre>
-    </div>`;
-  }
-};
-window.addEventListener('unhandledrejection', function(event) {
-  const chartContainer = document.querySelector('.chart-container-glass');
-  if (chartContainer) {
-    chartContainer.innerHTML = `<div style="color: red; padding: 20px;">
-      <h3>Unhandled Promise Rejection:</h3>
-      <pre>${event.reason ? event.reason.stack || event.reason : 'Unknown Error'}</pre>
-    </div>`;
-  }
-});
+// Sorting states
+let sortCol = 'amount', sortDesc = true;
+let radarSortCol = 'amount', radarSortDesc = true;
+let themeSortCol = 'amount', themeSortDesc = true;
 
-// Sorting State
-let sortCol = 'amount'; // 'amount', 'volume', or 'return'
-let sortDesc = true;
-
-// Radar Sorting State
-let radarSortCol = 'amount'; // 'amount', 'volume', or 'return'
-let radarSortDesc = true;
-
-// Theme Sorting State
-let themeSortCol = 'amount';
-let themeSortDesc = true;
-
-// DOM Elements
+// ============================================================
+// DOM ELEMENTS
+// ============================================================
 const viewRanking = document.getElementById('view-ranking');
 const viewThemeRanking = document.getElementById('view-theme-ranking');
 const viewRadar = document.getElementById('view-radar');
@@ -70,720 +49,667 @@ const themeSortableHeaders = document.querySelectorAll('.theme-sortable');
 const radarSortableHeaders = document.querySelectorAll('.radar-sortable');
 const navBtns = document.querySelectorAll('.nav-btn');
 
-// Initialize
+// ============================================================
+// GLOBAL ERROR HANDLER
+// ============================================================
+window.onerror = function(message, source, lineno, colno, error) {
+  const el = document.querySelector('.chart-container-glass');
+  if (el) el.innerHTML = `<div style="color:red;padding:20px"><h3>Error</h3><p>${message}</p><pre>${error ? error.stack : ''}</pre></div>`;
+};
+window.addEventListener('unhandledrejection', function(event) {
+  console.error('Unhandled rejection:', event.reason);
+});
+
+// ============================================================
+// INIT
+// ============================================================
 async function init() {
   try {
-    Papa.parse('./stocks.csv?v=' + new Date().getTime(), {
+    // Load historical ranking JSON first (pre-calculated 5/10/20 day data)
+    const hrRes = await fetch('./historical_ranking.json').catch(() => null);
+    if (hrRes && hrRes.ok) {
+      historicalRanking = await hrRes.json();
+      const updatedAt = historicalRanking.updated_at
+        ? new Date(historicalRanking.updated_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })
+        : '未知';
+      console.log(`[HistoricalRanking] Loaded. Updated at: ${updatedAt}`);
+    } else {
+      console.warn('[HistoricalRanking] Not available, 5/10/20 day ranking will be disabled.');
+    }
+
+    // Load CSV
+    Papa.parse('./stocks.csv?v=' + Date.now(), {
       download: true,
       header: true,
       complete: function(results) {
-        allStocks = results.data.filter(d => d['股票代號'] && d['股票名稱']); // 確保不收空行
+        allStocks = results.data.filter(d => d['股票代號'] && d['股票名稱']);
+        // Initial data fetch
         processData();
       }
     });
 
-    // Setup Navigation Tabs
+    // ---- Navigation ----
     navBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
-        // Remove active from all
         navBtns.forEach(b => b.classList.remove('active'));
-        // Add active to clicked
         e.target.classList.add('active');
-        
         const targetViewId = e.target.getAttribute('data-target');
         switchView(targetViewId);
-        
-        // Reset chart state if leaving chart view
-        if (targetViewId !== 'view-chart') {
-          currentSector = null;
-        }
+        if (targetViewId !== 'view-chart') currentSector = null;
       });
     });
 
     backBtn.addEventListener('click', () => {
-      // Find the currently active nav button and trigger click to restore view
       const activeNav = document.querySelector('.nav-btn.active') || navBtns[0];
       switchView(activeNav.getAttribute('data-target'));
-      currentSector = null; // Clear chart state
+      currentSector = null;
     });
 
-    // Setup Sorting Listeners for Ranking
-    sortableHeaders.forEach(header => {
-      header.addEventListener('click', () => {
-        const col = header.getAttribute('data-sort');
-        if (sortCol === col) {
-          sortDesc = !sortDesc; // toggle order
-        } else {
-          sortCol = col;
-          sortDesc = true; // default to descending for new column
-        }
+    // ---- Sorting listeners ----
+    sortableHeaders.forEach(h => {
+      h.addEventListener('click', () => {
+        const col = h.getAttribute('data-sort');
+        if (sortCol === col) sortDesc = !sortDesc; else { sortCol = col; sortDesc = true; }
         updateSortUI();
         renderRanking();
       });
     });
 
-    // Setup Sorting Listeners for Theme
-    themeSortableHeaders.forEach(header => {
-      header.addEventListener('click', () => {
-        const col = header.getAttribute('data-sort');
-        if (themeSortCol === col) {
-          themeSortDesc = !themeSortDesc;
-        } else {
-          themeSortCol = col;
-          themeSortDesc = true;
-        }
+    themeSortableHeaders.forEach(h => {
+      h.addEventListener('click', () => {
+        const col = h.getAttribute('data-sort');
+        if (themeSortCol === col) themeSortDesc = !themeSortDesc; else { themeSortCol = col; themeSortDesc = true; }
         updateThemeSortUI();
         renderThemeRanking();
       });
     });
 
-    // Setup Sorting Listeners for Radar
-    radarSortableHeaders.forEach(header => {
-      header.addEventListener('click', () => {
-        const col = header.getAttribute('data-sort');
-        if (radarSortCol === col) {
-          radarSortDesc = !radarSortDesc;
-        } else {
-          radarSortCol = col;
-          radarSortDesc = true;
-        }
+    radarSortableHeaders.forEach(h => {
+      h.addEventListener('click', () => {
+        const col = h.getAttribute('data-sort');
+        if (radarSortCol === col) radarSortDesc = !radarSortDesc; else { radarSortCol = col; radarSortDesc = true; }
         updateRadarSortUI();
         renderRadar();
       });
     });
 
-    // Render Initial View
+    // ---- Period buttons (main page ranking) ----
+    document.querySelectorAll('.period-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const selectedPeriod = parseInt(e.target.getAttribute('data-period'));
+        
+        // Sync ALL period buttons with same data-period
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll(`.period-btn[data-period="${selectedPeriod}"]`).forEach(b => b.classList.add('active'));
+        
+        currentPeriodDays = selectedPeriod;
+
+        // If in chart view: re-render chart
+        if (!viewChart.classList.contains('hidden') && currentSector) {
+          renderChart(currentSector, currentChartMode);
+          return;
+        }
+        
+        // Otherwise: re-render main ranking tables with period data
+        if (currentPeriodDays === 1) {
+          // Live data
+          renderRanking();
+          renderThemeRanking();
+          renderRadar();
+        } else {
+          // Historical pre-calculated data
+          renderHistoricalRanking(currentPeriodDays);
+        }
+      });
+    });
+
+    // ---- Detail table sorting (chart view) ----
+    document.querySelectorAll('.detail-sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const column = th.getAttribute('data-sort');
+        if (currentDetailSort.column === column) {
+          currentDetailSort.order = currentDetailSort.order === 'desc' ? 'asc' : 'desc';
+        } else {
+          currentDetailSort.column = column;
+          currentDetailSort.order = 'desc';
+        }
+        document.querySelectorAll('.detail-sortable .sort-icon').forEach(i => { i.textContent = ''; i.classList.remove('asc', 'desc'); });
+        const icon = document.getElementById(`detail-sort-${column}`);
+        if (icon) { icon.textContent = currentDetailSort.order === 'desc' ? '▼' : '▲'; icon.classList.add(currentDetailSort.order); }
+        if (globalSectorDataForTable.length > 0) renderDetailTable(globalSectorDataForTable);
+      });
+    });
+
+    // ---- UI init ----
     updateSortUI();
     updateThemeSortUI();
     updateRadarSortUI();
-    // Set up auto-refresh every 30 seconds for the Ranking view
+
+    // ---- Auto-refresh (live snapshot every 15 seconds) ----
     setInterval(() => {
-      // Only refresh if we are currently looking at the ranking view
-      if (currentSector === null) {
-        processData();
+      if (currentPeriodDays === 1) {
+        processData(true); // silent refresh (no loading indicator)
       }
-    }, 30000);
+    }, 15000);
+
   } catch (error) {
-    console.error('Failed to load data:', error);
-    rankingTableBody.innerHTML = '<tr><td colspan="5" class="text-center">載入資料失敗</td></tr>';
+    console.error('Init failed:', error);
   }
 }
 
-async function processData() {
+// ============================================================
+// DATA PROCESSING - LIVE SNAPSHOT
+// ============================================================
+async function processData(silent = false) {
   try {
     const response = await fetch('/api/snapshot');
     const result = await response.json();
-    
-    // Check if it's the new format with metadata, or old raw format
     const marketCache = result.data || result;
-    const isMarketOpen = result.isMarketOpen !== undefined ? result.isMarketOpen : true;
-    
+    isMarketOpenNow = result.isMarketOpen !== undefined ? result.isMarketOpen : true;
+    liveSnapshotCache = marketCache;
+
     // Update timestamp
     const now = new Date();
-    const marketStatus = isMarketOpen ? '' : ' (已收盤)';
-    document.getElementById('last-updated').textContent = `最後更新時間：${now.toLocaleTimeString('zh-TW', { hour12: false })}${marketStatus}`;
-    
-    // Clear sectors set for fresh repopulation
-    sectors.clear();
+    const marketStatus = isMarketOpenNow ? ' 🟢 盤中即時' : ' 🔴 已收盤';
+    document.getElementById('last-updated').textContent =
+      `最後更新：${now.toLocaleTimeString('zh-TW', { hour12: false })}${marketStatus}`;
 
-    // 1. Generate individual stock market data from backend snapshot
+    // Build allMarketData from CSV + snapshot
+    const sectors = new Set();
     allMarketData = allStocks.map(stock => {
       const symbol = stock['股票代號'];
-      let dailyReturn = 0;
-      let volume = 0;
-      let amount = 0;
-      let price = 0;
-
-      // Extract raw data from cache if available
+      let dailyReturn = 0, volume = 0, amount = 0, price = 0;
       if (marketCache[symbol]) {
         const data = marketCache[symbol];
-        price = data.price;
-        volume = data.volume;
-        if (data.prevClose && data.prevClose > 0) {
+        price = data.price || 0;
+        volume = data.volume || 0;
+        if (data.prevClose && data.prevClose > 0 && price > 0) {
           dailyReturn = ((price - data.prevClose) / data.prevClose) * 100;
         }
         amount = price * volume * 1000;
-      } else {
-        dailyReturn = 0;
-        volume = 0;
-        amount = 0;
       }
-      
-      if (stock['產業別'] && stock['產業別'] !== '無' && stock['產業別'] !== '') {
-        sectors.add(stock['產業別']);
-      }
-
-      return {
-        stock,
-        dailyReturn,
-        volume,
-        amount,
-        price
-      };
+      if (stock['產業別'] && stock['產業別'] !== '無' && stock['產業別'] !== '') sectors.add(stock['產業別']);
+      return { stock, dailyReturn, volume, amount, price };
     });
 
-    const sectorMap = {};
-    const themeMap = {};
+    // Aggregate sector ranking
+    const sectorMap = {}, themeMap = {};
+    const blacklist = ['半導體', '電子零組件', '電子代工', '通信網路', '其他電子', '光電', '電腦及週邊設備'];
 
     allMarketData.forEach(d => {
       const sector = d.stock['產業別'];
       if (sector && sector !== '無' && sector !== '') {
-        if (!sectorMap[sector]) {
-          sectorMap[sector] = { sector: sector, totalVolume: 0, totalAmount: 0, weightedReturnSum: 0, count: 0 };
-        }
+        if (!sectorMap[sector]) sectorMap[sector] = { sector, totalVolume: 0, totalAmount: 0, weightedReturnSum: 0, count: 0 };
         sectorMap[sector].totalVolume += d.volume;
         sectorMap[sector].totalAmount += d.amount;
         sectorMap[sector].weightedReturnSum += (d.dailyReturn * d.amount);
         sectorMap[sector].count += 1;
       }
-
-      // Parse themes with a filter for redundant/generic tags
       const themesStr = d.stock['題材清單'];
-      if (themesStr && themesStr !== '') {
-        const blacklist = ['半導體', '電子零組件', '電子代工', '通信網路', '其他電子', '光電', '電腦及週邊設備'];
-        const themesArr = themesStr.split('、')
-          .map(t => t.trim())
-          .filter(t => t.length > 0 && t !== d.stock['產業別'] && !blacklist.includes(t)); // 過濾掉與產業別完全相同的標籤，或過於廣泛的黑名單標籤
-          
-        themesArr.forEach(theme => {
-          if (!themeMap[theme]) {
-            themeMap[theme] = { theme: theme, totalVolume: 0, totalAmount: 0, weightedReturnSum: 0, count: 0 };
-          }
-          themeMap[theme].totalVolume += d.volume;
-          themeMap[theme].totalAmount += d.amount;
-          themeMap[theme].weightedReturnSum += (d.dailyReturn * d.amount);
-          themeMap[theme].count += 1;
-        });
+      if (themesStr) {
+        themesStr.split('、').map(t => t.trim())
+          .filter(t => t.length > 0 && t !== sector && !blacklist.includes(t))
+          .forEach(theme => {
+            if (!themeMap[theme]) themeMap[theme] = { theme, totalVolume: 0, totalAmount: 0, weightedReturnSum: 0, count: 0 };
+            themeMap[theme].totalVolume += d.volume;
+            themeMap[theme].totalAmount += d.amount;
+            themeMap[theme].weightedReturnSum += (d.dailyReturn * d.amount);
+            themeMap[theme].count += 1;
+          });
       }
     });
 
-    sectorRankingData = Object.keys(sectorMap).map(sector => {
-      const data = sectorMap[sector];
-      const avgReturn = data.totalAmount > 0 ? (data.weightedReturnSum / data.totalAmount) : 0;
-      return { sector, totalVolume: data.totalVolume, totalAmount: data.totalAmount, avgReturn };
-    });
+    sectorRankingData = Object.values(sectorMap).map(s => ({
+      sector: s.sector, totalVolume: s.totalVolume, totalAmount: s.totalAmount,
+      avgReturn: s.totalAmount > 0 ? s.weightedReturnSum / s.totalAmount : 0
+    }));
 
-    themeRankingData = Object.keys(themeMap).map(theme => {
-      const data = themeMap[theme];
-      const avgReturn = data.totalAmount > 0 ? (data.weightedReturnSum / data.totalAmount) : 0;
-      return { theme, totalVolume: data.totalVolume, totalAmount: data.totalAmount, avgReturn };
-    });
+    themeRankingData = Object.values(themeMap).map(t => ({
+      theme: t.theme, totalVolume: t.totalVolume, totalAmount: t.totalAmount,
+      avgReturn: t.totalAmount > 0 ? t.weightedReturnSum / t.totalAmount : 0
+    }));
 
-    // Render Ranking and Radar after processing data
-    renderRanking();
-    renderThemeRanking();
-    renderRadar();
+    // Only render main ranking if we're in period=1 mode
+    if (currentPeriodDays === 1) {
+      renderRanking();
+      renderThemeRanking();
+      renderRadar();
+    }
+
+    // If chart view is open, auto-refresh chart (single day mode only)
+    if (currentSector && !viewChart.classList.contains('hidden') && currentPeriodDays === 1) {
+      renderChart(currentSector, currentChartMode);
+    }
 
   } catch (error) {
-    console.error('Error fetching market snapshot:', error);
-    document.getElementById('last-updated').textContent = '最後更新時間：載入失敗，請稍後再試。';
+    console.error('processData error:', error);
+    document.getElementById('last-updated').textContent = '最後更新：載入失敗，請稍後再試。';
   }
 }
-function renderThemeRanking() {
-  themeRankingTableBody.innerHTML = '';
-  
-  // Sort the data
-  themeRankingData.sort((a, b) => {
-    let valA, valB;
-    if (themeSortCol === 'amount') {
-      valA = a.totalAmount; valB = b.totalAmount;
-    } else if (themeSortCol === 'volume') {
-      valA = a.totalVolume; valB = b.totalVolume;
-    } else {
-      valA = a.avgReturn; valB = b.avgReturn;
-    }
-    return themeSortDesc ? valB - valA : valA - valB;
-  });
 
-  const maxAmount = Math.max(...themeRankingData.map(d => d.totalAmount), 1);
-  const maxReturn = Math.max(...themeRankingData.map(d => Math.abs(d.avgReturn)), 1);
-
-  themeRankingData.forEach((d, index) => {
-    const tr = document.createElement('tr');
-    
-    // Animation flash for update
-    tr.classList.add('flash-up');
-    setTimeout(() => tr.classList.remove('flash-up'), 1000);
-
-    const returnClass = d.avgReturn > 0 ? 'color-positive' : (d.avgReturn < 0 ? 'color-negative' : '');
-    const returnSign = d.avgReturn > 0 ? '+' : '';
-    const amountHundredMillion = (d.totalAmount / 10000).toFixed(2);
-
-    const amountPct = (d.totalAmount / maxAmount) * 100;
-    const returnPct = (Math.abs(d.avgReturn) / maxReturn) * 100;
-    const returnBarColor = d.avgReturn > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
-
-    tr.innerHTML = `
-      <td>${index + 1}</td>
-      <td><span class="badge-sector">${d.theme}</span></td>
-      <td class="text-right ${returnClass} data-bar-cell">
-        <div class="data-bar" style="width: ${returnPct}%; background: ${returnBarColor};"></div>
-        <strong class="data-bar-text">${returnSign}${d.avgReturn.toFixed(2)}%</strong>
-      </td>
-      <td class="text-right">${d.totalVolume.toLocaleString()}</td>
-      <td class="text-right data-bar-cell">
-        <div class="data-bar" style="width: ${amountPct}%; background: rgba(56, 189, 248, 0.15);"></div>
-        <span class="data-bar-text">${amountHundredMillion}</span>
-      </td>
-    `;
-
-    // Click on a row goes to the chart
-    tr.addEventListener('click', () => {
-      showChart(d.theme, 'theme');
-    });
-
-    themeRankingTableBody.appendChild(tr);
-  });
-}
-function renderRadar() {
-  radarTableBody.innerHTML = '';
-  
-  // Sort all stocks by selected column
-  const sortedStocks = [...allMarketData]
-    .filter(d => d.amount > 0) // Only show active stocks
-    .sort((a, b) => {
-      let valA, valB;
-      if (radarSortCol === 'amount') {
-        valA = a.amount; valB = b.amount;
-      } else if (radarSortCol === 'volume') {
-        valA = a.volume; valB = b.volume;
-      } else {
-        valA = a.dailyReturn; valB = b.dailyReturn;
-      }
-      return radarSortDesc ? valB - valA : valA - valB;
-    })
-    .slice(0, 100); // Top 100
-    
-  if (sortedStocks.length === 0) {
-    radarTableBody.innerHTML = '<tr><td colspan="6" class="text-center">目前無交易資料</td></tr>';
+// ============================================================
+// RENDER HISTORICAL RANKING (5/10/20 days from pre-calc JSON)
+// ============================================================
+function renderHistoricalRanking(days) {
+  if (!historicalRanking || !historicalRanking[String(days)]) {
+    rankingTableBody.innerHTML = `<tr><td colspan="5" class="text-center" style="color:#94a3b8">歷史資料尚未產生，請稍後再試</td></tr>`;
+    themeRankingTableBody.innerHTML = `<tr><td colspan="5" class="text-center" style="color:#94a3b8">歷史資料尚未產生</td></tr>`;
     return;
   }
-  
-  sortedStocks.forEach((stock, index) => {
-    const tr = document.createElement('tr');
-    
-    // Animation flash for update
-    tr.classList.add('flash-up');
-    setTimeout(() => tr.classList.remove('flash-up'), 1000);
-    
-    const returnClass = stock.dailyReturn > 0 ? 'color-positive' : (stock.dailyReturn < 0 ? 'color-negative' : '');
-    const returnSign = stock.dailyReturn > 0 ? '+' : '';
-    const amountHundredMillion = (stock.amount / 10000).toFixed(2);
-    
-    // Calculate Data Bar percentages
-    // Radar is sorted by amount or volume, we can use an absolute max or just max of top 100
-    const maxRadarAmount = Math.max(...sortedStocks.map(s => s.amount), 1);
-    const maxRadarReturn = Math.max(...sortedStocks.map(s => Math.abs(s.dailyReturn)), 1);
-    
-    const amountPct = (stock.amount / maxRadarAmount) * 100;
-    const returnPct = (Math.abs(stock.dailyReturn) / maxRadarReturn) * 100;
-    const returnBarColor = stock.dailyReturn > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
-    
-    tr.innerHTML = `
-      <td>${index + 1}</td>
-      <td>${stock.stock['股票名稱']} <span style="font-size:0.9em;color:var(--text-secondary)">${stock.stock['股票代號']}</span></td>
-      <td class="text-right"><span class="badge-sector">${stock.stock['產業別']}</span></td>
-      <td class="text-right ${returnClass} data-bar-cell">
-        <div class="data-bar" style="width: ${returnPct}%; background: ${returnBarColor};"></div>
-        <strong class="data-bar-text">${returnSign}${stock.dailyReturn.toFixed(2)}%</strong>
-      </td>
-      <td class="text-right">${stock.volume.toLocaleString()}</td>
-      <td class="text-right data-bar-cell">
-        <div class="data-bar" style="width: ${amountPct}%; background: rgba(56, 189, 248, 0.15);"></div>
-        <span class="data-bar-text">${amountHundredMillion}</span>
-      </td>
-    `;
-    
-    // Click on a radar row goes to the sector chart
-    tr.addEventListener('click', () => {
-      showChart(stock.stock['產業別'], 'sector');
-    });
-    
-    radarTableBody.appendChild(tr);
-  });
+
+  const periodData = historicalRanking[String(days)];
+  const updatedAt = historicalRanking.updated_at
+    ? new Date(historicalRanking.updated_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })
+    : '';
+
+  // Temporarily override with historical data for rendering
+  const origSector = [...sectorRankingData];
+  const origTheme = [...themeRankingData];
+  const origMarket = [...allMarketData];
+
+  sectorRankingData = periodData.sectors.filter(s => isFinite(s.avgReturn));
+  themeRankingData = periodData.themes.filter(t => isFinite(t.avgReturn));
+
+  renderRanking(`近 ${days} 日資料 (更新：${updatedAt})`);
+  renderThemeRanking(`近 ${days} 日資料`);
+
+  // Radar: use historical radar data
+  renderRadarFromData(periodData.radar || [], `近 ${days} 日`);
+
+  // Restore
+  sectorRankingData = origSector;
+  themeRankingData = origTheme;
 }
 
-function renderRanking() {
+// ============================================================
+// RENDER RANKING TABLE
+// ============================================================
+function renderRanking(subTitle = '') {
   rankingTableBody.innerHTML = '';
-  
-  // Sort the data
-  sectorRankingData.sort((a, b) => {
-    let valA, valB;
-    if (sortCol === 'amount') {
-      valA = a.totalAmount; valB = b.totalAmount;
-    } else if (sortCol === 'volume') {
-      valA = a.totalVolume; valB = b.totalVolume;
-    } else {
-      valA = a.avgReturn; valB = b.avgReturn;
-    }
-    return sortDesc ? valB - valA : valA - valB;
+
+  let data = [...sectorRankingData];
+  data.sort((a, b) => {
+    const vA = sortCol === 'amount' ? a.totalAmount : sortCol === 'volume' ? a.totalVolume : a.avgReturn;
+    const vB = sortCol === 'amount' ? b.totalAmount : sortCol === 'volume' ? b.totalVolume : b.avgReturn;
+    return sortDesc ? vB - vA : vA - vB;
   });
 
-  const maxAmount = Math.max(...sectorRankingData.map(d => d.totalAmount), 1);
-  const maxReturn = Math.max(...sectorRankingData.map(d => Math.abs(d.avgReturn)), 1);
+  if (subTitle) {
+    const infoRow = document.createElement('tr');
+    infoRow.innerHTML = `<td colspan="5" style="font-size:0.8rem;color:#64748b;padding:0.5rem 1rem;background:rgba(255,255,255,0.03)">${subTitle}</td>`;
+    rankingTableBody.appendChild(infoRow);
+  }
 
-  sectorRankingData.forEach((d, index) => {
+  const maxAmount = Math.max(...data.map(d => d.totalAmount), 1);
+  const maxReturn = Math.max(...data.map(d => Math.abs(d.avgReturn)), 1);
+
+  data.forEach((d, index) => {
     const tr = document.createElement('tr');
     tr.setAttribute('data-sector', d.sector);
-    
-    // Animation flash for update
     tr.classList.add('flash-up');
-    setTimeout(() => tr.classList.remove('flash-up'), 1000);
+    setTimeout(() => tr.classList.remove('flash-up'), 800);
 
     const returnClass = d.avgReturn > 0 ? 'color-positive' : (d.avgReturn < 0 ? 'color-negative' : '');
     const returnSign = d.avgReturn > 0 ? '+' : '';
-    const amountHundredMillion = (d.totalAmount / 10000).toFixed(2);
-    
+    const amountStr = (d.totalAmount / 100000000).toFixed(2);
     const amountPct = (d.totalAmount / maxAmount) * 100;
     const returnPct = (Math.abs(d.avgReturn) / maxReturn) * 100;
-    const returnBarColor = d.avgReturn > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
+    const returnBarColor = d.avgReturn >= 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
 
     tr.innerHTML = `
       <td>${index + 1}</td>
       <td><span class="badge-sector">${d.sector}</span></td>
       <td class="text-right ${returnClass} data-bar-cell">
-        <div class="data-bar" style="width: ${returnPct}%; background: ${returnBarColor};"></div>
+        <div class="data-bar" style="width:${returnPct}%;background:${returnBarColor}"></div>
         <strong class="data-bar-text">${returnSign}${d.avgReturn.toFixed(2)}%</strong>
       </td>
-      <td class="text-right">${d.totalVolume.toLocaleString()}</td>
+      <td class="text-right">${Math.round(d.totalVolume).toLocaleString()}</td>
       <td class="text-right data-bar-cell">
-        <div class="data-bar" style="width: ${amountPct}%; background: rgba(56, 189, 248, 0.15);"></div>
-        <span class="data-bar-text">${amountHundredMillion}</span>
+        <div class="data-bar" style="width:${amountPct}%;background:rgba(56,189,248,0.15)"></div>
+        <span class="data-bar-text">${amountStr}</span>
       </td>
     `;
-    
-    // Add click event listener to the row
-    tr.addEventListener('click', () => {
-      showChart(d.sector, 'sector');
-    });
-    
+    tr.addEventListener('click', () => showChart(d.sector, 'sector'));
     rankingTableBody.appendChild(tr);
   });
 }
 
+// ============================================================
+// RENDER THEME RANKING TABLE
+// ============================================================
+function renderThemeRanking(subTitle = '') {
+  themeRankingTableBody.innerHTML = '';
+
+  let data = [...themeRankingData];
+  data.sort((a, b) => {
+    const vA = themeSortCol === 'amount' ? a.totalAmount : themeSortCol === 'volume' ? a.totalVolume : a.avgReturn;
+    const vB = themeSortCol === 'amount' ? b.totalAmount : themeSortCol === 'volume' ? b.totalVolume : b.avgReturn;
+    return themeSortDesc ? vB - vA : vA - vB;
+  });
+
+  if (subTitle) {
+    const infoRow = document.createElement('tr');
+    infoRow.innerHTML = `<td colspan="5" style="font-size:0.8rem;color:#64748b;padding:0.5rem 1rem;background:rgba(255,255,255,0.03)">${subTitle}</td>`;
+    themeRankingTableBody.appendChild(infoRow);
+  }
+
+  const maxAmount = Math.max(...data.map(d => d.totalAmount), 1);
+  const maxReturn = Math.max(...data.map(d => Math.abs(d.avgReturn)), 1);
+
+  data.forEach((d, index) => {
+    const tr = document.createElement('tr');
+    tr.classList.add('flash-up');
+    setTimeout(() => tr.classList.remove('flash-up'), 800);
+
+    const returnClass = d.avgReturn > 0 ? 'color-positive' : (d.avgReturn < 0 ? 'color-negative' : '');
+    const returnSign = d.avgReturn > 0 ? '+' : '';
+    const amountStr = (d.totalAmount / 100000000).toFixed(2);
+    const amountPct = (d.totalAmount / maxAmount) * 100;
+    const returnPct = (Math.abs(d.avgReturn) / maxReturn) * 100;
+    const returnBarColor = d.avgReturn >= 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
+
+    tr.innerHTML = `
+      <td>${index + 1}</td>
+      <td><span class="badge-sector">${d.theme}</span></td>
+      <td class="text-right ${returnClass} data-bar-cell">
+        <div class="data-bar" style="width:${returnPct}%;background:${returnBarColor}"></div>
+        <strong class="data-bar-text">${returnSign}${d.avgReturn.toFixed(2)}%</strong>
+      </td>
+      <td class="text-right">${Math.round(d.totalVolume).toLocaleString()}</td>
+      <td class="text-right data-bar-cell">
+        <div class="data-bar" style="width:${amountPct}%;background:rgba(56,189,248,0.15)"></div>
+        <span class="data-bar-text">${amountStr}</span>
+      </td>
+    `;
+    tr.addEventListener('click', () => showChart(d.theme, 'theme'));
+    themeRankingTableBody.appendChild(tr);
+  });
+}
+
+// ============================================================
+// RENDER RADAR TABLE (live)
+// ============================================================
+function renderRadar() {
+  const sorted = [...allMarketData]
+    .filter(d => d.amount > 0)
+    .sort((a, b) => {
+      const vA = radarSortCol === 'amount' ? a.amount : radarSortCol === 'volume' ? a.volume : a.dailyReturn;
+      const vB = radarSortCol === 'amount' ? b.amount : radarSortCol === 'volume' ? b.volume : b.dailyReturn;
+      return radarSortDesc ? vB - vA : vA - vB;
+    })
+    .slice(0, 100);
+  renderRadarFromData(sorted, '今日');
+}
+
+// ============================================================
+// RENDER RADAR TABLE (from any data source)
+// ============================================================
+function renderRadarFromData(stocks, periodLabel = '') {
+  radarTableBody.innerHTML = '';
+  if (!stocks || stocks.length === 0) {
+    radarTableBody.innerHTML = '<tr><td colspan="6" class="text-center">目前無交易資料</td></tr>';
+    return;
+  }
+
+  const maxAmount = Math.max(...stocks.map(s => s.amount), 1);
+  const maxReturn = Math.max(...stocks.map(s => Math.abs(s.dailyReturn || 0)), 1);
+
+  stocks.forEach((stock, index) => {
+    const tr = document.createElement('tr');
+    tr.classList.add('flash-up');
+    setTimeout(() => tr.classList.remove('flash-up'), 800);
+
+    const ret = stock.dailyReturn || 0;
+    const returnClass = ret > 0 ? 'color-positive' : (ret < 0 ? 'color-negative' : '');
+    const returnSign = ret > 0 ? '+' : '';
+    const amountStr = (stock.amount / 100000000).toFixed(2);
+    const amountPct = (stock.amount / maxAmount) * 100;
+    const returnPct = (Math.abs(ret) / maxReturn) * 100;
+    const returnBarColor = ret >= 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
+
+    const stockName = stock.stock ? stock.stock['股票名稱'] : (stock.name || '');
+    const stockCode = stock.stock ? stock.stock['股票代號'] : (stock.symbol || '');
+    const stockSector = stock.stock ? stock.stock['產業別'] : '';
+
+    tr.innerHTML = `
+      <td>${index + 1}</td>
+      <td>${stockName} <span style="font-size:0.9em;color:var(--text-secondary)">${stockCode}</span></td>
+      <td class="text-right"><span class="badge-sector">${stockSector}</span></td>
+      <td class="text-right ${returnClass} data-bar-cell">
+        <div class="data-bar" style="width:${returnPct}%;background:${returnBarColor}"></div>
+        <strong class="data-bar-text">${returnSign}${ret.toFixed(2)}%</strong>
+      </td>
+      <td class="text-right">${Math.round(stock.volume).toLocaleString()}</td>
+      <td class="text-right data-bar-cell">
+        <div class="data-bar" style="width:${amountPct}%;background:rgba(56,189,248,0.15)"></div>
+        <span class="data-bar-text">${amountStr}</span>
+      </td>
+    `;
+    tr.addEventListener('click', () => {
+      if (stockSector) showChart(stockSector, 'sector');
+    });
+    radarTableBody.appendChild(tr);
+  });
+}
+
+// ============================================================
+// SORT UI UPDATERS
+// ============================================================
 function updateSortUI() {
-  sortableHeaders.forEach(header => {
-    const col = header.getAttribute('data-sort');
-    const icon = header.querySelector('.sort-icon');
-    if (col === sortCol) {
-      header.setAttribute('data-active', 'true');
-      icon.textContent = sortDesc ? '▼' : '▲';
-    } else {
-      header.removeAttribute('data-active');
-      icon.textContent = '';
-    }
+  sortableHeaders.forEach(h => {
+    const col = h.getAttribute('data-sort');
+    const icon = h.querySelector('.sort-icon');
+    if (col === sortCol) { h.setAttribute('data-active', 'true'); icon.textContent = sortDesc ? '▼' : '▲'; }
+    else { h.removeAttribute('data-active'); icon.textContent = ''; }
   });
 }
-
-
+function updateThemeSortUI() {
+  themeSortableHeaders.forEach(h => {
+    const col = h.getAttribute('data-sort');
+    const icon = h.querySelector('.sort-icon');
+    if (col === themeSortCol) { h.setAttribute('data-active', 'true'); icon.textContent = themeSortDesc ? '▼' : '▲'; }
+    else { h.removeAttribute('data-active'); icon.textContent = ''; }
+  });
+}
 function updateRadarSortUI() {
-  radarSortableHeaders.forEach(header => {
-    const col = header.getAttribute('data-sort');
-    const icon = header.querySelector('.sort-icon');
-    if (col === radarSortCol) {
-      header.setAttribute('data-active', 'true');
-      icon.textContent = radarSortDesc ? '▼' : '▲';
-    } else {
-      header.removeAttribute('data-active');
-      icon.textContent = '';
-    }
+  radarSortableHeaders.forEach(h => {
+    const col = h.getAttribute('data-sort');
+    const icon = h.querySelector('.sort-icon');
+    if (col === radarSortCol) { h.setAttribute('data-active', 'true'); icon.textContent = radarSortDesc ? '▼' : '▲'; }
+    else { h.removeAttribute('data-active'); icon.textContent = ''; }
   });
 }
 
+// ============================================================
+// SWITCH VIEW
+// ============================================================
 function switchView(targetViewId) {
-  // Update Nav Buttons
   if (targetViewId !== 'view-chart') {
     navBtns.forEach(b => {
-      if (b.getAttribute('data-target') === targetViewId) {
-        b.classList.add('active');
-      } else {
-        b.classList.remove('active');
-      }
+      if (b.getAttribute('data-target') === targetViewId) b.classList.add('active');
+      else b.classList.remove('active');
     });
   }
-
-  // Hide all views
-  const views = [viewRanking, viewThemeRanking, viewRadar, viewChart];
-  views.forEach(v => {
-    v.classList.add('hidden');
-    v.classList.remove('active');
+  [viewRanking, viewThemeRanking, viewRadar, viewChart].forEach(v => {
+    v.classList.add('hidden'); v.classList.remove('active');
   });
-
-  // Show target view
-  const targetView = document.getElementById(targetViewId);
-  if (targetView) {
-    targetView.classList.remove('hidden');
-    targetView.classList.add('active');
-  }
+  const target = document.getElementById(targetViewId);
+  if (target) { target.classList.remove('hidden'); target.classList.add('active'); }
 }
 
-function updateThemeSortUI() {
-  themeSortableHeaders.forEach(header => {
-    const col = header.getAttribute('data-sort');
-    const icon = header.querySelector('.sort-icon');
-    if (col === themeSortCol) {
-      header.setAttribute('data-active', 'true');
-      icon.textContent = themeSortDesc ? '▼' : '▲';
-    } else {
-      header.removeAttribute('data-active');
-      icon.textContent = '';
-    }
-  });
-}
-
+// ============================================================
+// SHOW CHART (entry point)
+// ============================================================
 function showChart(identifier, mode = 'sector') {
   currentSector = identifier;
   currentChartMode = mode;
-  
-  // Switch Views
   switchView('view-chart');
-  
+
   const modeText = mode === 'sector' ? '族群' : '題材概念股';
   currentSectorTitle.textContent = `${identifier} ${modeText}分析`;
-  
-  // Reset period to 1 (today) when switching sector
+
+  // Reset period to 1
   currentPeriodDays = 1;
   document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
   document.querySelector('.period-btn[data-period="1"]').classList.add('active');
-  
+
   renderChart(identifier, mode);
 }
 
-// --- Event Listeners ---
-
-// Period selector binding
-document.querySelectorAll('.period-btn').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    // Update active class for ALL period buttons
-    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-    
-    // The user might click on one view, we should sync all buttons with the same data-period
-    const selectedPeriod = e.target.getAttribute('data-period');
-    document.querySelectorAll(`.period-btn[data-period="${selectedPeriod}"]`).forEach(b => b.classList.add('active'));
-    
-    currentPeriodDays = parseInt(selectedPeriod);
-    
-    // Only re-render if we are currently viewing a chart
-    if (!document.getElementById('view-chart').classList.contains('hidden') && currentSector) {
-      renderChart(currentSector, currentChartMode);
-    }
-  });
-});
-
-// Detail Table Sorting
-document.querySelectorAll('.detail-sortable').forEach(th => {
-  th.addEventListener('click', () => {
-    const column = th.getAttribute('data-sort');
-    if (currentDetailSort.column === column) {
-      currentDetailSort.order = currentDetailSort.order === 'desc' ? 'asc' : 'desc';
-    } else {
-      currentDetailSort.column = column;
-      currentDetailSort.order = 'desc';
-    }
-    
-    // Update UI icons
-    document.querySelectorAll('.detail-sortable .sort-icon').forEach(icon => {
-      icon.textContent = '';
-      icon.classList.remove('asc', 'desc');
-    });
-    
-    const icon = document.getElementById(`detail-sort-${column}`);
-    if (icon) {
-      icon.textContent = currentDetailSort.order === 'desc' ? '▼' : '▲';
-      icon.classList.add(currentDetailSort.order);
-    }
-    
-    // Re-render table using raw sectorData, not just plotted data (so missing shows up)
-    if (globalSectorDataForTable && globalSectorDataForTable.length > 0) {
-      renderDetailTable(globalSectorDataForTable);
-    }
-  });
-});
-
-function openChart(identifier, mode = 'sector') {
-  currentSector = identifier;
-  currentChartMode = mode;
-  
-  // Switch Views
-  switchView('view-chart');
-  
-  renderChart(identifier, mode);
-}
-
+// ============================================================
+// RENDER CHART
+// ============================================================
 async function renderChart(identifier, mode) {
   currentFetchId++;
   const fetchId = currentFetchId;
-  
-  // 1. Clear existing chart
-  if (chartInstance) {
-    chartInstance.destroy();
-    chartInstance = null;
-  }
-  
-  const currentSectorTitle = document.getElementById('current-sector-title');
+
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
   const modeText = mode === 'sector' ? '族群' : '題材';
   currentSectorTitle.textContent = `${identifier} ${modeText}分析`;
 
   // Filter stocks
-  let baseData = currentChartMode === 'sector' 
+  let baseData = mode === 'sector'
     ? allMarketData.filter(d => d.stock['產業別'] === identifier)
     : allMarketData.filter(d => {
         const themes = d.stock['題材清單'];
         return themes && themes.includes(identifier);
       });
-      
-  // Safety filter to prevent undefined symbols and 0 volume stocks
-  baseData = baseData.filter(d => d && d.stock && d.stock['股票代號'] && d.amount > 0 && d.volume > 0 && !isNaN(d.dailyReturn));
-  
-  // Sort by today's amount and limit to top 50
+
+  // Safety filter: only stocks with valid data
+  baseData = baseData.filter(d => d && d.stock && d.stock['股票代號'] && d.amount > 0 && d.volume > 0 && isFinite(d.dailyReturn));
   baseData.sort((a, b) => b.amount - a.amount);
   baseData = baseData.slice(0, 50);
-    
-  if (baseData.length === 0) return;
-  
+
+  if (baseData.length === 0) {
+    currentSectorTitle.textContent = `${identifier} ${modeText}分析 (無資料)`;
+    return;
+  }
+
   const overlay = document.getElementById('chart-loading-overlay');
-  
-  // Base daily data preparation
   let sectorData = [];
-  
+
   if (currentPeriodDays === 1) {
-    // Single Day Mode
+    // --- LIVE SINGLE DAY ---
     overlay.classList.add('hidden');
     sectorData = baseData.map(d => ({
-        symbol: d.stock['股票代號'],
-        name: d.stock['股票名稱'],
-        stock: d.stock,
-        dailyReturn: d.dailyReturn || 0,
-        volume: d.volume,
-        amount: d.amount
+      symbol: d.stock['股票代號'],
+      name: d.stock['股票名稱'],
+      stock: d.stock,
+      dailyReturn: d.dailyReturn || 0,
+      volume: d.volume,
+      amount: d.amount
     }));
   } else {
-    // Historical Period Mode
+    // --- HISTORICAL PERIOD (FinMind API) ---
     overlay.classList.remove('hidden');
     currentSectorTitle.textContent = `${identifier} ${modeText}分析 (歷史資料載入中...)`;
-    
+
     try {
-      const period1 = new Date();
-      period1.setDate(period1.getDate() - (currentPeriodDays + 20));
-      const startDateStr = period1.toISOString().split('T')[0];
-      
+      const period1Date = new Date();
+      period1Date.setDate(period1Date.getDate() - (currentPeriodDays + 20));
+      const startDateStr = period1Date.toISOString().split('T')[0];
+
       const periodResults = {};
-      const CHUNK_SIZE = 10; 
-      
+      const CHUNK_SIZE = 10;
       const symbols = baseData.map(d => d.stock['股票代號']);
-      
+
       for (let i = 0; i < symbols.length; i += CHUNK_SIZE) {
-        if (fetchId !== currentFetchId) return;
-        
+        if (fetchId !== currentFetchId) return; // Race condition abort
+
         const chunk = symbols.slice(i, i + CHUNK_SIZE);
         const promises = chunk.map(async symbol => {
           const cacheKey = `${symbol}-${currentPeriodDays}`;
-          if (historicalDataCache[cacheKey]) {
-            return { symbol, data: historicalDataCache[cacheKey] };
-          }
-          
+          if (historicalDataCache[cacheKey]) return { symbol, data: historicalDataCache[cacheKey] };
+
           try {
             const res = await fetch(`https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${symbol}&start_date=${startDateStr}`);
             const json = await res.json();
             if (fetchId !== currentFetchId) return null;
-            
+
             if (json.msg === 'success' && json.data.length > 0) {
               const recent = json.data.slice(-currentPeriodDays);
               if (recent.length === 0) return null;
-              
-              const startClose = recent[0].open || recent[0].close;
+
+              const prevDay = json.data[Math.max(0, json.data.length - currentPeriodDays - 1)];
+              const startClose = prevDay ? (prevDay.close || prevDay.open) : (recent[0].open || recent[0].close);
               const endClose = recent[recent.length - 1].close;
-              const cumulativeReturn = startClose ? ((endClose - startClose) / startClose) * 100 : 0;
-              
-              let totalVolume = 0;
-              let totalAmount = 0;
+              const cumulativeReturn = (startClose > 0 && endClose > 0) ? ((endClose - startClose) / startClose) * 100 : 0;
+
+              let totalVolume = 0, totalAmount = 0;
               for (const day of recent) {
                 totalVolume += day.Trading_Volume / 1000;
                 totalAmount += day.Trading_money;
               }
-              
+
               const resultData = { cumulativeReturn, totalVolume, totalAmount };
               historicalDataCache[cacheKey] = resultData;
               return { symbol, data: resultData };
             }
           } catch(e) {
-            console.error(`Failed to fetch ${symbol} from FinMind`, e);
+            console.warn(`Failed to fetch ${symbol} from FinMind`, e);
           }
           return null;
         });
-        
+
         const chunkResults = await Promise.all(promises);
         for (const res of chunkResults) {
           if (res) periodResults[res.symbol] = res.data;
         }
-        
-        if (i + CHUNK_SIZE < symbols.length) {
-          await new Promise(resolve => setTimeout(resolve, 300));
-        }
+
+        if (i + CHUNK_SIZE < symbols.length) await new Promise(r => setTimeout(r, 300));
       }
-      
+
       if (fetchId !== currentFetchId) return;
-      
-      currentSectorTitle.textContent = `${identifier} ${modeText}分析 (${currentPeriodDays}日)`;
-      
+
       for (const d of baseData) {
         const symbol = d.stock['股票代號'];
         if (periodResults[symbol]) {
           const p = periodResults[symbol];
           sectorData.push({
-              symbol: symbol,
-              name: d.stock['股票名稱'],
-              stock: d.stock,
-              dailyReturn: p.cumulativeReturn || 0,
-              volume: p.totalVolume,
-              amount: p.totalAmount
+            symbol, name: d.stock['股票名稱'], stock: d.stock,
+            dailyReturn: p.cumulativeReturn || 0,
+            volume: p.totalVolume,
+            amount: p.totalAmount
           });
         } else {
           sectorData.push({
-            symbol: symbol,
-            name: d.stock['股票名稱'],
-            stock: d.stock,
-            dailyReturn: 0,
-            volume: 0,
-            amount: 0,
-            isMissing: true
+            symbol, name: d.stock['股票名稱'], stock: d.stock,
+            dailyReturn: 0, volume: 0, amount: 0, isMissing: true
           });
         }
       }
     } catch(e) {
       console.error('Failed to fetch period analysis', e);
     }
-    
+
     sectorData.sort((a, b) => b.amount - a.amount);
     sectorData = sectorData.slice(0, 50);
-    
-    currentSectorTitle.textContent = `${identifier} ${modeText}分析`;
+    currentSectorTitle.textContent = `${identifier} ${modeText}分析 (近 ${currentPeriodDays} 日)`;
   }
 
-  // 3. Render Chart Initial State
-  const chartPlotData = sectorData.filter(d => !d.isMissing);
+  overlay.classList.add('hidden');
+
+  // ---- CHART ----
+  const chartPlotData = sectorData.filter(d => !d.isMissing && d.amount > 0);
+  if (chartPlotData.length === 0) {
+    currentSectorTitle.textContent += ' - 無圖表資料';
+    globalSectorDataForTable = sectorData;
+    renderDetailTable(sectorData);
+    return;
+  }
 
   const datasets = [{
     label: `${identifier} ${mode === 'sector' ? '族群' : '題材'}`,
     data: chartPlotData.map(d => ({
-      x: Math.max((d.amount / 100000000) || 0.1, 0.1), // Ensure x > 0 for log scale safety
+      x: Math.max((d.amount / 100000000) || 0.1, 0.1),
       y: d.dailyReturn || 0,
-      r: Math.max(4, Math.min((d.volume || 0) / 2000, 25)), 
-      raw: d 
+      r: Math.max(5, Math.min((d.volume || 0) / 2000, 28)),
+      raw: d
     })),
-    backgroundColor: chartPlotData.map(d => 
-      (d.dailyReturn || 0) >= 0 
-        ? 'rgba(239, 68, 68, 0.75)'  // Red
-        : 'rgba(34, 197, 94, 0.75)'  // Green
-    ),
-    borderColor: chartPlotData.map(d => 
-      (d.dailyReturn || 0) >= 0 
-        ? 'rgba(239, 68, 68, 1)' 
-        : 'rgba(34, 197, 94, 1)'
-    ),
-    borderWidth: 1.5,
-    hoverBorderWidth: 3,
-    hoverBorderColor: '#fff'
+    backgroundColor: chartPlotData.map(d => (d.dailyReturn || 0) >= 0 ? 'rgba(239,68,68,0.75)' : 'rgba(34,197,94,0.75)'),
+    borderColor: chartPlotData.map(d => (d.dailyReturn || 0) >= 0 ? 'rgba(239,68,68,1)' : 'rgba(34,197,94,1)'),
+    borderWidth: 1.5, hoverBorderWidth: 3, hoverBorderColor: '#fff'
   }];
 
   Chart.defaults.color = '#475569';
@@ -792,140 +718,103 @@ async function renderChart(identifier, mode) {
   try {
     const ctx = document.getElementById('bubbleChart').getContext('2d');
     chartInstance = new Chart(ctx, {
-    type: 'bubble',
-    data: { datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: {
-        duration: 600,
-        easing: 'easeOutQuart'
-      },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          enabled: false,
-          external: function(context) {
-            const tooltipEl = document.getElementById('chart-tooltip');
-            const tooltipModel = context.tooltip;
-            
-            if (tooltipModel.opacity === 0) {
-              tooltipEl.style.opacity = 0;
-              return;
+      type: 'bubble',
+      data: { datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 500, easing: 'easeOutQuart' },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            enabled: false,
+            external: function(context) {
+              const tooltipEl = document.getElementById('chart-tooltip');
+              const tooltipModel = context.tooltip;
+              if (tooltipModel.opacity === 0) { tooltipEl.style.opacity = 0; return; }
+              if (tooltipModel.body) {
+                const d = tooltipModel.dataPoints[0].raw.raw;
+                const returnSign = d.dailyReturn > 0 ? '+' : '';
+                const returnColor = d.dailyReturn > 0 ? 'var(--positive-color)' : (d.dailyReturn < 0 ? 'var(--negative-color)' : 'white');
+                const amountStr = (d.amount / 100000000).toFixed(2);
+                tooltipEl.innerHTML = `
+                  <div style="margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:4px">
+                    <strong style="font-size:1.1rem;color:#fff">${d.stock['股票名稱']}</strong>
+                    <span style="color:#94a3b8;font-size:0.9rem">(${d.stock['股票代號']})</span>
+                  </div>
+                  <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:0.95rem">
+                    <span style="color:#94a3b8">報酬率:</span>
+                    <span style="color:${returnColor};font-weight:bold;text-align:right">${returnSign}${d.dailyReturn.toFixed(2)}%</span>
+                    <span style="color:#94a3b8">成交量:</span>
+                    <span style="color:#fff;text-align:right">${Math.round(d.volume).toLocaleString()} 張</span>
+                    <span style="color:#94a3b8">成交額:</span>
+                    <span style="color:#fff;text-align:right">${amountStr} 億</span>
+                  </div>
+                `;
+              }
+              const pos = context.chart.canvas.getBoundingClientRect();
+              tooltipEl.style.opacity = 1;
+              tooltipEl.style.left = (pos.left + window.scrollX + tooltipModel.caretX + 15) + 'px';
+              tooltipEl.style.top = (pos.top + window.scrollY + tooltipModel.caretY - 15) + 'px';
             }
-
-            if (tooltipModel.body) {
-              const dataPoint = tooltipModel.dataPoints[0];
-              const d = dataPoint.raw.raw;
-              
-              const returnSign = d.dailyReturn > 0 ? '+' : '';
-              const returnColor = d.dailyReturn > 0 ? 'var(--positive-color)' : (d.dailyReturn < 0 ? 'var(--negative-color)' : 'white');
-              const amountHundredMillion = (d.amount / 100000000).toFixed(2);
-              
-              const innerHtml = `
-                <div style="margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px;">
-                  <strong style="font-size: 1.1rem; color: #fff;">${d.stock['股票名稱']}</strong> 
-                  <span style="color: #94a3b8; font-size: 0.9rem;">(${d.stock['股票代號']})</span>
-                </div>
-                <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 0.95rem;">
-                  <span style="color: #94a3b8;">當日報酬:</span>
-                  <span style="color: ${returnColor}; font-weight: bold; text-align: right;">${returnSign}${d.dailyReturn.toFixed(2)}%</span>
-                  
-                  <span style="color: #94a3b8;">成交量:</span>
-                  <span style="color: #fff; text-align: right;">${d.volume.toLocaleString()} 張</span>
-                  
-                  <span style="color: #94a3b8;">成交額:</span>
-                  <span style="color: #fff; text-align: right;">${amountHundredMillion} 億</span>
-                </div>
-              `;
-              
-              tooltipEl.innerHTML = innerHtml;
-            }
-
-            const position = context.chart.canvas.getBoundingClientRect();
-            
-            let tooltipX = position.left + window.scrollX + tooltipModel.caretX + 15;
-            let tooltipY = position.top + window.scrollY + tooltipModel.caretY - 15;
-            
-            tooltipEl.style.opacity = 1;
-            tooltipEl.style.left = tooltipX + 'px';
-            tooltipEl.style.top = tooltipY + 'px';
-          }
-        },
-        datalabels: {
-          color: 'rgba(255, 255, 255, 0.9)',
-          font: { weight: 'bold', size: 12 },
-          formatter: function(value) {
-            return value.raw.stock['股票名稱'];
           },
-          align: 'end',
-          anchor: 'end',
-          offset: 2,
-          clip: false,
-          display: function(context) {
-            return context.dataset.data[context.dataIndex].r >= 8;
+          datalabels: {
+            color: 'rgba(255,255,255,0.9)',
+            font: { weight: 'bold', size: 12 },
+            formatter: value => value.raw.stock['股票名稱'],
+            align: 'end', anchor: 'end', offset: 2, clip: false,
+            display: ctx => ctx.dataset.data[ctx.dataIndex].r >= 8
           }
-        }
-      },
-      scales: {
-        x: {
-          type: 'linear',
-          title: { display: true, text: '成交金額 (億)', color: '#94a3b8' },
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#94a3b8' }
         },
-        y: {
-          title: { display: true, text: '報酬率 (%)', color: '#94a3b8' },
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#94a3b8' }
+        scales: {
+          x: {
+            type: 'linear',
+            title: { display: true, text: '成交金額 (億)', color: '#94a3b8' },
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#94a3b8' }
+          },
+          y: {
+            title: { display: true, text: '報酬率 (%)', color: '#94a3b8' },
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#94a3b8' }
+          }
         }
       }
-    }
-  });
-  
-  // Render Detail Table
-  globalSectorDataForTable = sectorData;
-  renderDetailTable(sectorData);
+    });
+
+    globalSectorDataForTable = sectorData;
+    renderDetailTable(sectorData);
 
   } catch (err) {
-    console.error("Chart initialization failed:", err);
-    return;
+    console.error('Chart initialization failed:', err);
   }
 }
 
+// ============================================================
+// RENDER DETAIL TABLE (chart view bottom)
+// ============================================================
 function renderDetailTable(data) {
   const tbody = document.getElementById('detailTableBody');
   tbody.innerHTML = '';
-  
+
   if (!data || data.length === 0) {
     tbody.innerHTML = '<tr><td colspan="4" class="text-center">無資料</td></tr>';
     return;
   }
-  
-  // Clone data for sorting
-  let sortedData = [...data];
-  sortedData.sort((a, b) => {
-    let valA, valB;
-    switch(currentDetailSort.column) {
-      case 'return':
-        valA = a.dailyReturn; valB = b.dailyReturn; break;
-      case 'volume':
-        valA = a.volume; valB = b.volume; break;
-      case 'amount':
-        valA = a.amount; valB = b.amount; break;
-      case 'symbol':
-      default:
-        valA = a.symbol; valB = b.symbol; break;
-    }
-    
-    if (valA < valB) return currentDetailSort.order === 'desc' ? 1 : -1;
-    if (valA > valB) return currentDetailSort.order === 'desc' ? -1 : 1;
+
+  let sorted = [...data].sort((a, b) => {
+    let vA, vB;
+    if (currentDetailSort.column === 'return')  { vA = a.dailyReturn; vB = b.dailyReturn; }
+    else if (currentDetailSort.column === 'volume') { vA = a.volume; vB = b.volume; }
+    else if (currentDetailSort.column === 'amount') { vA = a.amount; vB = b.amount; }
+    else { vA = a.symbol || ''; vB = b.symbol || ''; }
+    if (vA < vB) return currentDetailSort.order === 'desc' ? 1 : -1;
+    if (vA > vB) return currentDetailSort.order === 'desc' ? -1 : 1;
     return 0;
   });
-  
-  sortedData.forEach(item => {
+
+  sorted.forEach(item => {
     const tr = document.createElement('tr');
-    
     if (item.isMissing) {
       tr.innerHTML = `
         <td>${item.stock['股票名稱']} (${item.symbol})</td>
@@ -936,24 +825,18 @@ function renderDetailTable(data) {
     } else {
       const returnClass = item.dailyReturn > 0 ? 'text-danger' : (item.dailyReturn < 0 ? 'text-success' : '');
       const returnSign = item.dailyReturn > 0 ? '+' : '';
-      const formattedReturn = `${returnSign}${item.dailyReturn.toFixed(2)}%`;
-      
-      const formattedVolume = Math.round(item.volume).toLocaleString();
-      const formattedAmount = (item.amount / 100000000).toFixed(2);
-      
       tr.innerHTML = `
-        <td>${item.stock['股票名稱']} (${item.symbol})</td>
-        <td class="text-right font-bold ${returnClass}">${formattedReturn}</td>
-        <td class="text-right">${formattedVolume}</td>
-        <td class="text-right">${formattedAmount}</td>
+        <td>${item.stock['股票名稱']} <span style="color:#94a3b8;font-size:0.9em">(${item.symbol})</span></td>
+        <td class="text-right font-bold ${returnClass}">${returnSign}${item.dailyReturn.toFixed(2)}%</td>
+        <td class="text-right">${Math.round(item.volume).toLocaleString()}</td>
+        <td class="text-right">${(item.amount / 100000000).toFixed(2)}</td>
       `;
     }
     tbody.appendChild(tr);
   });
 }
 
-// Global variable to keep sector data around for detail table sorting without re-fetching
-let globalSectorDataForTable = [];
-
-// Start app
+// ============================================================
+// START APP
+// ============================================================
 init();
