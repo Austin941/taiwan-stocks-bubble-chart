@@ -5,7 +5,6 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import yahooFinance from 'yahoo-finance2';
 
 dotenv.config();
 
@@ -16,40 +15,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const FUGLE_API_KEYS = process.env.FUGLE_API_KEYS 
-  ? process.env.FUGLE_API_KEYS.split(',') 
-  : [];
-let currentKeyIndex = 0;
+// ============================================================
+// STOCK DICTIONARY
+// ============================================================
+let allSymbols = [];     // ['tse_2330.tw', 'otc_6547.tw', ...]
+let tseSymbols = [];     // only TSE (上市)
+let otcSymbols = [];     // only OTC (上櫃)
 
-// 1. Fugle API Proxy (High frequency, load balanced across multiple keys)
-app.get('/api/fugle/:symbol', async (req, res) => {
-  if (FUGLE_API_KEYS.length === 0) {
-    return res.status(500).json({ error: 'No Fugle API Keys configured' });
-  }
-
-  // Round-robin key selection
-  const apiKey = FUGLE_API_KEYS[currentKeyIndex];
-  currentKeyIndex = (currentKeyIndex + 1) % FUGLE_API_KEYS.length;
-
-  try {
-    const { symbol } = req.params;
-    const response = await axios.get(`https://api.fugle.tw/marketdata/v1.0/stock/intraday/quote/${symbol}`, {
-      headers: { 'X-API-KEY': apiKey }
-    });
-    res.json(response.data);
-  } catch (error) {
-    console.error(`[Fugle Proxy] Error fetching ${req.params.symbol} with key index ${currentKeyIndex}:`, error.message);
-    res.status(500).json({ error: 'Failed to fetch Fugle data' });
-  }
-});
-
-// 2. Market Snapshot (Concurrent Fetch with Market Hours Logic)
-let marketCache = {};
-let allSymbols = [];
-let lastCacheTime = 0;
-const CACHE_TTL = 5000; // 5 seconds
-
-// Read stocks from CSV
 try {
   const csvPath = path.join(__dirname, 'public', 'stocks.csv');
   const csvData = fs.readFileSync(csvPath, 'utf-8');
@@ -57,70 +29,192 @@ try {
   for (const line of lines) {
     if (!line.trim()) continue;
     const cols = line.split(',');
-    const symbol = cols[0];
-    const market = cols[3];
-    if (symbol && market) {
-      const prefix = market.includes('上市') ? 'tse' : 'otc';
-      allSymbols.push(`${prefix}_${symbol}.tw`);
+    const symbol = cols[0]?.trim();
+    const market  = cols[3]?.trim();
+    if (!symbol || !market) continue;
+    if (market.includes('上市')) {
+      allSymbols.push(`tse_${symbol}.tw`);
+      tseSymbols.push(symbol);
+    } else {
+      allSymbols.push(`otc_${symbol}.tw`);
+      otcSymbols.push(symbol);
     }
   }
-  console.log(`[Backend] Loaded ${allSymbols.length} symbols from dictionary.`);
+  console.log(`[Backend] Loaded ${tseSymbols.length} TSE + ${otcSymbols.length} OTC symbols.`);
 } catch (e) {
   console.error('[Backend] Error loading CSV:', e.message);
 }
 
+// ============================================================
+// MARKET HOURS
+// ============================================================
 function isMarketOpen() {
   const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
   const time = now.getHours() * 60 + now.getMinutes();
-  // Taiwan Stock Market Open + After-market: 08:30 to 14:30
-  return time >= 510 && time <= 870;
+  return time >= 510 && time <= 870; // 08:30 ~ 14:30
 }
 
-async function fetchEntireMarket() {
-  if (allSymbols.length === 0) return;
-  
+// ============================================================
+// CACHE
+// ============================================================
+let marketCache = {};
+let lastCacheTime = 0;
+const INTRADAY_TTL  = 8000;  // 8 seconds during market hours
+const CLOSING_TTL   = 3600000; // 1 hour after close
+
+// ============================================================
+// API 1 — TWSE mis.twse.com.tw (即時盤中 - Real-time Intraday)
+// Handles: TSE + OTC in a single API (100 symbols per request)
+// Field guide:
+//   z = last transaction price (can be "-" if no trade yet)
+//   y = yesterday close price
+//   o = today open
+//   h = today high
+//   l = today low
+//   v = volume (張)
+// ============================================================
+async function fetchIntraday() {
   const CHUNK_SIZE = 100;
   const promises = [];
-  
+
   for (let i = 0; i < allSymbols.length; i += CHUNK_SIZE) {
     const chunk = allSymbols.slice(i, i + CHUNK_SIZE);
-    const queryUrl = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${chunk.join('|')}&json=1&delay=0`;
-    
+    const url = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${chunk.join('|')}&json=1&delay=0`;
     promises.push(
-      axios.get(queryUrl, {
+      axios.get(url, {
         headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-        timeout: 5000
+        timeout: 6000
       }).then(response => {
-        if (response.data && response.data.msgArray) {
+        if (response.data?.msgArray) {
           response.data.msgArray.forEach(item => {
-            if (item.c) {
-              marketCache[item.c] = {
-                price: parseFloat(item.z) || parseFloat(item.y),
-                prevClose: parseFloat(item.y),
-                volume: parseInt(item.v) || 0
-              };
+            if (!item.c) return;
+            const prevClose = parseFloat(item.y) || 0;
+            // z is the last deal price; it can be "-" if not yet traded
+            let price = parseFloat(item.z);
+            // Fallback: use midpoint of high and low if z is not a number
+            if (isNaN(price) || price <= 0) {
+              const h = parseFloat(item.h);
+              const l = parseFloat(item.l);
+              if (!isNaN(h) && !isNaN(l) && h > 0 && l > 0) {
+                price = (h + l) / 2; // Best estimate from bid/ask range
+              } else {
+                price = prevClose; // Last resort: use prevClose (return = 0)
+              }
+            }
+            const volume = parseInt(item.v) || 0;
+            if (prevClose > 0) {
+              marketCache[item.c] = { price, prevClose, volume };
             }
           });
         }
-      }).catch(err => console.error('[Backend] Fetch Chunk Error:', err.message))
+      }).catch(err => console.error('[Intraday] Chunk fetch error:', err.message))
     );
   }
-  
+
   await Promise.all(promises);
   lastCacheTime = Date.now();
-  console.log(`[Backend] Fetched full market snapshot. Cache size: ${Object.keys(marketCache).length}. Market Open: ${isMarketOpen()}`);
+  console.log(`[Intraday] Updated. Cache size: ${Object.keys(marketCache).length}`);
 }
 
+// ============================================================
+// API 2 — TWSE OpenAPI (收盤後精確數據 - TSE Closing Data)
+// URL: https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL
+// Fields: Code, ClosingPrice, Change, TradeVolume, TradeValue
+// ============================================================
+async function fetchTSEClosing() {
+  try {
+    const res = await axios.get('https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL', {
+      timeout: 10000,
+      headers: { 'Accept': 'application/json' }
+    });
+    const data = res.data;
+    if (!Array.isArray(data)) return;
+
+    let updated = 0;
+    data.forEach(item => {
+      const code = item.Code?.trim();
+      const close = parseFloat(item.ClosingPrice?.replace(/,/g, ''));
+      const change = parseFloat(item.Change?.replace(/,/g, ''));
+      const vol = parseFloat(item.TradeVolume?.replace(/,/g, '')) / 1000; // Convert to 張
+      if (!code || isNaN(close) || close <= 0) return;
+
+      const prevClose = close - change;
+      marketCache[code] = {
+        price: close,
+        prevClose: prevClose > 0 ? prevClose : close,
+        volume: isNaN(vol) ? 0 : Math.round(vol)
+      };
+      updated++;
+    });
+    console.log(`[TSE-Closing] Updated ${updated} TSE stocks.`);
+  } catch (e) {
+    console.error('[TSE-Closing] Error:', e.message);
+  }
+}
+
+// ============================================================
+// API 3 — TPEx OpenAPI (收盤後精確數據 - OTC Closing Data)
+// URL: https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes
+// Fields: SecuritiesCompanyCode, Close, Change, TradingShares, TransactionAmount
+// ============================================================
+async function fetchOTCClosing() {
+  try {
+    const res = await axios.get('https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes', {
+      timeout: 10000,
+      headers: { 'Accept': 'application/json' }
+    });
+    const data = res.data;
+    if (!Array.isArray(data)) return;
+
+    let updated = 0;
+    data.forEach(item => {
+      const code = item.SecuritiesCompanyCode?.trim();
+      const close = parseFloat(item.Close?.trim());
+      const change = parseFloat(item.Change?.trim());
+      const vol = parseFloat(item.TradingShares?.replace(/,/g, '')) / 1000; // Convert to 張
+      if (!code || isNaN(close) || close <= 0) return;
+
+      const prevClose = close - change;
+      marketCache[code] = {
+        price: close,
+        prevClose: prevClose > 0 ? prevClose : close,
+        volume: isNaN(vol) ? 0 : Math.round(vol)
+      };
+      updated++;
+    });
+    console.log(`[OTC-Closing] Updated ${updated} OTC stocks.`);
+  } catch (e) {
+    console.error('[OTC-Closing] Error:', e.message);
+  }
+}
+
+// ============================================================
+// SMART FETCH DISPATCHER
+// During market hours: use real-time intraday API
+// After close: use official closing price APIs (more accurate)
+// ============================================================
+async function fetchMarketData() {
+  if (isMarketOpen()) {
+    // Real-time: TWSE mis (all symbols in parallel chunks)
+    await fetchIntraday();
+  } else {
+    // After close: use both official closing APIs concurrently
+    await Promise.all([fetchTSEClosing(), fetchOTCClosing()]);
+  }
+}
+
+// ============================================================
+// SNAPSHOT ENDPOINT
+// ============================================================
 app.get('/api/snapshot', async (req, res) => {
   const now = Date.now();
-  
-  // Fetch if cache is empty OR (market is open AND cache is older than TTL)
-  const needsUpdate = (Object.keys(marketCache).length === 0) || (isMarketOpen() && (now - lastCacheTime > CACHE_TTL));
-  
+  const ttl = isMarketOpen() ? INTRADAY_TTL : CLOSING_TTL;
+  const needsUpdate = Object.keys(marketCache).length === 0 || (now - lastCacheTime > ttl);
+
   if (needsUpdate) {
-    await fetchEntireMarket();
+    await fetchMarketData();
   }
-  
+
   res.json({
     data: marketCache,
     isMarketOpen: isMarketOpen(),
@@ -128,96 +222,26 @@ app.get('/api/snapshot', async (req, res) => {
   });
 });
 
-// 3. Historical Data for K-Line Chart
-app.get('/api/historical/:symbol', async (req, res) => {
-  try {
-    const symbol = req.params.symbol;
-    // Get last 6 months
-    const period1 = new Date();
-    period1.setMonth(period1.getMonth() - 6);
-    
-    const queryOptions = { period1, interval: '1d' };
-    const result = await yahooFinance.historical(symbol, queryOptions);
-    
-    // Format for Lightweight Charts: { time: 'yyyy-mm-dd', open, high, low, close, value (volume) }
-    const formatted = result.map(d => ({
-      time: d.date.toISOString().split('T')[0],
-      open: d.open,
-      high: d.high,
-      low: d.low,
-      close: d.close,
-      value: d.volume / 1000 // Convert shares to 張
-    }));
-    res.json(formatted);
-  } catch (error) {
-    console.error(`[Backend] Error fetching historical data for ${req.params.symbol}:`, error.message);
-    res.status(500).json({ error: 'Failed to fetch historical data' });
-  }
+// ============================================================
+// HEALTH CHECK
+// ============================================================
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    cacheSize: Object.keys(marketCache).length,
+    lastUpdate: new Date(lastCacheTime).toISOString(),
+    isMarketOpen: isMarketOpen(),
+    tseCount: tseSymbols.length,
+    otcCount: otcSymbols.length
+  });
 });
 
-// 4. Period Analysis for Historical Bubble Chart
-app.post('/api/period_analysis', async (req, res) => {
-  try {
-    const { symbols, days } = req.body;
-    if (!symbols || !Array.isArray(symbols) || !days) {
-      return res.status(400).json({ error: 'Invalid payload' });
-    }
-    
-    const period1 = new Date();
-    period1.setDate(period1.getDate() - (days + 20)); // Add buffer for weekends/holidays
-    
-    const results = {};
-    const CHUNK_SIZE = 10;
-    
-    for (let i = 0; i < symbols.length; i += CHUNK_SIZE) {
-      const chunk = symbols.slice(i, i + CHUNK_SIZE);
-      const promises = chunk.map(async (symbol) => {
-        try {
-          // Add .TW or .TWO suffix. (Usually our UI passes them without suffix if it's from stocks.csv, 
-          // we need to determine if it's TW or TWO. But Yahoo Finance mostly accepts .TW for TSE and .TWO for OTC.
-          // Wait, the client will pass the exact YF symbol if we format it, or just the number.)
-          // Let's assume client passes "2330.TW"
-          const hist = await yahooFinance.historical(symbol, { period1, interval: '1d' });
-          const recent = hist.slice(-days);
-          if (recent.length === 0) return null;
-          
-          const startClose = recent[0].close || recent[0].open;
-          const endClose = recent[recent.length - 1].close;
-          const cumulativeReturn = startClose ? ((endClose - startClose) / startClose) * 100 : 0;
-          
-          let totalVolume = 0;
-          let totalAmount = 0;
-          for (const day of recent) {
-            const vol = day.volume / 1000;
-            totalVolume += vol;
-            totalAmount += (vol * day.close * 1000); // TWD
-          }
-          
-          // Provide symbol without suffix for matching
-          const baseSymbol = symbol.split('.')[0];
-          results[baseSymbol] = {
-            cumulativeReturn,
-            totalVolume,
-            totalAmount
-          };
-        } catch (e) {
-          // ignore failed symbols
-        }
-      });
-      await Promise.all(promises);
-      if (i + CHUNK_SIZE < symbols.length) {
-        await new Promise(resolve => setTimeout(resolve, 300)); // Rate limit buffer
-      }
-    }
-    
-    res.json(results);
-  } catch (error) {
-    console.error('[Backend] Error in period analysis:', error.message);
-    res.status(500).json({ error: 'Failed to analyze period' });
-  }
-});
-
+// ============================================================
+// START SERVER
+// ============================================================
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`[Backend] Server listening on port ${PORT}`);
+  // Pre-warm the cache on startup
+  fetchMarketData().catch(e => console.error('[Backend] Pre-warm error:', e.message));
 });
