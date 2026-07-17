@@ -1,6 +1,8 @@
 import Chart from 'chart.js/auto';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import Papa from 'papaparse';
+import { fetchSnapshot, fetchHistoricalRanking, showToast } from './src/api.js';
+import { updateTableDelta, triggerFlashIfChanged } from './src/ui.js';
 
 Chart.register(ChartDataLabels);
 
@@ -67,9 +69,8 @@ window.addEventListener('unhandledrejection', function(event) {
 async function init() {
   try {
     // Load historical ranking JSON first (pre-calculated 5/10/20 day data)
-    const hrRes = await fetch('./historical_ranking.json').catch(() => null);
-    if (hrRes && hrRes.ok) {
-      historicalRanking = await hrRes.json();
+    historicalRanking = await fetchHistoricalRanking();
+    if (historicalRanking) {
       const updatedAt = historicalRanking.updated_at
         ? new Date(historicalRanking.updated_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })
         : '未知';
@@ -208,8 +209,9 @@ async function init() {
 // ============================================================
 async function processData(silent = false) {
   try {
-    const response = await fetch('/api/snapshot');
-    const result = await response.json();
+    const result = await fetchSnapshot();
+    if (!result) return; // Exit if fetch failed, keeping previous data
+    
     const marketCache = result.data || result;
     isMarketOpenNow = result.isMarketOpen !== undefined ? result.isMarketOpen : true;
     liveSnapshotCache = marketCache;
@@ -332,7 +334,13 @@ function renderHistoricalRanking(days) {
 // RENDER RANKING TABLE
 // ============================================================
 function renderRanking(subTitle = '') {
-  rankingTableBody.innerHTML = '';
+  if (subTitle) {
+    rankingTableBody.innerHTML = '';
+    const infoRow = document.createElement('tr');
+    infoRow.setAttribute('data-ignore', 'true');
+    infoRow.innerHTML = `<td colspan="5" style="font-size:0.8rem;color:#64748b;padding:0.5rem 1rem;background:rgba(255,255,255,0.03)">${subTitle}</td>`;
+    rankingTableBody.appendChild(infoRow);
+  }
 
   let data = [...sectorRankingData];
   data.sort((a, b) => {
@@ -350,42 +358,55 @@ function renderRanking(subTitle = '') {
   const maxAmount = Math.max(...data.map(d => d.totalAmount), 1);
   const maxReturn = Math.max(...data.map(d => Math.abs(d.avgReturn)), 1);
 
-  data.forEach((d, index) => {
-    const tr = document.createElement('tr');
-    tr.setAttribute('data-sector', d.sector);
-    tr.classList.add('flash-up');
-    setTimeout(() => tr.classList.remove('flash-up'), 800);
+  updateTableDelta(
+    rankingTableBody,
+    data,
+    (d) => d.sector, // getRowId
+    (tr, d, index) => { // updateRow
+      const returnClass = d.avgReturn > 0 ? 'color-positive' : (d.avgReturn < 0 ? 'color-negative' : '');
+      const returnSign = d.avgReturn > 0 ? '+' : '';
+      const amountStr = (d.totalAmount / 100000000).toFixed(2);
+      const amountPct = (d.totalAmount / maxAmount) * 100;
+      const returnPct = (Math.abs(d.avgReturn) / maxReturn) * 100;
+      const returnBarColor = d.avgReturn >= 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
 
-    const returnClass = d.avgReturn > 0 ? 'color-positive' : (d.avgReturn < 0 ? 'color-negative' : '');
-    const returnSign = d.avgReturn > 0 ? '+' : '';
-    const amountStr = (d.totalAmount / 100000000).toFixed(2);
-    const amountPct = (d.totalAmount / maxAmount) * 100;
-    const returnPct = (Math.abs(d.avgReturn) / maxReturn) * 100;
-    const returnBarColor = d.avgReturn >= 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
+      const oldAmount = tr.getAttribute('data-amount');
+      
+      tr.innerHTML = `
+        <td>${index + 1}</td>
+        <td><span class="badge-sector">${d.sector}</span></td>
+        <td class="text-right ${returnClass} data-bar-cell">
+          <div class="data-bar" style="width:${returnPct}%;background:${returnBarColor}"></div>
+          <strong class="data-bar-text">${returnSign}${d.avgReturn.toFixed(2)}%</strong>
+        </td>
+        <td class="text-right">${Math.round(d.totalVolume).toLocaleString()}</td>
+        <td class="text-right data-bar-cell">
+          <div class="data-bar" style="width:${amountPct}%;background:rgba(56,189,248,0.15)"></div>
+          <span class="data-bar-text">${amountStr}</span>
+        </td>
+      `;
+      
+      if (!tr.hasAttribute('data-amount')) {
+         tr.addEventListener('click', () => showChart(d.sector, 'sector'));
+      }
 
-    tr.innerHTML = `
-      <td>${index + 1}</td>
-      <td><span class="badge-sector">${d.sector}</span></td>
-      <td class="text-right ${returnClass} data-bar-cell">
-        <div class="data-bar" style="width:${returnPct}%;background:${returnBarColor}"></div>
-        <strong class="data-bar-text">${returnSign}${d.avgReturn.toFixed(2)}%</strong>
-      </td>
-      <td class="text-right">${Math.round(d.totalVolume).toLocaleString()}</td>
-      <td class="text-right data-bar-cell">
-        <div class="data-bar" style="width:${amountPct}%;background:rgba(56,189,248,0.15)"></div>
-        <span class="data-bar-text">${amountStr}</span>
-      </td>
-    `;
-    tr.addEventListener('click', () => showChart(d.sector, 'sector'));
-    rankingTableBody.appendChild(tr);
-  });
+      tr.setAttribute('data-amount', d.totalAmount);
+      triggerFlashIfChanged(tr, oldAmount, d.totalAmount);
+    }
+  );
 }
 
 // ============================================================
 // RENDER THEME RANKING TABLE
 // ============================================================
 function renderThemeRanking(subTitle = '') {
-  themeRankingTableBody.innerHTML = '';
+  if (subTitle) {
+    themeRankingTableBody.innerHTML = '';
+    const infoRow = document.createElement('tr');
+    infoRow.setAttribute('data-ignore', 'true');
+    infoRow.innerHTML = `<td colspan="5" style="font-size:0.8rem;color:#64748b;padding:0.5rem 1rem;background:rgba(255,255,255,0.03)">${subTitle}</td>`;
+    themeRankingTableBody.appendChild(infoRow);
+  }
 
   let data = [...themeRankingData];
   data.sort((a, b) => {
@@ -394,43 +415,45 @@ function renderThemeRanking(subTitle = '') {
     return themeSortDesc ? vB - vA : vA - vB;
   });
 
-  if (subTitle) {
-    const infoRow = document.createElement('tr');
-    infoRow.innerHTML = `<td colspan="5" style="font-size:0.8rem;color:#64748b;padding:0.5rem 1rem;background:rgba(255,255,255,0.03)">${subTitle}</td>`;
-    themeRankingTableBody.appendChild(infoRow);
-  }
-
   const maxAmount = Math.max(...data.map(d => d.totalAmount), 1);
   const maxReturn = Math.max(...data.map(d => Math.abs(d.avgReturn)), 1);
 
-  data.forEach((d, index) => {
-    const tr = document.createElement('tr');
-    tr.classList.add('flash-up');
-    setTimeout(() => tr.classList.remove('flash-up'), 800);
+  updateTableDelta(
+    themeRankingTableBody,
+    data,
+    (d) => d.theme, // getRowId
+    (tr, d, index) => { // updateRow
+      const returnClass = d.avgReturn > 0 ? 'color-positive' : (d.avgReturn < 0 ? 'color-negative' : '');
+      const returnSign = d.avgReturn > 0 ? '+' : '';
+      const amountStr = (d.totalAmount / 100000000).toFixed(2);
+      const amountPct = (d.totalAmount / maxAmount) * 100;
+      const returnPct = (Math.abs(d.avgReturn) / maxReturn) * 100;
+      const returnBarColor = d.avgReturn >= 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
+      
+      const oldAmount = tr.getAttribute('data-amount');
 
-    const returnClass = d.avgReturn > 0 ? 'color-positive' : (d.avgReturn < 0 ? 'color-negative' : '');
-    const returnSign = d.avgReturn > 0 ? '+' : '';
-    const amountStr = (d.totalAmount / 100000000).toFixed(2);
-    const amountPct = (d.totalAmount / maxAmount) * 100;
-    const returnPct = (Math.abs(d.avgReturn) / maxReturn) * 100;
-    const returnBarColor = d.avgReturn >= 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
-
-    tr.innerHTML = `
-      <td>${index + 1}</td>
-      <td><span class="badge-sector">${d.theme}</span></td>
-      <td class="text-right ${returnClass} data-bar-cell">
-        <div class="data-bar" style="width:${returnPct}%;background:${returnBarColor}"></div>
-        <strong class="data-bar-text">${returnSign}${d.avgReturn.toFixed(2)}%</strong>
-      </td>
-      <td class="text-right">${Math.round(d.totalVolume).toLocaleString()}</td>
-      <td class="text-right data-bar-cell">
-        <div class="data-bar" style="width:${amountPct}%;background:rgba(56,189,248,0.15)"></div>
-        <span class="data-bar-text">${amountStr}</span>
-      </td>
-    `;
-    tr.addEventListener('click', () => showChart(d.theme, 'theme'));
-    themeRankingTableBody.appendChild(tr);
-  });
+      tr.innerHTML = `
+        <td>${index + 1}</td>
+        <td><span class="badge-sector">${d.theme}</span></td>
+        <td class="text-right ${returnClass} data-bar-cell">
+          <div class="data-bar" style="width:${returnPct}%;background:${returnBarColor}"></div>
+          <strong class="data-bar-text">${returnSign}${d.avgReturn.toFixed(2)}%</strong>
+        </td>
+        <td class="text-right">${Math.round(d.totalVolume).toLocaleString()}</td>
+        <td class="text-right data-bar-cell">
+          <div class="data-bar" style="width:${amountPct}%;background:rgba(56,189,248,0.15)"></div>
+          <span class="data-bar-text">${amountStr}</span>
+        </td>
+      `;
+      
+      if (!tr.hasAttribute('data-amount')) {
+         tr.addEventListener('click', () => showChart(d.theme, 'theme'));
+      }
+      
+      tr.setAttribute('data-amount', d.totalAmount);
+      triggerFlashIfChanged(tr, oldAmount, d.totalAmount);
+    }
+  );
 }
 
 // ============================================================
@@ -747,6 +770,18 @@ async function renderChart(identifier, mode) {
         responsive: true,
         maintainAspectRatio: false,
         animation: { duration: 500, easing: 'easeOutQuart' },
+        onClick: (event, elements) => {
+          if (elements.length > 0) {
+            const el = elements[0];
+            const dataPoint = chartInstance.data.datasets[el.datasetIndex].data[el.index];
+            if (dataPoint && dataPoint.raw && dataPoint.raw.symbol) {
+              window.open(`https://tw.stock.yahoo.com/quote/${dataPoint.raw.symbol}`, '_blank');
+            }
+          }
+        },
+        onHover: (event, elements, chart) => {
+          chart.canvas.style.cursor = elements.length ? 'pointer' : 'default';
+        },
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -818,10 +853,9 @@ async function renderChart(identifier, mode) {
 // ============================================================
 function renderDetailTable(data) {
   const tbody = document.getElementById('detailTableBody');
-  tbody.innerHTML = '';
 
   if (!data || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center">無資料</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center" data-ignore="true">無資料</td></tr>';
     return;
   }
 
@@ -836,27 +870,39 @@ function renderDetailTable(data) {
     return 0;
   });
 
-  sorted.forEach(item => {
-    const tr = document.createElement('tr');
-    if (item.isMissing) {
-      tr.innerHTML = `
-        <td>${item.stock['股票名稱']} (${item.symbol})</td>
-        <td class="text-right text-slate-500">無資料</td>
-        <td class="text-right text-slate-500">-</td>
-        <td class="text-right text-slate-500">-</td>
-      `;
-    } else {
-      const returnClass = item.dailyReturn > 0 ? 'text-danger' : (item.dailyReturn < 0 ? 'text-success' : '');
-      const returnSign = item.dailyReturn > 0 ? '+' : '';
-      tr.innerHTML = `
-        <td>${item.stock['股票名稱']} <span style="color:#94a3b8;font-size:0.9em">(${item.symbol})</span></td>
-        <td class="text-right font-bold ${returnClass}">${returnSign}${item.dailyReturn.toFixed(2)}%</td>
-        <td class="text-right">${Math.round(item.volume).toLocaleString()}</td>
-        <td class="text-right">${(item.amount / 100000000).toFixed(2)}</td>
-      `;
+  updateTableDelta(
+    tbody,
+    sorted,
+    (item) => item.symbol, // getRowId
+    (tr, item) => { // updateRow
+      const oldAmount = tr.getAttribute('data-amount');
+      
+      if (item.isMissing) {
+        tr.innerHTML = `
+          <td>${item.stock['股票名稱']} (${item.symbol})</td>
+          <td class="text-right text-slate-500">無資料</td>
+          <td class="text-right text-slate-500">-</td>
+          <td class="text-right text-slate-500">-</td>
+        `;
+      } else {
+        const returnClass = item.dailyReturn > 0 ? 'text-danger color-positive' : (item.dailyReturn < 0 ? 'text-success color-negative' : '');
+        const returnSign = item.dailyReturn > 0 ? '+' : '';
+        tr.innerHTML = `
+          <td>
+            <a href="https://tw.stock.yahoo.com/quote/${item.symbol}" target="_blank" class="stock-link">
+              ${item.stock['股票名稱']} <span style="color:#94a3b8;font-size:0.9em">(${item.symbol})</span>
+            </a>
+          </td>
+          <td class="text-right font-bold ${returnClass}">${returnSign}${item.dailyReturn.toFixed(2)}%</td>
+          <td class="text-right">${Math.round(item.volume).toLocaleString()}</td>
+          <td class="text-right">${(item.amount / 100000000).toFixed(2)}</td>
+        `;
+      }
+      
+      tr.setAttribute('data-amount', item.amount || 0);
+      triggerFlashIfChanged(tr, oldAmount, item.amount || 0);
     }
-    tbody.appendChild(tr);
-  });
+  );
 }
 
 // ============================================================

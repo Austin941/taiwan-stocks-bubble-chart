@@ -2,9 +2,9 @@ name: Daily Historical Ranking Fetch
 
 on:
   schedule:
-    # Run at 07:30 UTC every weekday (Monday-Friday)
-    # 07:30 UTC = 15:30 Taiwan Time (After market close)
-    - cron: '30 7 * * 1-5'
+    # Run at 12:00 UTC every weekday (Monday-Friday)
+    # 12:00 UTC = 20:00 Taiwan Time (After Yahoo historical data is fully updated)
+    - cron: '0 12 * * 1-5'
   workflow_dispatch: # Allow manual trigger
 
 jobs:

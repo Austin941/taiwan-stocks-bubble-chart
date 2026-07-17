@@ -650,3 +650,80 @@ body {
   z-index: 10;
   border-bottom: 1px solid var(--border-color);
 }
+
+/* -------------------------------------
+ *  Skeleton Loading & Toast
+ * ------------------------------------- */
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
+.skeleton {
+  animation: shimmer 2s infinite linear;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.05) 4%, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.05) 36%);
+  background-size: 1000px 100%;
+  border-radius: 4px;
+  height: 1.5rem;
+  width: 100%;
+}
+
+.skeleton-text {
+  display: inline-block;
+  min-height: 1.2rem;
+  width: 100%;
+  border-radius: 4px;
+}
+
+/* Toast Notifications */
+.toast-container {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.toast {
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--negative-color);
+  color: var(--text-primary);
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  transform: translateX(120%);
+}
+
+.toast.hide {
+  animation: slideOutRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes slideInRight {
+  to { transform: translateX(0); }
+}
+
+@keyframes slideOutRight {
+  to { transform: translateX(120%); opacity: 0; }
+}
+
+/* Hyperlinks in table */
+.stock-link {
+  color: var(--text-primary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.stock-link:hover {
+  color: var(--accent-color);
+  text-decoration: underline;
+}
