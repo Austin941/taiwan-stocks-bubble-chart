@@ -28,6 +28,7 @@ const historicalDataCache = {};
 
 // Sorting states
 let sortCol = 'amount', sortDesc = true;
+let currentRadarData = []; // Holds the current radar data (live or historical) for re-sorting
 let radarSortCol = 'amount', radarSortDesc = true;
 let themeSortCol = 'amount', themeSortDesc = true;
 
@@ -129,7 +130,12 @@ async function init() {
         const col = h.getAttribute('data-sort');
         if (radarSortCol === col) radarSortDesc = !radarSortDesc; else { radarSortCol = col; radarSortDesc = true; }
         updateRadarSortUI();
-        renderRadar();
+        // In historical mode, resort the cached radar data; in live mode, re-render from allMarketData
+        if (currentPeriodDays !== 1 && currentRadarData.length > 0) {
+          resortRadar();
+        } else {
+          renderRadar();
+        }
       });
     });
 
@@ -313,8 +319,9 @@ function renderHistoricalRanking(days) {
   renderRanking(`近 ${days} 日資料 (更新：${updatedAt})`);
   renderThemeRanking(`近 ${days} 日資料`);
 
-  // Radar: use historical radar data
-  renderRadarFromData(periodData.radar || [], `近 ${days} 日`);
+  // Radar: store historical radar data and render with current sort
+  currentRadarData = periodData.radar || [];
+  resortRadar();
 
   // Restore
   sectorRankingData = origSector;
@@ -430,8 +437,9 @@ function renderThemeRanking(subTitle = '') {
 // RENDER RADAR TABLE (live)
 // ============================================================
 function renderRadar() {
-  const sorted = [...allMarketData]
-    .filter(d => d.amount > 0)
+  // Build live data and store for sorting
+  currentRadarData = [...allMarketData].filter(d => d.amount > 0);
+  const sorted = [...currentRadarData]
     .sort((a, b) => {
       const vA = radarSortCol === 'amount' ? a.amount : radarSortCol === 'volume' ? a.volume : a.dailyReturn;
       const vB = radarSortCol === 'amount' ? b.amount : radarSortCol === 'volume' ? b.volume : b.dailyReturn;
@@ -439,6 +447,21 @@ function renderRadar() {
     })
     .slice(0, 100);
   renderRadarFromData(sorted, '今日');
+}
+
+// ============================================================
+// RENDER RADAR TABLE (sorting re-entry for historical mode)
+// ============================================================
+function resortRadar() {
+  if (currentRadarData.length === 0) return;
+  const sorted = [...currentRadarData]
+    .sort((a, b) => {
+      const vA = radarSortCol === 'amount' ? a.amount : radarSortCol === 'volume' ? a.volume : a.dailyReturn;
+      const vB = radarSortCol === 'amount' ? b.amount : radarSortCol === 'volume' ? b.volume : b.dailyReturn;
+      return radarSortDesc ? vB - vA : vA - vB;
+    })
+    .slice(0, 200);
+  renderRadarFromData(sorted);
 }
 
 // ============================================================
