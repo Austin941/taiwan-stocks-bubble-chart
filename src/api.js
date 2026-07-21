@@ -158,7 +158,7 @@ export async function fetchSnapshot(allStocks = []) {
   } catch (error) {
     failCount++;
     console.error('[Snapshot] All retries failed:', error);
-    if (failCount >= 1) {
+    if (failCount === 1) {
       showToast('無法取得最新資料，將顯示歷史模式。');
     }
     return { data: closingCache || {}, isMarketOpen: false };
@@ -167,7 +167,8 @@ export async function fetchSnapshot(allStocks = []) {
 
 export async function fetchHistoricalRanking() {
   try {
-    const response = await fetch('./historical_ranking.json?t=' + Date.now());
+    const today = new Date().toISOString().split('T')[0];
+    const response = await fetch(`./historical_ranking.json?d=${today}`);
     if (!response.ok) throw new Error('Historical data not found');
     const data = await response.json();
     return data;

@@ -79,7 +79,8 @@ async function init() {
     }
 
     // Load CSV
-    Papa.parse('./stocks.csv?v=' + Date.now(), {
+    const todayStr = new Date().toISOString().split('T')[0];
+    Papa.parse(`./stocks.csv?v=${todayStr}`, {
       download: true,
       header: true,
       complete: function(results) {
@@ -511,49 +512,52 @@ function renderRadarFromData(stocks, periodLabel = '') {
     return (isNaN(r) || !isFinite(r)) ? 0 : Math.abs(r);
   }), 1);
 
-  const frag = document.createDocumentFragment();
+  updateTableDelta(
+    radarTableBody,
+    stocks,
+    (stock) => stock.stock ? stock.stock['股票代號'] : (stock.symbol || ''), // getRowId
+    (tr, stock, index) => { // updateRow
+      let ret = parseFloat(stock.dailyReturn);
+      if (isNaN(ret) || !isFinite(ret)) ret = 0;
+      
+      const returnClass = ret > 0 ? 'color-positive' : (ret < 0 ? 'color-negative' : '');
+      const returnSign = ret > 0 ? '+' : '';
+      const amountStr = (stock.amount / 100000000).toFixed(2);
+      const amountPct = (stock.amount / maxAmount) * 100;
+      const returnPct = (Math.abs(ret) / maxReturn) * 100;
+      const returnBarColor = ret >= 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
 
-  stocks.forEach((stock, index) => {
-    const tr = document.createElement('tr');
-    tr.classList.add('flash-up');
-    setTimeout(() => tr.classList.remove('flash-up'), 800);
+      const stockName = stock.stock ? stock.stock['股票名稱'] : (stock.name || '');
+      const stockCode = stock.stock ? stock.stock['股票代號'] : (stock.symbol || '');
+      const stockSector = stock.stock ? stock.stock['產業別'] : '';
 
-    let ret = parseFloat(stock.dailyReturn);
-    if (isNaN(ret) || !isFinite(ret)) ret = 0;
-    
-    const returnClass = ret > 0 ? 'color-positive' : (ret < 0 ? 'color-negative' : '');
-    const returnSign = ret > 0 ? '+' : '';
-    const amountStr = (stock.amount / 100000000).toFixed(2);
-    const amountPct = (stock.amount / maxAmount) * 100;
-    const returnPct = (Math.abs(ret) / maxReturn) * 100;
-    const returnBarColor = ret >= 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
+      const oldAmount = tr.getAttribute('data-amount');
 
-    const stockName = stock.stock ? stock.stock['股票名稱'] : (stock.name || '');
-    const stockCode = stock.stock ? stock.stock['股票代號'] : (stock.symbol || '');
-    const stockSector = stock.stock ? stock.stock['產業別'] : '';
+      tr.innerHTML = `
+        <td>${index + 1}</td>
+        <td>${stockName} <span style="font-size:0.9em;color:var(--text-secondary)">${stockCode}</span></td>
+        <td class="text-right"><span class="badge-sector">${stockSector}</span></td>
+        <td class="text-right ${returnClass} data-bar-cell">
+          <div class="data-bar" style="width:${returnPct}%;background:${returnBarColor}"></div>
+          <strong class="data-bar-text">${returnSign}${ret.toFixed(2)}%</strong>
+        </td>
+        <td class="text-right">${Math.round(stock.volume).toLocaleString()}</td>
+        <td class="text-right data-bar-cell">
+          <div class="data-bar" style="width:${amountPct}%;background:rgba(56,189,248,0.15)"></div>
+          <span class="data-bar-text">${amountStr}</span>
+        </td>
+      `;
 
-    tr.innerHTML = `
-      <td>${index + 1}</td>
-      <td>${stockName} <span style="font-size:0.9em;color:var(--text-secondary)">${stockCode}</span></td>
-      <td class="text-right"><span class="badge-sector">${stockSector}</span></td>
-      <td class="text-right ${returnClass} data-bar-cell">
-        <div class="data-bar" style="width:${returnPct}%;background:${returnBarColor}"></div>
-        <strong class="data-bar-text">${returnSign}${ret.toFixed(2)}%</strong>
-      </td>
-      <td class="text-right">${Math.round(stock.volume).toLocaleString()}</td>
-      <td class="text-right data-bar-cell">
-        <div class="data-bar" style="width:${amountPct}%;background:rgba(56,189,248,0.15)"></div>
-        <span class="data-bar-text">${amountStr}</span>
-      </td>
-    `;
-    tr.addEventListener('click', () => {
-      if (stockSector) showChart(stockSector, 'sector');
-    });
-    frag.appendChild(tr);
-  });
-  
-  radarTableBody.innerHTML = '';
-  radarTableBody.appendChild(frag);
+      if (!tr.hasAttribute('data-amount')) {
+         tr.addEventListener('click', () => {
+           if (stockSector) showChart(stockSector, 'sector');
+         });
+      }
+
+      tr.setAttribute('data-amount', stock.amount || 0);
+      triggerFlashIfChanged(tr, oldAmount, stock.amount || 0);
+    }
+  );
 }
 
 
