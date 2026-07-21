@@ -104,15 +104,27 @@ async function init() {
       const activeNav = document.querySelector('.nav-btn.active') || navBtns[0];
       switchView(activeNav.getAttribute('data-target'));
       currentSector = null;
+      
+      // When going back, re-render the view with the correct historical or live data
+      if (currentPeriodDays === 1) {
+        if (activeNav.getAttribute('data-target') === 'view-ranking') renderRanking();
+        else if (activeNav.getAttribute('data-target') === 'view-theme-ranking') renderThemeRanking();
+        else if (activeNav.getAttribute('data-target') === 'view-radar') renderRadar();
+      } else {
+        renderHistoricalRanking(currentPeriodDays);
+      }
     });
 
-    // ---- Sorting listeners ----
     sortableHeaders.forEach(h => {
       h.addEventListener('click', () => {
         const col = h.getAttribute('data-sort');
         if (sortCol === col) sortDesc = !sortDesc; else { sortCol = col; sortDesc = true; }
         updateSortUI();
-        renderRanking();
+        if (currentPeriodDays === 1) {
+          renderRanking();
+        } else {
+          renderHistoricalRanking(currentPeriodDays);
+        }
       });
     });
 
@@ -121,7 +133,11 @@ async function init() {
         const col = h.getAttribute('data-sort');
         if (themeSortCol === col) themeSortDesc = !themeSortDesc; else { themeSortCol = col; themeSortDesc = true; }
         updateThemeSortUI();
-        renderThemeRanking();
+        if (currentPeriodDays === 1) {
+          renderThemeRanking();
+        } else {
+          renderHistoricalRanking(currentPeriodDays);
+        }
       });
     });
 
@@ -497,14 +513,19 @@ function renderRadarFromData(stocks, periodLabel = '') {
   }
 
   const maxAmount = Math.max(...stocks.map(s => s.amount), 1);
-  const maxReturn = Math.max(...stocks.map(s => Math.abs(s.dailyReturn || 0)), 1);
+  const maxReturn = Math.max(...stocks.map(s => {
+    let r = parseFloat(s.dailyReturn);
+    return (isNaN(r) || !isFinite(r)) ? 0 : Math.abs(r);
+  }), 1);
 
   stocks.forEach((stock, index) => {
     const tr = document.createElement('tr');
     tr.classList.add('flash-up');
     setTimeout(() => tr.classList.remove('flash-up'), 800);
 
-    const ret = stock.dailyReturn || 0;
+    let ret = parseFloat(stock.dailyReturn);
+    if (isNaN(ret) || !isFinite(ret)) ret = 0;
+    
     const returnClass = ret > 0 ? 'color-positive' : (ret < 0 ? 'color-negative' : '');
     const returnSign = ret > 0 ? '+' : '';
     const amountStr = (stock.amount / 100000000).toFixed(2);
@@ -590,13 +611,8 @@ function showChart(identifier, mode = 'sector') {
   currentChartMode = mode;
   switchView('view-chart');
 
-  const modeText = mode === 'sector' ? '族群' : '題材概念股';
+  const modeText = mode === 'sector' ? '族群' : '題材概念';
   currentSectorTitle.textContent = `${identifier} ${modeText}分析`;
-
-  // Reset period to 1
-  currentPeriodDays = 1;
-  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector('.period-btn[data-period="1"]').classList.add('active');
 
   renderChart(identifier, mode);
 }
