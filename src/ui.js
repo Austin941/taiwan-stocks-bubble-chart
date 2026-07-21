@@ -10,7 +10,15 @@
  * @param {Function} getRowId - Function that takes a data object and returns a unique ID string
  * @param {Function} updateRow - Function that takes a tr element and a data object, and updates the tr's content
  */
+const renderQueue = new Map();
+
 export function updateTableDelta(tbody, data, getRowId, updateRow) {
+  // Cancel any pending progressive render for this specific table body
+  if (renderQueue.has(tbody)) {
+    cancelAnimationFrame(renderQueue.get(tbody));
+    renderQueue.delete(tbody);
+  }
+
   const existingRows = Array.from(tbody.children);
   const rowMap = new Map();
   
@@ -28,34 +36,51 @@ export function updateTableDelta(tbody, data, getRowId, updateRow) {
     }
   });
 
-  // Re-order and update/create rows
-  data.forEach((d, index) => {
-    const id = getRowId(d);
-    let tr = rowMap.get(id);
+  const chunkSize = 20; // Number of rows to render per animation frame
+  let currentIndex = 0;
 
-    if (!tr) {
-      // Create new row
-      tr = document.createElement('tr');
-      tr.setAttribute('data-id', id);
-      tbody.appendChild(tr);
+  function renderChunk() {
+    const end = Math.min(currentIndex + chunkSize, data.length);
+    for (let i = currentIndex; i < end; i++) {
+      const d = data[i];
+      const id = getRowId(d);
+      let tr = rowMap.get(id);
+
+      if (!tr) {
+        // Create new row
+        tr = document.createElement('tr');
+        tr.setAttribute('data-id', id);
+        tbody.appendChild(tr);
+      } else {
+        // Remove from map so we know it's processed
+        rowMap.delete(id);
+      }
+
+      // Ensure row is in correct order in the DOM
+      if (tbody.children[i] !== tr) {
+        tbody.insertBefore(tr, tbody.children[i]);
+      }
+
+      // Update row contents (only triggers flash if values change)
+      updateRow(tr, d, i);
+    }
+
+    currentIndex = end;
+
+    if (currentIndex < data.length) {
+      // Schedule next chunk
+      renderQueue.set(tbody, requestAnimationFrame(renderChunk));
     } else {
-      // Remove from map so we know it's processed
-      rowMap.delete(id);
+      // Finished all chunks, remove any remaining rows that are no longer in the data
+      rowMap.forEach(tr => {
+        tbody.removeChild(tr);
+      });
+      renderQueue.delete(tbody);
     }
+  }
 
-    // Ensure row is in correct order in the DOM
-    if (tbody.children[index] !== tr) {
-      tbody.insertBefore(tr, tbody.children[index]);
-    }
-
-    // Update row contents (only triggers flash if values change)
-    updateRow(tr, d, index);
-  });
-
-  // Remove any remaining rows that are no longer in the data
-  rowMap.forEach(tr => {
-    tbody.removeChild(tr);
-  });
+  // Execute the first chunk immediately synchronously to prevent visual blanking/stutter
+  renderChunk();
 }
 
 /**
