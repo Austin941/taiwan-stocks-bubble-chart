@@ -13,6 +13,20 @@ let activeTvWidget = null;
 const renderedPeriods = new Set([1]); // Track which periods are rendered
 
 function showBubbleChart(groupName, mode = 'sector') {
+  // Fade-in animation
+  const bubbleView = document.getElementById('bubble-chart-view');
+  bubbleView.classList.remove('fade-in');
+  void bubbleView.offsetWidth; // trigger reflow
+  bubbleView.classList.add('fade-in');
+
+  // Breadcrumb Title
+  let title = '全市場族群';
+  if (groupName && groupName !== 'ALL') {
+    title += ' ❯ ' + groupName;
+  }
+  document.getElementById('tv-main-title').textContent = title;
+  document.getElementById('tv-main-subtitle').textContent = '';
+
   document.getElementById('tech-chart-view').classList.add('hidden');
   document.getElementById('tech-interval-selector').classList.add('hidden');
   document.getElementById('back-to-bubble-btn').classList.add('hidden');
@@ -37,6 +51,10 @@ function showTechChart(stockData) {
   
   // Show Tech View
   document.getElementById('tech-chart-view').classList.remove('hidden');
+  const techView = document.getElementById('tech-chart-view');
+  techView.classList.remove('fade-in');
+  void techView.offsetWidth;
+  techView.classList.add('fade-in');
   document.getElementById('tech-interval-selector').classList.remove('hidden');
   document.getElementById('back-to-bubble-btn').classList.remove('hidden');
   
@@ -1046,9 +1064,7 @@ function renderDetailTable(data) {
         `;
         
         if (!tr.hasAttribute('data-amount')) {
-          tr.addEventListener('click', (e) => {
-            e.preventDefault();
-            showTechChart({ stock: item.stock, dailyReturn: item.dailyReturn, volume: item.volume, amount: item.amount });
+          tr.addEventListener('click', (e) => { e.preventDefault(); setActiveRow(tr); showTechChart({ stock: item.stock, dailyReturn: item.dailyReturn, volume: item.volume, amount: item.amount });
           });
         }
       }
