@@ -84,41 +84,49 @@ const CLOSING_TTL   = 3600000; // 1 hour after close
 //   v = volume (張)
 // ============================================================
 async function fetchIntraday() {
-  const CHUNK_SIZE = 150; // Increased chunk size to reduce total requests
-  const promises = [];
+  const CHUNK_SIZE = 80; // Reduced chunk size to prevent IP blocks
+  let updatedCount = 0;
 
   for (let i = 0; i < allSymbols.length; i += CHUNK_SIZE) {
     const chunk = allSymbols.slice(i, i + CHUNK_SIZE);
     const url = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${chunk.join('|')}&json=1&delay=0`;
-    promises.push(
-      axios.get(url, {
+    
+    try {
+      const response = await axios.get(url, {
         headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
         timeout: 6000,
-        httpsAgent: httpsAgent // Reuses TCP connections
-      }).then(response => {
-        if (response.data?.msgArray) {
-          response.data.msgArray.forEach(item => {
-            if (!item.c) return;
-            const prevClose = parseFloat(item.y) || 0; // Adjusted reference price!
-            let price = parseFloat(item.z);
-            if (isNaN(price) || price <= 0) {
-              if (marketCache[item.c] && marketCache[item.c].price > 0) {
-                price = marketCache[item.c].price;
-              } else {
-                price = prevClose;
-              }
+        httpsAgent: httpsAgent
+      });
+
+      if (response.data?.msgArray) {
+        response.data.msgArray.forEach(item => {
+          if (!item.c) return;
+          const prevClose = parseFloat(item.y) || 0;
+          let price = parseFloat(item.z);
+          if (isNaN(price) || price <= 0) {
+            if (marketCache[item.c] && marketCache[item.c].price > 0) {
+              price = marketCache[item.c].price;
+            } else {
+              price = prevClose;
             }
-            const volume = parseInt(item.v) || 0;
-            if (prevClose > 0) {
-              marketCache[item.c] = { price, prevClose, volume };
-            }
-          });
-        }
-      }).catch(err => console.error('[Intraday] Chunk fetch error:', err.message))
-    );
+          }
+          const volume = parseInt(item.v) || 0;
+          if (prevClose > 0) {
+            marketCache[item.c] = { price, prevClose, volume };
+            updatedCount++;
+          }
+        });
+      }
+    } catch (err) {
+      console.error(`[Intraday] Chunk error (index ${i}):`, err.message);
+    }
+
+    // Delay between chunks to prevent rate limiting (TWSE is very strict)
+    if (i + CHUNK_SIZE < allSymbols.length) {
+      await new Promise(r => setTimeout(r, 200));
+    }
   }
 
-  await Promise.all(promises);
   lastCacheTime = Date.now();
   console.log(`[Intraday] Updated via TWSE MIS. Cache size: ${Object.keys(marketCache).length}`);
 }
@@ -140,9 +148,9 @@ async function fetchTSEClosing() {
     let updated = 0;
     data.forEach(item => {
       const code = item.Code?.trim();
-      const close = parseFloat(item.ClosingPrice?.replace(/,/g, ''));
-      const change = parseFloat(item.Change?.replace(/,/g, ''));
-      const vol = parseFloat(item.TradeVolume?.replace(/,/g, '')) / 1000; // Convert to 張
+      const close = parseFloat(String(item.ClosingPrice || '').replace(/,/g, ''));
+      const change = parseFloat(String(item.Change || '').replace(/,/g, ''));
+      const vol = parseFloat(String(item.TradeVolume || '').replace(/,/g, '')) / 1000; // Convert to 張
       if (!code || isNaN(close) || close <= 0) return;
 
       const prevClose = close - change;
@@ -176,9 +184,9 @@ async function fetchOTCClosing() {
     let updated = 0;
     data.forEach(item => {
       const code = item.SecuritiesCompanyCode?.trim();
-      const close = parseFloat(item.Close?.trim());
-      const change = parseFloat(item.Change?.trim());
-      const vol = parseFloat(item.TradingShares?.replace(/,/g, '')) / 1000; // Convert to 張
+      const close = parseFloat(String(item.Close || '').trim());
+      const change = parseFloat(String(item.Change || '').trim());
+      const vol = parseFloat(String(item.TradingShares || '').replace(/,/g, '')) / 1000; // Convert to 張
       if (!code || isNaN(close) || close <= 0) return;
 
       const prevClose = close - change;
@@ -213,19 +221,15 @@ async function fetchMarketData() {
 // ============================================================
 // SNAPSHOT ENDPOINT
 // ============================================================
-app.get('/api/snapshot', async (req, res) => {
-  const now = Date.now();
-  const ttl = isMarketOpen() ? INTRADAY_TTL : CLOSING_TTL;
-  const needsUpdate = Object.keys(marketCache).length === 0 || (now - lastCacheTime > ttl);
-
-  if (needsUpdate) {
-    await fetchMarketData();
-  }
-
+// ============================================================
+// SNAPSHOT ENDPOINT (PURE READ-ONLY)
+// ============================================================
+app.get('/api/snapshot', (req, res) => {
   res.json({
     data: marketCache,
     isMarketOpen: isMarketOpen(),
-    timestamp: lastCacheTime
+    timestamp: lastCacheTime,
+    stale: Date.now() - lastCacheTime > 60000 // if >1 min old, considered stale
   });
 });
 
@@ -244,15 +248,38 @@ app.get('/api/health', (req, res) => {
 });
 
 // ============================================================
-// START SERVER OR EXPORT FOR VERCEL
+// BACKGROUND POLLING & STATIC SERVING
 // ============================================================
-const PORT = process.env.PORT || 3001;
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`[Backend] Server listening on port ${PORT}`);
-    // Pre-warm the cache on startup
-    fetchMarketData().catch(e => console.error('[Backend] Pre-warm error:', e.message));
-  });
+// Serve static frontend files from 'dist' directory (for Render)
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Also serve public folder just in case
+app.use(express.static(path.join(__dirname, 'public')));
+
+let isFetching = false;
+async function backgroundFetchLoop() {
+  if (isFetching) return;
+  isFetching = true;
+  try {
+    const ttl = isMarketOpen() ? INTRADAY_TTL : CLOSING_TTL;
+    if (Date.now() - lastCacheTime > ttl || Object.keys(marketCache).length === 0) {
+      await fetchMarketData();
+    }
+  } catch (err) {
+    console.error('[Background] Fetch error:', err.message);
+  } finally {
+    isFetching = false;
+  }
 }
+
+// Start background loop every 5 seconds
+setInterval(backgroundFetchLoop, 5000);
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`[Backend] Server listening on port ${PORT}`);
+  // Pre-warm the cache immediately on startup
+  backgroundFetchLoop();
+});
 
 export default app;

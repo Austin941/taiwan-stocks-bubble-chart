@@ -56,8 +56,7 @@ const navBtns = document.querySelectorAll('.nav-btn');
 // GLOBAL ERROR HANDLER
 // ============================================================
 window.onerror = function(message, source, lineno, colno, error) {
-  const el = document.querySelector('.chart-container-glass');
-  if (el) el.innerHTML = `<div style="color:red;padding:20px"><h3>Error</h3><p>${message}</p><pre>${error ? error.stack : ''}</pre></div>`;
+  console.error('Global Error:', message, error);
 };
 window.addEventListener('unhandledrejection', function(event) {
   console.error('Unhandled rejection:', event.reason);
@@ -647,86 +646,38 @@ async function renderChart(identifier, mode) {
       amount: d.amount
     }));
   } else {
-    // --- HISTORICAL PERIOD (FinMind API) ---
-    overlay.classList.remove('hidden');
-    currentSectorTitle.textContent = `${identifier} ${modeText}分析 (歷史資料載入中...)`;
+    // --- HISTORICAL PERIOD (From pre-calculated JSON) ---
+    overlay.classList.add('hidden'); // No loading needed, data is already in memory
 
-    try {
-      const period1Date = new Date();
-      period1Date.setDate(period1Date.getDate() - (currentPeriodDays + 20));
-      const startDateStr = period1Date.toISOString().split('T')[0];
+    if (!historicalRanking || !historicalRanking[String(currentPeriodDays)]) {
+      currentSectorTitle.textContent = `${identifier} ${modeText}分析 (歷史資料缺失)`;
+      return;
+    }
 
-      const periodResults = {};
-      const CHUNK_SIZE = 10;
-      const symbols = baseData.map(d => d.stock['股票代號']);
+    const periodData = historicalRanking[String(currentPeriodDays)].allStocks || historicalRanking[String(currentPeriodDays)].radar || [];
+    
+    // Create a map for fast lookup
+    const periodMap = {};
+    periodData.forEach(d => {
+      periodMap[d.stock['股票代號']] = d;
+    });
 
-      for (let i = 0; i < symbols.length; i += CHUNK_SIZE) {
-        if (fetchId !== currentFetchId) return; // Race condition abort
-
-        const chunk = symbols.slice(i, i + CHUNK_SIZE);
-        const promises = chunk.map(async symbol => {
-          const cacheKey = `${symbol}-${currentPeriodDays}`;
-          if (historicalDataCache[cacheKey]) return { symbol, data: historicalDataCache[cacheKey] };
-
-          try {
-            const res = await fetch(`https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${symbol}&start_date=${startDateStr}`);
-            const json = await res.json();
-            if (fetchId !== currentFetchId) return null;
-
-            if (json.msg === 'success' && json.data.length > 0) {
-              const recent = json.data.slice(-currentPeriodDays);
-              if (recent.length === 0) return null;
-
-              const prevDay = json.data[Math.max(0, json.data.length - currentPeriodDays - 1)];
-              const startClose = prevDay ? (prevDay.close || prevDay.open) : (recent[0].open || recent[0].close);
-              const endClose = recent[recent.length - 1].close;
-              const cumulativeReturn = (startClose > 0 && endClose > 0) ? ((endClose - startClose) / startClose) * 100 : 0;
-
-              let totalVolume = 0, totalAmount = 0;
-              for (const day of recent) {
-                totalVolume += day.Trading_Volume / 1000;
-                totalAmount += day.Trading_money;
-              }
-
-              const resultData = { cumulativeReturn, totalVolume, totalAmount };
-              historicalDataCache[cacheKey] = resultData;
-              return { symbol, data: resultData };
-            }
-          } catch(e) {
-            console.warn(`Failed to fetch ${symbol} from FinMind`, e);
-          }
-          return null;
+    for (const d of baseData) {
+      const symbol = d.stock['股票代號'];
+      if (periodMap[symbol]) {
+        const p = periodMap[symbol];
+        sectorData.push({
+          symbol, name: d.stock['股票名稱'], stock: d.stock,
+          dailyReturn: p.dailyReturn || 0,
+          volume: p.volume,
+          amount: p.amount
         });
-
-        const chunkResults = await Promise.all(promises);
-        for (const res of chunkResults) {
-          if (res) periodResults[res.symbol] = res.data;
-        }
-
-        if (i + CHUNK_SIZE < symbols.length) await new Promise(r => setTimeout(r, 300));
+      } else {
+        sectorData.push({
+          symbol, name: d.stock['股票名稱'], stock: d.stock,
+          dailyReturn: 0, volume: 0, amount: 0, isMissing: true
+        });
       }
-
-      if (fetchId !== currentFetchId) return;
-
-      for (const d of baseData) {
-        const symbol = d.stock['股票代號'];
-        if (periodResults[symbol]) {
-          const p = periodResults[symbol];
-          sectorData.push({
-            symbol, name: d.stock['股票名稱'], stock: d.stock,
-            dailyReturn: p.cumulativeReturn || 0,
-            volume: p.totalVolume,
-            amount: p.totalAmount
-          });
-        } else {
-          sectorData.push({
-            symbol, name: d.stock['股票名稱'], stock: d.stock,
-            dailyReturn: 0, volume: 0, amount: 0, isMissing: true
-          });
-        }
-      }
-    } catch(e) {
-      console.error('Failed to fetch period analysis', e);
     }
 
     sectorData.sort((a, b) => b.amount - a.amount);

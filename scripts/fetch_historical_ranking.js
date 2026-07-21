@@ -103,7 +103,7 @@ async function run() {
     }
     
     console.log(`Fetched ${Math.min(i + CHUNK_SIZE, allStocks.length)} / ${allStocks.length}`);
-    await new Promise(r => setTimeout(r, 150)); // Anti-rate-limit sleep
+    await new Promise(r => setTimeout(r, 500)); // Anti-rate-limit sleep
   }
   
   console.log(`Successfully fetched data for ${Object.keys(results).length} stocks.`);
@@ -180,17 +180,26 @@ async function run() {
       return t;
     }).filter(t => isFinite(t.avgReturn));
     
-    // Sort radar and slice top 100
+    // Sort all stocks by amount
     validStocks.sort((a, b) => b.amount - a.amount);
-    finalJson[days].radar = validStocks.slice(0, 200);
     
-    console.log(`Period ${days}d: ${finalJson[days].sectors.length} sectors, ${finalJson[days].themes.length} themes, ${finalJson[days].radar.length} stocks`);
+    // Store all stocks for bubble chart, but radar can just use the same array
+    finalJson[days].allStocks = validStocks;
+    finalJson[days].radar = validStocks.slice(0, 200); // Keep radar small for fast UI, chart uses allStocks
+    
+    console.log(`Period ${days}d: ${finalJson[days].sectors.length} sectors, ${finalJson[days].themes.length} themes, ${finalJson[days].allStocks.length} stocks`);
   }
   
-  // 4. Save JSON
+  // 4. Validate and Save JSON
+  const successRate = Object.keys(results).length / allStocks.length;
+  if (successRate < 0.6) {
+    console.error(`Fetch failed: Success rate is too low (${(successRate * 100).toFixed(1)}%). Refusing to overwrite JSON.`);
+    process.exit(1);
+  }
+
   const outputPath = path.join(__dirname, '..', 'public', 'historical_ranking.json');
   fs.writeFileSync(outputPath, JSON.stringify(finalJson));
-  console.log(`Saved historical ranking data to ${outputPath}`);
+  console.log(`Saved historical ranking data to ${outputPath} (Success rate: ${(successRate * 100).toFixed(1)}%)`);
 }
 
 run();
