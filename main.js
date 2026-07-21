@@ -142,17 +142,13 @@ let themeSortCol = 'amount', themeSortDesc = true;
 const viewRanking = document.getElementById('view-ranking');
 const viewThemeRanking = document.getElementById('view-theme');
 const viewRadar = document.getElementById('view-radar');
-const viewChart = document.getElementById('view-chart');
-const currentSectorTitle = document.getElementById('current-sector-title');
 const canvas = document.getElementById('bubbleChart');
 const backBtn = document.getElementById('back-to-bubble-btn');
 const sortableHeaders = document.querySelectorAll('.ranking-table th.sortable:not(.radar-sortable):not(.theme-sortable)');
 const themeSortableHeaders = document.querySelectorAll('.theme-sortable');
 
 // --- Drawer Elements ---
-const stockDrawerOverlay = document.getElementById('stock-drawer-overlay');
-const stockDrawer = document.getElementById('stock-drawer');
-const closeDrawerBtn = document.getElementById('close-drawer-btn');
+// --- Drawer Elements (Removed) ---
 const tvWidgetContainer = document.getElementById('tradingview-widget-container');
 
 // --- DOM Cache Helper ---
@@ -183,8 +179,7 @@ const radarSortableHeaders = document.querySelectorAll('.radar-sortable');
 const navBtns = document.querySelectorAll('.sidebar-tab');
 
 // --- Drawer Listeners ---
-stockDrawerOverlay.addEventListener('click', closeStockDrawer);
-closeDrawerBtn.addEventListener('click', closeStockDrawer);
+// --- Drawer Listeners (Removed) ---
 
 document.querySelectorAll('#tech-interval-selector .interval-btn').forEach(btn => {
   btn.addEventListener('click', (e) => {
@@ -494,7 +489,7 @@ async function processData(silent = false) {
     }
 
     // If chart view is open, auto-refresh chart (single day mode only)
-    if (currentSector && !viewChart.classList.contains('hidden') && currentPeriodDays === 1) {
+    if (currentSector && !document.getElementById('bubble-chart-view').classList.contains('hidden') && currentPeriodDays === 1) {
       renderChart(currentSector, currentChartMode);
     }
 
@@ -776,7 +771,7 @@ function switchView(targetViewId) {
       else b.classList.remove('active');
     });
   }
-  [viewRanking, viewThemeRanking, viewRadar, viewChart].forEach(v => {
+  document.querySelectorAll('.sidebar-view').forEach(v => {
     v.classList.add('hidden'); v.classList.remove('active');
   });
   const target = document.getElementById(targetViewId);
@@ -792,7 +787,7 @@ function showChart(identifier, mode = 'sector') {
   switchView('view-chart');
 
   const modeText = mode === 'sector' ? '族群' : '題材概念';
-  currentSectorTitle.textContent = `${identifier} ${modeText}分析`;
+  document.getElementById('tv-main-title').textContent = `${identifier} ${modeText}分析`;
 
   renderChart(identifier, mode);
 }
@@ -807,7 +802,7 @@ async function renderChart(identifier, mode) {
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
 
   const modeText = mode === 'sector' ? '族群' : '題材';
-  currentSectorTitle.textContent = `${identifier} ${modeText}分析`;
+  document.getElementById('tv-main-title').textContent = `${identifier} ${modeText}分析`;
 
   // Filter stocks
   let baseData = mode === 'sector'
@@ -823,7 +818,7 @@ async function renderChart(identifier, mode) {
   baseData = baseData.slice(0, 50);
 
   if (baseData.length === 0) {
-    currentSectorTitle.textContent = `${identifier} ${modeText}分析 (無資料)`;
+    document.getElementById('tv-main-title').textContent = `${identifier} ${modeText}分析 (無資料)`;
     return;
   }
 
@@ -846,7 +841,7 @@ async function renderChart(identifier, mode) {
     overlay.classList.add('hidden'); // No loading needed, data is already in memory
 
     if (!historicalRanking || !historicalRanking[String(currentPeriodDays)]) {
-      currentSectorTitle.textContent = `${identifier} ${modeText}分析 (歷史資料缺失)`;
+      document.getElementById('tv-main-title').textContent = `${identifier} ${modeText}分析 (歷史資料缺失)`;
       return;
     }
 
@@ -878,7 +873,7 @@ async function renderChart(identifier, mode) {
 
     sectorData.sort((a, b) => b.amount - a.amount);
     sectorData = sectorData.slice(0, 50);
-    currentSectorTitle.textContent = `${identifier} ${modeText}分析 (近 ${currentPeriodDays} 日)`;
+    document.getElementById('tv-main-title').textContent = `${identifier} ${modeText}分析 (近 ${currentPeriodDays} 日)`;
   }
 
   overlay.classList.add('hidden');
@@ -886,7 +881,7 @@ async function renderChart(identifier, mode) {
   // ---- CHART ----
   const chartPlotData = sectorData.filter(d => !d.isMissing && d.amount > 0);
   if (chartPlotData.length === 0) {
-    currentSectorTitle.textContent += ' - 無圖表資料';
+    document.getElementById('tv-main-title').textContent += ' - 無圖表資料';
     globalSectorDataForTable = sectorData;
     renderDetailTable(sectorData);
     return;
