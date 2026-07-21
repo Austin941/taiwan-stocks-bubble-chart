@@ -84,14 +84,30 @@ export async function fetchSnapshot(allStocks = []) {
             if (!code) return;
 
             let prevClose = parseFloat(item.y) || 0;
-            // Use true prevClose from OpenAPI if available
-            if (closingCache[code] && closingCache[code].prevClose > 0) {
+            // Only use closingCache if item.y is missing or 0 (e.g., newly listed stocks)
+            if (prevClose <= 0 && closingCache[code] && closingCache[code].prevClose > 0) {
               prevClose = closingCache[code].prevClose;
             }
 
             let price = parseFloat(item.z);
             if (isNaN(price) || price <= 0) {
-               price = prevClose;
+               // Fallback 1: Simulated matching price
+               if (item.pz && item.pz !== '-') {
+                 price = parseFloat(item.pz);
+               } 
+               // Fallback 2: Average of best bid/ask
+               else if (item.a && item.b && item.a !== '-' && item.b !== '-') {
+                 const ask = parseFloat(item.a.split('_')[0]);
+                 const bid = parseFloat(item.b.split('_')[0]);
+                 if (!isNaN(ask) && !isNaN(bid)) {
+                   price = (ask + bid) / 2;
+                 }
+               }
+               
+               // Fallback 3: If still no live price, use previous close (0% return)
+               if (isNaN(price) || price <= 0) {
+                 price = prevClose;
+               }
             }
 
             const volume = parseInt(item.v) || 0;
