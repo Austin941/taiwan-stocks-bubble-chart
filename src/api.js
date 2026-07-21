@@ -130,16 +130,18 @@ export async function fetchSnapshot(allStocks = []) {
     };
 
     // Concurrency control loop
+    const activePromises = new Set();
     while (index < chunks.length) {
-      if (active < maxConcurrency) {
-        const chunk = chunks[index++];
-        active++;
-        const p = fetchChunkWithRetry(chunk).finally(() => { active--; });
-        fetchPromises.push(p);
-      } else {
-        // Wait for at least one promise to finish before spawning another
-        await Promise.race(fetchPromises);
+      if (activePromises.size >= maxConcurrency) {
+        // Wait for at least one active promise to finish
+        await Promise.race(activePromises);
       }
+      
+      const chunk = chunks[index++];
+      const p = fetchChunkWithRetry(chunk);
+      fetchPromises.push(p);
+      activePromises.add(p);
+      p.finally(() => activePromises.delete(p));
     }
 
     await Promise.all(fetchPromises);
