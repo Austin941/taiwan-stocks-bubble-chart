@@ -7,6 +7,108 @@ import { updateTableDelta, triggerFlashIfChanged } from './src/ui.js';
 Chart.register(ChartDataLabels);
 
 // ============================================================
+// DASHBOARD LOGIC (TV Layout)
+// ============================================================
+let activeTvWidget = null;
+const renderedPeriods = new Set([1]); // Track which periods are rendered
+
+function showBubbleChart(groupName, mode = 'sector') {
+  document.getElementById('tech-chart-view').classList.add('hidden');
+  document.getElementById('tech-interval-selector').classList.add('hidden');
+  document.getElementById('back-to-bubble-btn').classList.add('hidden');
+  
+  document.getElementById('bubble-chart-view').classList.remove('hidden');
+  document.getElementById('bubble-period-selector').classList.remove('hidden');
+  document.getElementById('detail-table-wrapper').classList.remove('hidden');
+  
+  if (groupName && groupName !== 'ALL') {
+    showChart(groupName, mode);
+  }
+}
+
+function showTechChart(stockData) {
+  if (!stockData || !stockData.stock) return;
+  const stock = stockData.stock;
+  
+  // Hide Bubble View
+  document.getElementById('bubble-chart-view').classList.add('hidden');
+  document.getElementById('bubble-period-selector').classList.add('hidden');
+  document.getElementById('detail-table-wrapper').classList.add('hidden');
+  
+  // Show Tech View
+  document.getElementById('tech-chart-view').classList.remove('hidden');
+  document.getElementById('tech-interval-selector').classList.remove('hidden');
+  document.getElementById('back-to-bubble-btn').classList.remove('hidden');
+  
+  // Set Title
+  document.getElementById('tv-main-title').textContent = stock['股票名稱'] + ' (' + stock['股票代號'] + ')';
+  const dReturn = stockData.dailyReturn;
+  let returnText = '--';
+  if (dReturn !== undefined && isFinite(dReturn)) {
+     returnText = dReturn > 0 ? '+' + dReturn.toFixed(2) + '%' : dReturn.toFixed(2) + '%';
+     document.getElementById('tv-main-subtitle').className = 'subtitle ' + (dReturn > 0 ? 'color-positive' : (dReturn < 0 ? 'color-negative' : ''));
+  }
+  document.getElementById('tv-main-subtitle').textContent = '今日漲跌: ' + returnText;
+
+  // Set Tags
+  const sectorTags = document.getElementById('tech-sector-tags');
+  sectorTags.innerHTML = '';
+  if (stock['產業別']) {
+    const t = document.createElement('span');
+    t.className = 'drawer-tag';
+    t.textContent = stock['產業別'];
+    t.addEventListener('click', () => { showBubbleChart(stock['產業別'], 'sector'); });
+    sectorTags.appendChild(t);
+  }
+
+  const themeTags = document.getElementById('tech-theme-tags');
+  themeTags.innerHTML = '';
+  if (stock['題材清單']) {
+    stock['題材清單'].split(',').forEach(theme => {
+      if (!theme.trim()) return;
+      const t = document.createElement('span');
+      t.className = 'drawer-tag';
+      t.textContent = theme.trim();
+      t.addEventListener('click', () => { showBubbleChart(theme.trim(), 'theme'); });
+      themeTags.appendChild(t);
+    });
+  }
+
+  // TradingView Interval logic
+  const market = stock['市場別'] || '';
+  const tvSymbol = market.includes('上市') ? 'TWSE:' + stock['股票代號'] : 'TPEX:' + stock['股票代號'];
+  document.getElementById('tech-chart-view').setAttribute('data-tv-symbol', tvSymbol);
+  
+  // Set default interval active state
+  document.querySelectorAll('#tech-interval-selector .interval-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelector('#tech-interval-selector .interval-btn[data-interval="D"]').classList.add('active');
+  
+  renderTvWidget(tvSymbol, 'D');
+}
+
+function renderTvWidget(symbol, interval) {
+  const container = document.getElementById('tradingview-widget-container');
+  container.innerHTML = '';
+  if (window.TradingView) {
+    activeTvWidget = new TradingView.widget({
+      "autosize": true,
+      "symbol": symbol,
+      "interval": interval,
+      "timezone": "Asia/Taipei",
+      "theme": "dark",
+      "style": "1",
+      "locale": "zh_TW",
+      "enable_publishing": false,
+      "backgroundColor": "rgba(15, 23, 42, 1)",
+      "hide_top_toolbar": true, 
+      "hide_legend": false,
+      "save_image": false,
+      "container_id": "tradingview-widget-container"
+    });
+  }
+}
+
+// ============================================================
 // STATE
 // ============================================================
 let allStocks = [];
@@ -38,19 +140,63 @@ let themeSortCol = 'amount', themeSortDesc = true;
 // DOM ELEMENTS
 // ============================================================
 const viewRanking = document.getElementById('view-ranking');
-const viewThemeRanking = document.getElementById('view-theme-ranking');
+const viewThemeRanking = document.getElementById('view-theme');
 const viewRadar = document.getElementById('view-radar');
 const viewChart = document.getElementById('view-chart');
-const rankingTableBody = document.getElementById('rankingTableBody');
-const themeRankingTableBody = document.getElementById('themeRankingTableBody');
-const radarTableBody = document.getElementById('radarTableBody');
 const currentSectorTitle = document.getElementById('current-sector-title');
 const canvas = document.getElementById('bubbleChart');
-const backBtn = document.getElementById('back-btn');
+const backBtn = document.getElementById('back-to-bubble-btn');
 const sortableHeaders = document.querySelectorAll('.ranking-table th.sortable:not(.radar-sortable):not(.theme-sortable)');
 const themeSortableHeaders = document.querySelectorAll('.theme-sortable');
+
+// --- Drawer Elements ---
+const stockDrawerOverlay = document.getElementById('stock-drawer-overlay');
+const stockDrawer = document.getElementById('stock-drawer');
+const closeDrawerBtn = document.getElementById('close-drawer-btn');
+const tvWidgetContainer = document.getElementById('tradingview-widget-container');
+
+// --- DOM Cache Helper ---
+function getTbody(viewId, days) {
+  let baseId = '';
+  if (viewId === 'view-ranking') baseId = 'rankingTableBody';
+  else if (viewId === 'view-theme') baseId = 'themeRankingTableBody';
+  else if (viewId === 'view-radar') baseId = 'radarTableBody';
+  return document.getElementById(`${baseId}_${days}`);
+}
+
+function switchPeriodTbody(viewId, days) {
+  let baseId = '';
+  if (viewId === 'view-ranking') baseId = 'rankingTableBody';
+  else if (viewId === 'view-theme') baseId = 'themeRankingTableBody';
+  else if (viewId === 'view-radar') baseId = 'radarTableBody';
+  
+  [1, 5, 10, 20].forEach(d => {
+    const tbody = document.getElementById(`${baseId}_${d}`);
+    if (tbody) {
+      if (d === days) tbody.classList.remove('hidden');
+      else tbody.classList.add('hidden');
+    }
+  });
+}
+
 const radarSortableHeaders = document.querySelectorAll('.radar-sortable');
-const navBtns = document.querySelectorAll('.nav-btn');
+const navBtns = document.querySelectorAll('.sidebar-tab');
+
+// --- Drawer Listeners ---
+stockDrawerOverlay.addEventListener('click', closeStockDrawer);
+closeDrawerBtn.addEventListener('click', closeStockDrawer);
+
+document.querySelectorAll('#tech-interval-selector .interval-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    document.querySelectorAll('#tech-interval-selector .interval-btn').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    const interval = e.target.getAttribute('data-interval');
+    const symbol = document.getElementById('tech-chart-view').getAttribute('data-tv-symbol');
+    if (symbol) {
+      renderTvWidget(symbol, interval);
+    }
+  });
+});
 
 // ============================================================
 // GLOBAL ERROR HANDLER
@@ -128,7 +274,7 @@ async function init() {
             sectorRankingData = periodData.sectors.filter(s => isFinite(s.avgReturn));
             renderRanking(`近 ${currentPeriodDays} 日排行`);
             sectorRankingData = orig;
-          } else if (targetViewId === 'view-theme-ranking') {
+          } else if (targetViewId === 'view-theme') {
             const orig = [...themeRankingData];
             themeRankingData = periodData.themes.filter(t => isFinite(t.avgReturn));
             renderThemeRanking(`近 ${currentPeriodDays} 日排行`);
@@ -139,24 +285,14 @@ async function init() {
           }
         } else if (currentPeriodDays === 1) {
           if (targetViewId === 'view-ranking') renderRanking();
-          else if (targetViewId === 'view-theme-ranking') renderThemeRanking();
+          else if (targetViewId === 'view-theme') renderThemeRanking();
           else if (targetViewId === 'view-radar') renderRadar();
         }
       });
     });
 
     backBtn.addEventListener('click', () => {
-      const activeNav = document.querySelector('.nav-btn.active') || navBtns[0];
-      const targetView = activeNav.getAttribute('data-target');
-      switchView(targetView);
-      currentSector = null;
-      if (currentPeriodDays === 1) {
-        if (targetView === 'view-ranking') renderRanking();
-        else if (targetView === 'view-theme-ranking') renderThemeRanking();
-        else if (targetView === 'view-radar') renderRadar();
-      } else {
-        renderHistoricalRanking(currentPeriodDays);
-      }
+      showBubbleChart(currentSector, currentChartMode);
     });
 
     sortableHeaders.forEach(h => {
@@ -204,31 +340,41 @@ async function init() {
     });
 
     // ---- Period buttons ----
-    document.querySelectorAll('.period-btn').forEach(btn => {
+    document.querySelectorAll('#bubble-period-selector .period-btn').forEach(btn => {
       btn.addEventListener('click', debounceUI((e) => {
-        const days = parseInt(e.target.getAttribute('data-period'));
+        const days = parseInt(e.target.getAttribute('data-days'));
         if (currentPeriodDays === days) return;
         currentPeriodDays = days;
 
-        document.querySelectorAll('.period-btn').forEach(b => {
-          if (parseInt(b.getAttribute('data-period')) === days) b.classList.add('active');
+        document.querySelectorAll('#bubble-period-selector .period-btn').forEach(b => {
+          if (parseInt(b.getAttribute('data-days')) === days) b.classList.add('active');
           else b.classList.remove('active');
         });
 
-        // Chart view: re-render chart with new period
-        if (!viewChart.classList.contains('hidden') && currentSector) {
-          renderChart(currentSector, currentChartMode);
-          return;
+        switchPeriodTbody('view-ranking', days);
+        switchPeriodTbody('view-theme', days);
+        switchPeriodTbody('view-radar', days);
+        
+        // If we are currently in bubble view, re-render chart if needed, 
+        // wait, we can just update chart without calling showChart again if we just update the data.
+        if (!document.getElementById('bubble-chart-view').classList.contains('hidden') && currentSector) {
+           renderChart(currentSector, currentChartMode);
         }
 
-        if (currentPeriodDays === 1) {
-          const activeView = document.querySelector('.main-view:not(.hidden)')?.id;
-          if (activeView === 'view-ranking') renderRanking();
-          else if (activeView === 'view-theme-ranking') renderThemeRanking();
-          else if (activeView === 'view-radar') renderRadar();
-        } else {
-          // Wait for historical data if still loading
-          historicalPromise.then(() => renderHistoricalRanking(currentPeriodDays));
+        if (!renderedPeriods.has(days)) {
+          if (days === 1) {
+            renderRanking();
+            renderThemeRanking();
+            renderRadar();
+            renderedPeriods.add(1);
+          } else if (historicalPromise) {
+            document.getElementById('chart-loading-overlay').classList.remove('hidden');
+            historicalPromise.then(() => {
+              renderHistoricalRanking(currentPeriodDays);
+              renderedPeriods.add(currentPeriodDays);
+              document.getElementById('chart-loading-overlay').classList.add('hidden');
+            });
+          }
         }
       }, 80));
     });
@@ -363,8 +509,9 @@ async function processData(silent = false) {
 // ============================================================
 function renderHistoricalRanking(days) {
   if (!historicalRanking || !historicalRanking[String(days)]) {
-    rankingTableBody.innerHTML = `<tr><td colspan="5" class="text-center" style="color:#94a3b8">歷史資料尚未產生，請稍後再試</td></tr>`;
-    themeRankingTableBody.innerHTML = `<tr><td colspan="5" class="text-center" style="color:#94a3b8">歷史資料尚未產生</td></tr>`;
+    getTbody('view-ranking', days).innerHTML = `<tr><td colspan="5" class="text-center" style="color:#94a3b8">歷史資料尚未產生，請稍後再試</td></tr>`;
+    getTbody('view-theme', days).innerHTML = `<tr><td colspan="5" class="text-center" style="color:#94a3b8">歷史資料尚未產生</td></tr>`;
+    getTbody('view-radar', days).innerHTML = `<tr><td colspan="6" class="text-center" style="color:#94a3b8">歷史資料尚未產生</td></tr>`;
     return;
   }
 
@@ -382,19 +529,14 @@ function renderHistoricalRanking(days) {
   sectorRankingData = periodData.sectors.filter(s => isFinite(s.avgReturn));
   themeRankingData = periodData.themes.filter(t => isFinite(t.avgReturn));
 
-  if (activeView === 'view-ranking') {
-    renderRanking(`近 ${days} 日排行 (更新: ${updatedAt})`);
-  } else if (activeView === 'view-theme-ranking') {
-    renderThemeRanking(`近 ${days} 日排行`);
-  } else if (activeView === 'view-radar') {
-    const desc = document.getElementById('radar-description');
-    if (desc) desc.textContent = `顯示全市場近 ${days} 日累積成交金額最高的前 200 檔個股`;
-    currentRadarData = periodData.radar || [];
-    resortRadar();
-  } else {
-    // If we're on the chart view, still prepare radar data just in case
-    currentRadarData = periodData.radar || [];
-  }
+  // Render ALL 3 views simultaneously! Chunked rendering handles them smoothly in background.
+  renderRanking(`近 ${days} 日排行 (更新: ${updatedAt})`, days);
+  renderThemeRanking(`近 ${days} 日排行`, days);
+  
+  const desc = document.getElementById('radar-description');
+  if (desc && activeView === 'view-radar') desc.textContent = `顯示全市場近 ${days} 日累積成交金額最高的前 200 檔個股`;
+  currentRadarData = periodData.radar || [];
+  resortRadar(days);
 
   // Restore
   sectorRankingData = origSector;
@@ -404,7 +546,7 @@ function renderHistoricalRanking(days) {
 // ============================================================
 // RENDER RANKING TABLE
 // ============================================================
-function renderRanking(subTitle = '') {
+function renderRanking(subTitle = '', targetDays = currentPeriodDays) {
   const desc = document.getElementById('ranking-description');
   if (desc) {
     desc.textContent = subTitle ? subTitle : '點擊各產業別標籤即可查看該族群的泡泡圖分析';
@@ -417,19 +559,18 @@ function renderRanking(subTitle = '') {
     return sortDesc ? vB - vA : vA - vB;
   });
 
-  const maxAmount = Math.max(...data.map(d => d.totalAmount), 1);
-  const maxReturn = Math.max(...data.map(d => Math.abs(d.avgReturn)), 1);
-
+  const tbody = getTbody('view-ranking', targetDays);
   updateTableDelta(
-    rankingTableBody,
+    tbody,
     data,
     (d) => d.sector, // getRowId
     (tr, d, index) => { // updateRow
       const returnClass = d.avgReturn > 0 ? 'color-positive' : (d.avgReturn < 0 ? 'color-negative' : '');
       const returnSign = d.avgReturn > 0 ? '+' : '';
       const amountStr = (d.totalAmount / 100000000).toFixed(2);
-      const amountPct = (d.totalAmount / maxAmount) * 100;
-      const returnPct = (Math.abs(d.avgReturn) / maxReturn) * 100;
+      
+      const amountPct = Math.min((d.totalAmount / (data[0] && data[0].totalAmount || 1)) * 100, 100);
+      const returnPct = Math.min(Math.abs(d.avgReturn) / 10 * 100, 100);
       const returnBarColor = d.avgReturn >= 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
 
       const oldAmount = tr.getAttribute('data-amount');
@@ -461,7 +602,7 @@ function renderRanking(subTitle = '') {
 // ============================================================
 // RENDER THEME RANKING TABLE
 // ============================================================
-function renderThemeRanking(subTitle = '') {
+function renderThemeRanking(subTitle = '', targetDays = currentPeriodDays) {
   const desc = document.getElementById('theme-ranking-description');
   if (desc) {
     desc.textContent = subTitle ? subTitle : '點擊各題材類別標籤即可查看該概念股的專屬泡泡圖';
@@ -474,19 +615,18 @@ function renderThemeRanking(subTitle = '') {
     return themeSortDesc ? vB - vA : vA - vB;
   });
 
-  const maxAmount = Math.max(...data.map(d => d.totalAmount), 1);
-  const maxReturn = Math.max(...data.map(d => Math.abs(d.avgReturn)), 1);
-
+  const tbody = getTbody('view-theme', targetDays);
   updateTableDelta(
-    themeRankingTableBody,
+    tbody,
     data,
     (d) => d.theme, // getRowId
     (tr, d, index) => { // updateRow
       const returnClass = d.avgReturn > 0 ? 'color-positive' : (d.avgReturn < 0 ? 'color-negative' : '');
       const returnSign = d.avgReturn > 0 ? '+' : '';
       const amountStr = (d.totalAmount / 100000000).toFixed(2);
-      const amountPct = (d.totalAmount / maxAmount) * 100;
-      const returnPct = (Math.abs(d.avgReturn) / maxReturn) * 100;
+      
+      const amountPct = Math.min((d.totalAmount / (data[0] && data[0].totalAmount || 1)) * 100, 100);
+      const returnPct = Math.min(Math.abs(d.avgReturn) / 10 * 100, 100);
       const returnBarColor = d.avgReturn >= 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
       
       const oldAmount = tr.getAttribute('data-amount');
@@ -524,95 +664,79 @@ function renderRadar() {
 
   // Build live data and store for sorting
   currentRadarData = [...allMarketData].filter(d => d.amount > 0);
-  const sorted = [...currentRadarData]
-    .sort((a, b) => {
-      const vA = radarSortCol === 'amount' ? a.amount : radarSortCol === 'volume' ? a.volume : a.dailyReturn;
-      const vB = radarSortCol === 'amount' ? b.amount : radarSortCol === 'volume' ? b.volume : b.dailyReturn;
-      return radarSortDesc ? vB - vA : vA - vB;
-    })
-    .slice(0, 100);
-  renderRadarFromData(sorted, '今日');
+  resortRadar(1);
 }
 
 // ============================================================
 // RENDER RADAR TABLE (sorting re-entry for historical mode)
 // ============================================================
-function resortRadar() {
-  if (currentRadarData.length === 0) return;
-  const sorted = [...currentRadarData]
-    .sort((a, b) => {
-      const vA = radarSortCol === 'amount' ? a.amount : radarSortCol === 'volume' ? a.volume : a.dailyReturn;
-      const vB = radarSortCol === 'amount' ? b.amount : radarSortCol === 'volume' ? b.volume : b.dailyReturn;
-      return radarSortDesc ? vB - vA : vA - vB;
-    })
-    .slice(0, 200);
-  renderRadarFromData(sorted);
+function resortRadar(targetDays = currentPeriodDays) {
+  let sorted = [...currentRadarData];
+  sorted.sort((a, b) => {
+    const vA = radarSortCol === 'amount' ? a.amount : (radarSortCol === 'volume' ? a.volume : a.dailyReturn);
+    const vB = radarSortCol === 'amount' ? b.amount : (radarSortCol === 'volume' ? b.volume : b.dailyReturn);
+    return radarSortDesc ? vB - vA : vA - vB;
+  });
+  renderRadarFromData(sorted.slice(0, 200), targetDays);
 }
 
 // ============================================================
 // RENDER RADAR TABLE (from any data source)
 // ============================================================
-function renderRadarFromData(stocks, periodLabel = '') {
-  if (!stocks || stocks.length === 0) {
-    radarTableBody.innerHTML = '<tr><td colspan="6" class="text-center">查無交易資料</td></tr>';
+function renderRadarFromData(data, targetDays = currentPeriodDays) {
+  const tbody = getTbody('view-radar', targetDays);
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center">暫無交易資料</td></tr>';
     return;
   }
 
-  const maxAmount = Math.max(...stocks.map(s => s.amount), 1);
-  const maxReturn = Math.max(...stocks.map(s => {
-    let r = parseFloat(s.dailyReturn);
-    return (isNaN(r) || !isFinite(r)) ? 0 : Math.abs(r);
-  }), 1);
-
   updateTableDelta(
-    radarTableBody,
-    stocks,
-    (stock) => stock.stock ? stock.stock['股票代號'] : (stock.symbol || ''), // getRowId
-    (tr, stock, index) => { // updateRow
-      let ret = parseFloat(stock.dailyReturn);
-      if (isNaN(ret) || !isFinite(ret)) ret = 0;
+    tbody,
+    data,
+    (d) => d.stock ? d.stock['股票代號'] : d.symbol,
+    (tr, d, index) => {
+      const stock = d.stock;
+      if (!stock) return;
+      const stockSector = stock['產業別'] || '無';
+      const dReturn = d.dailyReturn;
+      const returnClass = dReturn > 0 ? 'color-positive' : (dReturn < 0 ? 'color-negative' : '');
+      const returnSign = dReturn > 0 ? '+' : '';
+      const amountStr = (d.amount / 100000000).toFixed(2);
       
-      const returnClass = ret > 0 ? 'color-positive' : (ret < 0 ? 'color-negative' : '');
-      const returnSign = ret > 0 ? '+' : '';
-      const amountStr = (stock.amount / 100000000).toFixed(2);
-      const amountPct = (stock.amount / maxAmount) * 100;
-      const returnPct = (Math.abs(ret) / maxReturn) * 100;
-      const returnBarColor = ret >= 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)';
-
-      const stockName = stock.stock ? stock.stock['股票名稱'] : (stock.name || '');
-      const stockCode = stock.stock ? stock.stock['股票代號'] : (stock.symbol || '');
-      const stockSector = stock.stock ? stock.stock['產業別'] : '';
-
-      const oldAmount = tr.getAttribute('data-amount');
+      const amountPct = Math.min((d.amount / (data[0].amount || 1)) * 100, 100);
+      const returnPct = Math.min(Math.abs(dReturn) / 10 * 100, 100);
+      const returnBarColor = dReturn > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)';
 
       tr.innerHTML = `
         <td>${index + 1}</td>
-        <td>${stockName} <span style="font-size:0.9em;color:var(--text-secondary)">${stockCode}</span></td>
-        <td class="text-right"><span class="badge-sector">${stockSector}</span></td>
+        <td>
+          <div class="stock-name-cell">
+            <strong>${stock['股票名稱']}</strong>
+            <span class="stock-symbol">${stock['股票代號']}</span>
+          </div>
+        </td>
+        <td><span class="badge-sector">${stockSector}</span></td>
         <td class="text-right ${returnClass} data-bar-cell">
           <div class="data-bar" style="width:${returnPct}%;background:${returnBarColor}"></div>
-          <strong class="data-bar-text">${returnSign}${ret.toFixed(2)}%</strong>
+          <strong class="data-bar-text">${returnSign}${dReturn.toFixed(2)}%</strong>
         </td>
-        <td class="text-right">${Math.round(stock.volume).toLocaleString()}</td>
+        <td class="text-right">${Math.round(d.volume).toLocaleString()}</td>
         <td class="text-right data-bar-cell">
           <div class="data-bar" style="width:${amountPct}%;background:rgba(56,189,248,0.15)"></div>
           <span class="data-bar-text">${amountStr}</span>
         </td>
       `;
-
       if (!tr.hasAttribute('data-amount')) {
          tr.addEventListener('click', () => {
-           if (stockSector) showChart(stockSector, 'sector');
+             showTechChart(d);
          });
       }
-
-      tr.setAttribute('data-amount', stock.amount || 0);
-      triggerFlashIfChanged(tr, oldAmount, stock.amount || 0);
+      const oldAmount = tr.getAttribute('data-amount');
+      tr.setAttribute('data-amount', d.amount);
+      triggerFlashIfChanged(tr, oldAmount, d.amount);
     }
   );
 }
-
-
 
 // ============================================================
 // SORT UI UPDATERS
@@ -798,7 +922,12 @@ async function renderChart(identifier, mode) {
             const el = elements[0];
             const dataPoint = chartInstance.data.datasets[el.datasetIndex].data[el.index];
             if (dataPoint && dataPoint.raw && dataPoint.raw.symbol) {
-              window.open(`https://tw.stock.yahoo.com/quote/${dataPoint.raw.symbol}`, '_blank');
+              const fullStockData = globalSectorDataForTable.find(d => d.symbol === dataPoint.raw.symbol);
+              if (fullStockData) {
+                showTechChart(fullStockData);
+              } else {
+                window.open(`https://tw.stock.yahoo.com/quote/${dataPoint.raw.symbol}`, '_blank');
+              }
             }
           }
         },
@@ -912,7 +1041,7 @@ function renderDetailTable(data) {
         const returnSign = item.dailyReturn > 0 ? '+' : '';
         tr.innerHTML = `
           <td>
-            <a href="https://tw.stock.yahoo.com/quote/${item.symbol}" target="_blank" class="stock-link">
+            <a href="#" class="stock-link">
               ${item.stock['股票名稱']} <span style="color:#94a3b8;font-size:0.9em">(${item.symbol})</span>
             </a>
           </td>
@@ -920,6 +1049,13 @@ function renderDetailTable(data) {
           <td class="text-right">${Math.round(item.volume).toLocaleString()}</td>
           <td class="text-right">${(item.amount / 100000000).toFixed(2)}</td>
         `;
+        
+        if (!tr.hasAttribute('data-amount')) {
+          tr.addEventListener('click', (e) => {
+            e.preventDefault();
+            showTechChart({ stock: item.stock, dailyReturn: item.dailyReturn, volume: item.volume, amount: item.amount });
+          });
+        }
       }
       
       tr.setAttribute('data-amount', item.amount || 0);

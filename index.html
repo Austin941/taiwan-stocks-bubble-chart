@@ -3,226 +3,186 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>台股族群動態分析</title>
+  <title>台股全方位儀表板</title>
   <link rel="stylesheet" href="./style.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="app-container">
-    <header class="app-header">
-      <h1>台股動態排行與族群分析</h1>
-      <p class="subtitle">洞察全市場成交重心與各族群資金流向</p>
-      <div id="last-updated" style="margin-top:0.5rem; font-size:0.9rem; color:var(--accent-color); font-variant-numeric: tabular-nums;">
-        最後更新時間：載入中...
+  <div class="tv-layout">
+    <!-- Header -->
+    <header class="tv-header panel-glass">
+      <div class="header-left">
+        <h1>台股全方位儀表板</h1>
+        <span class="subtitle">族群動能與技術分析</span>
+      </div>
+      <div class="header-right">
+        <span id="last-updated" class="last-updated">資料載入中...</span>
       </div>
     </header>
-    
-    <nav class="app-nav">
-      <button class="nav-btn active" data-target="view-ranking">族群資金流向</button>
-      <button class="nav-btn" data-target="view-theme-ranking">🎯 題材資金流向</button>
-      <button class="nav-btn" data-target="view-radar">🔥 全市場爆量雷達</button>
-    </nav>
-    
-    <main class="main-content">
+
+    <!-- Main Workspace -->
+    <div class="tv-workspace">
       
-      <!-- 總表視圖 (Master View) -->
-      <section id="view-ranking" class="view active">
-        <div class="panel-glass">
-          <div class="panel-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
-            <div>
-              <h2>族群成交金額排行</h2>
-              <p id="ranking-description">點擊各產業別標籤即可查看該族群的泡泡圖分析</p>
+      <!-- LEFT: Main Chart Area -->
+      <div class="tv-main-panel panel-glass">
+        <!-- Top Toolbar -->
+        <div class="tv-main-toolbar">
+          <div class="toolbar-left">
+             <h2 id="tv-main-title">全市場族群泡泡圖</h2>
+             <span id="tv-main-subtitle" class="subtitle"></span>
+          </div>
+          <div class="toolbar-right">
+            <!-- Period buttons for Bubble Chart -->
+            <div id="bubble-period-selector" class="period-selector">
+              <button class="period-btn active" data-days="1">1日</button>
+              <button class="period-btn" data-days="5">5日</button>
+              <button class="period-btn" data-days="10">10日</button>
+              <button class="period-btn" data-days="20">20日</button>
             </div>
-            <div class="period-selector">
-              <button class="period-btn active" data-period="1">單日(今日)</button>
-              <button class="period-btn" data-period="5">近 5 日</button>
-              <button class="period-btn" data-period="10">近 10 日</button>
-              <button class="period-btn" data-period="20">近 20 日</button>
+            <!-- Interval buttons for Tech Chart -->
+            <div id="tech-interval-selector" class="interval-group hidden">
+              <button class="interval-btn" data-interval="5">5分</button>
+              <button class="interval-btn" data-interval="60">60分</button>
+              <button class="interval-btn active" data-interval="D">日K</button>
+              <button class="interval-btn" data-interval="W">週K</button>
+              <button class="interval-btn" data-interval="M">月K</button>
             </div>
-          </div>
-          <div class="table-responsive">
-            <table class="ranking-table">
-              <thead>
-                <tr>
-                  <th>排名</th>
-                  <th>產業別</th>
-                  <th class="text-right sortable" data-sort="return">
-                    族群平均漲幅 
-                    <span class="sort-icon" id="sort-return"></span>
-                  </th>
-                  <th class="text-right sortable" data-sort="volume">
-                    總成交量 (張) 
-                    <span class="sort-icon" id="sort-volume"></span>
-                  </th>
-                  <th class="text-right sortable" data-sort="amount" data-active="true" data-order="desc">
-                    總成交額 (億) 
-                    <span class="sort-icon desc" id="sort-amount">▼</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody id="rankingTableBody">
-                <tr><td colspan="5" class="text-center">資料載入中...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- 題材表視圖 (Theme Master View) -->
-      <section id="view-theme-ranking" class="view hidden">
-        <div class="panel-glass">
-          <div class="panel-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
-            <div>
-              <h2>熱門題材概念股排行</h2>
-              <p id="theme-ranking-description">點擊各題材類別標籤即可查看該概念股的專屬泡泡圖</p>
-            </div>
-            <div class="period-selector">
-              <button class="period-btn active" data-period="1">單日(今日)</button>
-              <button class="period-btn" data-period="5">近 5 日</button>
-              <button class="period-btn" data-period="10">近 10 日</button>
-              <button class="period-btn" data-period="20">近 20 日</button>
-            </div>
-          </div>
-          <div class="table-responsive">
-            <table class="ranking-table">
-              <thead>
-                <tr>
-                  <th>排名</th>
-                  <th>題材別</th>
-                  <th class="text-right sortable theme-sortable" data-sort="return">
-                    題材平均漲幅 <span class="sort-icon" id="theme-sort-return"></span>
-                  </th>
-                  <th class="text-right sortable theme-sortable" data-sort="volume">
-                    總成交量 (張) <span class="sort-icon" id="theme-sort-volume"></span>
-                  </th>
-                  <th class="text-right sortable theme-sortable" data-sort="amount" data-active="true" data-order="desc">
-                    總成交額 (億) <span class="sort-icon desc" id="theme-sort-amount">▼</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody id="themeRankingTableBody">
-                <tr><td colspan="5" class="text-center">資料載入中...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- 爆量雷達視圖 (Radar View) -->
-        <section id="view-radar" class="view hidden">
-          <div class="panel-glass">
-            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
-              <div>
-                <h2>全市場爆量雷達(不分族群)</h2>
-                <p id="radar-description">顯示全市場即時成交金額最高的前 100 檔個股</p>
-              </div>
-              <div class="period-selector">
-                <button class="period-btn active" data-period="1">單日(今日)</button>
-                <button class="period-btn" data-period="5">近 5 日</button>
-                <button class="period-btn" data-period="10">近 10 日</button>
-                <button class="period-btn" data-period="20">近 20 日</button>
-              </div>
-            </div>
-            <div class="table-responsive">
-            <table class="ranking-table radar-table">
-              <thead>
-                <tr>
-                  <th>排名</th>
-                  <th>股票名稱 (代號)</th>
-                  <th class="text-right">產業別</th>
-                  <th class="text-right sortable radar-sortable" data-sort="return">
-                    當日漲跌幅 <span class="sort-icon" id="radar-sort-return"></span>
-                  </th>
-                  <th class="text-right sortable radar-sortable" data-sort="volume">
-                    成交量 (張) <span class="sort-icon" id="radar-sort-volume"></span>
-                  </th>
-                  <th class="text-right sortable radar-sortable" data-sort="amount" data-active="true" data-order="desc">
-                    成交額 (億) <span class="sort-icon desc" id="radar-sort-amount">▼</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody id="radarTableBody">
-                <tr><td colspan="6" class="text-center">資料載入中...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- 泡泡圖視圖 (Detail View) -->
-      <div id="view-chart" class="view panel-glass flex-1 flex flex-col hidden">
-      <div class="view-header">
-        <h2 class="view-title">
-          <span class="accent-dot">⦿</span>
-          <span id="current-sector-title">族群分析</span>
-        </h2>
-        
-        <div class="view-actions">
-          <!-- Time Period Selector -->
-          <div class="period-selector">
-            <button class="period-btn active" data-period="1">單日(今日)</button>
-            <button class="period-btn" data-period="5">近 5 日</button>
-            <button class="period-btn" data-period="10">近 10 日</button>
-            <button class="period-btn" data-period="20">近 20 日</button>
-          </div>
-          
-          <button id="back-btn" class="btn-back">
-            ← 返回列表
-          </button>
-        </div>
-      </div>
-        <div class="chart-container-glass" style="position: relative;">
-          <div id="chart-loading-overlay" class="chart-loading-overlay hidden">
-            <div class="spinner"></div>
-            <div class="loading-text">正在分析歷史大數據...</div>
-          </div>
-          <div class="y-axis-title">當日報酬率</div>
-          <canvas id="bubbleChart"></canvas>
-        </div>
-
-        <div class="detail-table-container panel-glass" style="margin-top: 1rem; padding: 1rem;">
-          <h3 style="margin-bottom: 1rem; font-size: 1.1rem; color: #f1f5f9;">個股數據列表</h3>
-          <div class="table-responsive">
-            <table class="ranking-table detail-table">
-              <thead>
-                <tr>
-                  <th class="sortable detail-sortable" data-sort="symbol">股票代號名稱 <span class="sort-icon" id="detail-sort-symbol"></span></th>
-                  <th class="text-right sortable detail-sortable" data-sort="return">漲跌幅 (%) <span class="sort-icon" id="detail-sort-return"></span></th>
-                  <th class="text-right sortable detail-sortable" data-sort="volume">成交量 (張) <span class="sort-icon" id="detail-sort-volume"></span></th>
-                  <th class="text-right sortable detail-sortable" data-sort="amount" data-active="true" data-order="desc">成交額 (億) <span class="sort-icon desc" id="detail-sort-amount">▼</span></th>
-                </tr>
-              </thead>
-              <tbody id="detailTableBody">
-                <!-- Data populated via JS -->
-              </tbody>
-            </table>
+            <button id="back-to-bubble-btn" class="btn-secondary hidden">返回泡泡圖</button>
           </div>
         </div>
 
-        <div class="info-panel">
-          <h3>圖表說明</h3>
-          <ul>
-            <li><strong>X 軸</strong>：成交量 (即時)</li>
-            <li><strong>Y 軸</strong>：當日報酬率 % (即時)</li>
-            <li><strong>氣泡大小</strong>：成交金額 (即時)</li>
-            <li><strong>顏色</strong>：<span style="color:var(--positive-color);font-weight:bold;">紅色</span>代表上漲，<span style="color:var(--negative-color);font-weight:bold;">綠色</span>代表下跌</li>
-          </ul>
+        <!-- Content Views -->
+        <div class="tv-main-content">
+          <!-- 1. Bubble Chart View -->
+          <div id="bubble-chart-view" class="chart-wrapper">
+             <div id="chart-loading-overlay" class="chart-loading-overlay hidden">
+               <div class="spinner"></div><div class="loading-text">計算歷史數據中...</div>
+             </div>
+             <!-- The canvas itself -->
+             <div class="canvas-container" style="flex: 1; min-height: 400px; position: relative;">
+                 <canvas id="bubbleChart"></canvas>
+             </div>
+             
+             <!-- Detail Table (Bottom of bubble chart) -->
+             <div id="detail-table-wrapper" class="detail-table-wrapper hidden">
+               <h3>成分股明細</h3>
+               <div class="table-responsive">
+                 <table class="ranking-table detail-table">
+                   <thead>
+                     <tr>
+                       <th class="sortable detail-sortable" data-sort="symbol">股票名稱 <span class="sort-icon" id="detail-sort-symbol"></span></th>
+                       <th class="text-right sortable detail-sortable" data-sort="return">漲跌幅(%) <span class="sort-icon" id="detail-sort-return"></span></th>
+                       <th class="text-right sortable detail-sortable" data-sort="volume">成交量(張) <span class="sort-icon" id="detail-sort-volume"></span></th>
+                       <th class="text-right sortable detail-sortable" data-sort="amount" data-active="true" data-order="desc">成交金額(億) <span class="sort-icon desc" id="detail-sort-amount">↓</span></th>
+                     </tr>
+                   </thead>
+                   <tbody id="detailTableBody"></tbody>
+                 </table>
+               </div>
+             </div>
+          </div>
+
+          <!-- 2. Technical Analysis View (TradingView) -->
+          <div id="tech-chart-view" class="chart-wrapper hidden" style="display: flex; flex-direction: column;">
+             <div id="tradingview-widget-container" style="flex: 1; min-height: 500px; border-radius: 8px; overflow: hidden;"></div>
+             <!-- Stock Details (Tags) underneath the chart -->
+             <div class="stock-meta-panel" style="margin-top:1rem;">
+                <div class="meta-row" style="margin-bottom:0.5rem;">
+                  <span class="meta-label">所屬產業:</span>
+                  <div id="tech-sector-tags" class="tag-container" style="display:inline-flex;"></div>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-label">概念題材:</span>
+                  <div id="tech-theme-tags" class="tag-container" style="display:inline-flex;"></div>
+                </div>
+             </div>
+          </div>
         </div>
       </div>
 
-    </main>
-  </div>
-  
+      <!-- RIGHT: Sidebar Panels -->
+      <div class="tv-sidebar panel-glass">
+        <!-- Sidebar Tabs -->
+        <div class="sidebar-tabs">
+          <button class="sidebar-tab active" data-target="view-ranking">產業</button>
+          <button class="sidebar-tab" data-target="view-theme">題材</button>
+          <button class="sidebar-tab" data-target="view-radar">熱門</button>
+        </div>
+
+        <div class="sidebar-content">
+           <!-- Ranking View -->
+           <div id="view-ranking" class="sidebar-view">
+             <div class="table-responsive">
+             <table class="ranking-table">
+               <thead>
+                 <tr>
+                   <th>族群</th>
+                   <th class="text-right sortable" data-sort="return">漲跌<span class="sort-icon" id="sort-return"></span></th>
+                   <th class="text-right sortable" data-sort="amount" data-active="true" data-order="desc">金額(億)<span class="sort-icon desc" id="sort-amount">↓</span></th>
+                 </tr>
+               </thead>
+               <tbody id="rankingTableBody_1"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+               <tbody id="rankingTableBody_5" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+               <tbody id="rankingTableBody_10" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+               <tbody id="rankingTableBody_20" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+             </table>
+             </div>
+           </div>
+           
+           <!-- Theme View -->
+           <div id="view-theme" class="sidebar-view hidden">
+             <div class="table-responsive">
+             <table class="ranking-table">
+               <thead>
+                 <tr>
+                   <th>題材</th>
+                   <th class="text-right theme-sortable" data-sort="return">漲跌<span class="sort-icon" id="theme-sort-return"></span></th>
+                   <th class="text-right theme-sortable" data-sort="amount" data-active="true" data-order="desc">金額(億)<span class="sort-icon desc" id="theme-sort-amount">↓</span></th>
+                 </tr>
+               </thead>
+               <tbody id="themeRankingTableBody_1"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+               <tbody id="themeRankingTableBody_5" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+               <tbody id="themeRankingTableBody_10" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+               <tbody id="themeRankingTableBody_20" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+             </table>
+             </div>
+           </div>
+
+           <!-- Radar View -->
+           <div id="view-radar" class="sidebar-view hidden">
+             <div class="table-responsive">
+             <table class="ranking-table radar-table">
+               <thead>
+                 <tr>
+                   <th>股票名稱</th>
+                   <th class="text-right radar-sortable" data-sort="return">漲跌<span class="sort-icon" id="radar-sort-return"></span></th>
+                   <th class="text-right radar-sortable" data-sort="amount" data-active="true" data-order="desc">金額(億)<span class="sort-icon desc" id="radar-sort-amount">↓</span></th>
+                 </tr>
+               </thead>
+               <tbody id="radarTableBody_1"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+               <tbody id="radarTableBody_5" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+               <tbody id="radarTableBody_10" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+               <tbody id="radarTableBody_20" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+             </table>
+             </div>
+           </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Custom Chart Tooltip -->
   <div id="chart-tooltip" class="chart-tooltip"></div>
 
+  <!-- External Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <script src="https://s3.tradingview.com/tv.js"></script>
+  
+  <!-- App Scripts -->
+  <script type="module" src="/src/ui.js"></script>
+  <script type="module" src="/src/api.js"></script>
   <script type="module" src="./main.js"></script>
 </body>
 </html>
