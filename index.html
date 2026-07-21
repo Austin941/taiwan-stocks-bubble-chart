@@ -111,13 +111,21 @@
       </section>
 
       <!-- 爆量雷達視圖 (Radar View) -->
-      <section id="view-radar" class="view hidden">
-        <div class="panel-glass">
-          <div class="panel-header">
-            <h2>全市場爆量雷達 (即時熱門榜)</h2>
-            <p>顯示全市場即時成交金額最高的前 100 檔個股</p>
-          </div>
-          <div class="table-responsive">
+        <section id="view-radar" class="view hidden">
+          <div class="panel-glass">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+              <div>
+                <h2>全市場爆量雷達(不分族群)</h2>
+                <p id="radar-description">顯示全市場即時成交金額最高的前 100 檔個股</p>
+              </div>
+              <div class="period-selector">
+                <button class="period-btn active" data-period="1">單日(今日)</button>
+                <button class="period-btn" data-period="5">近 5 日</button>
+                <button class="period-btn" data-period="10">近 10 日</button>
+                <button class="period-btn" data-period="20">近 20 日</button>
+              </div>
+            </div>
+            <div class="table-responsive">
             <table class="ranking-table radar-table">
               <thead>
                 <tr>

@@ -333,8 +333,11 @@ function renderHistoricalRanking(days) {
   sectorRankingData = periodData.sectors.filter(s => isFinite(s.avgReturn));
   themeRankingData = periodData.themes.filter(t => isFinite(t.avgReturn));
 
-  renderRanking(`近 ${days} 日資料 (更新：${updatedAt})`);
-  renderThemeRanking(`近 ${days} 日資料`);
+  renderRanking(`近 ${days} 日排行 (更新: ${updatedAt})`);
+  renderThemeRanking(`近 ${days} 日排行`);
+    
+  const desc = document.getElementById('radar-description');
+  if (desc) desc.textContent = `顯示全市場近 ${days} 日累積成交金額最高的前 200 檔個股`;
 
   // Radar: store historical radar data and render with current sort
   currentRadarData = periodData.radar || [];
@@ -475,6 +478,9 @@ function renderThemeRanking(subTitle = '') {
 // RENDER RADAR TABLE (live)
 // ============================================================
 function renderRadar() {
+  const desc = document.getElementById('radar-description');
+  if (desc) desc.textContent = `顯示全市場即時成交金額最高的前 100 檔個股`;
+
   // Build live data and store for sorting
   currentRadarData = [...allMarketData].filter(d => d.amount > 0);
   const sorted = [...currentRadarData]
