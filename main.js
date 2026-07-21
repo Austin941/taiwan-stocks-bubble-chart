@@ -63,53 +63,97 @@ window.addEventListener('unhandledrejection', function(event) {
 });
 
 // ============================================================
+// DEBOUNCE HELPER
+// ============================================================
+function debounceUI(fn, delay = 50) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+// ============================================================
 // INIT
 // ============================================================
 async function init() {
   try {
-    // Load historical ranking JSON first (pre-calculated 5/10/20 day data)
-    historicalRanking = await fetchHistoricalRanking();
-    if (historicalRanking) {
-      const updatedAt = historicalRanking.updated_at
-        ? new Date(historicalRanking.updated_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })
-        : '未知';
-      console.log(`[HistoricalRanking] Loaded. Updated at: ${updatedAt}`);
-    } else {
-      console.warn('[HistoricalRanking] Not available, 5/10/20 day ranking will be disabled.');
-    const todayStr = new Date().toISOString().split('T')[0];
-    Papa.parse(`./stocks.csv?v=${todayStr}`, {
-      download: true,
-      header: true,
-      worker: true,
-      fastMode: true,
-      complete: function(results) {
-        allStocks = results.data.filter(d => d['股票代號'] && d['股票名稱']);
-        // Initial data fetch
-        processData();
+    // 1. Load historical ranking JSON (pre-calculated 5/10/20 day data)
+    //    — run in background, do NOT await here so CSV loading starts immediately
+    const historicalPromise = fetchHistoricalRanking().then(data => {
+      historicalRanking = data;
+      if (data) {
+        const updatedAt = data.updated_at
+          ? new Date(data.updated_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })
+          : '未知';
+        console.log(`[HistoricalRanking] Loaded. Updated at: ${updatedAt}`);
+      } else {
+        console.warn('[HistoricalRanking] Not available, 5/10/20 day ranking will be disabled.');
       }
     });
+
+    // 2. Load CSV in parallel with historical data
+    const todayStr = new Date().toISOString().split('T')[0];
+    const csvPromise = new Promise((resolve, reject) => {
+      Papa.parse(`./stocks.csv?v=${todayStr}`, {
+        download: true,
+        header: true,
+        complete: function(results) {
+          allStocks = results.data.filter(d => d['股票代號'] && d['股票名稱']);
+          resolve();
+        },
+        error: reject
+      });
+    });
+
+    // 3. Wait for CSV to finish, then kick off live snapshot
+    //    Historical data can still be loading — that's fine, it's non-blocking
+    await csvPromise;
+    processData(); // first live load — shows data ASAP
 
     // ---- Navigation ----
     navBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
+        const targetViewId = e.currentTarget.getAttribute('data-target');
         navBtns.forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
-        const targetViewId = e.target.getAttribute('data-target');
+        e.currentTarget.classList.add('active');
         switchView(targetViewId);
         if (targetViewId !== 'view-chart') currentSector = null;
+
+        // Lazy Rendering on tab switch
+        if (currentPeriodDays !== 1 && historicalRanking && historicalRanking[String(currentPeriodDays)]) {
+          const periodData = historicalRanking[String(currentPeriodDays)];
+          if (targetViewId === 'view-ranking') {
+            const orig = [...sectorRankingData];
+            sectorRankingData = periodData.sectors.filter(s => isFinite(s.avgReturn));
+            renderRanking(`近 ${currentPeriodDays} 日排行`);
+            sectorRankingData = orig;
+          } else if (targetViewId === 'view-theme-ranking') {
+            const orig = [...themeRankingData];
+            themeRankingData = periodData.themes.filter(t => isFinite(t.avgReturn));
+            renderThemeRanking(`近 ${currentPeriodDays} 日排行`);
+            themeRankingData = orig;
+          } else if (targetViewId === 'view-radar') {
+            currentRadarData = periodData.radar || [];
+            resortRadar();
+          }
+        } else if (currentPeriodDays === 1) {
+          if (targetViewId === 'view-ranking') renderRanking();
+          else if (targetViewId === 'view-theme-ranking') renderThemeRanking();
+          else if (targetViewId === 'view-radar') renderRadar();
+        }
       });
     });
 
     backBtn.addEventListener('click', () => {
       const activeNav = document.querySelector('.nav-btn.active') || navBtns[0];
-      switchView(activeNav.getAttribute('data-target'));
+      const targetView = activeNav.getAttribute('data-target');
+      switchView(targetView);
       currentSector = null;
-      
-      // When going back, re-render the view with the correct historical or live data
       if (currentPeriodDays === 1) {
-        if (activeNav.getAttribute('data-target') === 'view-ranking') renderRanking();
-        else if (activeNav.getAttribute('data-target') === 'view-theme-ranking') renderThemeRanking();
-        else if (activeNav.getAttribute('data-target') === 'view-radar') renderRadar();
+        if (targetView === 'view-ranking') renderRanking();
+        else if (targetView === 'view-theme-ranking') renderThemeRanking();
+        else if (targetView === 'view-radar') renderRadar();
       } else {
         renderHistoricalRanking(currentPeriodDays);
       }
@@ -120,10 +164,14 @@ async function init() {
         const col = h.getAttribute('data-sort');
         if (sortCol === col) sortDesc = !sortDesc; else { sortCol = col; sortDesc = true; }
         updateSortUI();
-        if (currentPeriodDays === 1) {
-          renderRanking();
-        } else {
-          renderHistoricalRanking(currentPeriodDays);
+        if (currentPeriodDays === 1) renderRanking();
+        else {
+          if (historicalRanking && historicalRanking[String(currentPeriodDays)]) {
+            const orig = [...sectorRankingData];
+            sectorRankingData = historicalRanking[String(currentPeriodDays)].sectors.filter(s => isFinite(s.avgReturn));
+            renderRanking(`近 ${currentPeriodDays} 日排行`);
+            sectorRankingData = orig;
+          }
         }
       });
     });
@@ -133,10 +181,14 @@ async function init() {
         const col = h.getAttribute('data-sort');
         if (themeSortCol === col) themeSortDesc = !themeSortDesc; else { themeSortCol = col; themeSortDesc = true; }
         updateThemeSortUI();
-        if (currentPeriodDays === 1) {
-          renderThemeRanking();
-        } else {
-          renderHistoricalRanking(currentPeriodDays);
+        if (currentPeriodDays === 1) renderThemeRanking();
+        else {
+          if (historicalRanking && historicalRanking[String(currentPeriodDays)]) {
+            const orig = [...themeRankingData];
+            themeRankingData = historicalRanking[String(currentPeriodDays)].themes.filter(t => isFinite(t.avgReturn));
+            renderThemeRanking(`近 ${currentPeriodDays} 日排行`);
+            themeRankingData = orig;
+          }
         }
       });
     });
@@ -146,46 +198,42 @@ async function init() {
         const col = h.getAttribute('data-sort');
         if (radarSortCol === col) radarSortDesc = !radarSortDesc; else { radarSortCol = col; radarSortDesc = true; }
         updateRadarSortUI();
-        // In historical mode, resort the cached radar data; in live mode, re-render from allMarketData
-        if (currentPeriodDays !== 1 && currentRadarData.length > 0) {
-          resortRadar();
-        } else {
-          renderRadar();
-        }
+        if (currentPeriodDays !== 1 && currentRadarData.length > 0) resortRadar();
+        else renderRadar();
       });
     });
 
-    // ---- Period buttons (main page ranking) ----
+    // ---- Period buttons ----
     document.querySelectorAll('.period-btn').forEach(btn => {
       btn.addEventListener('click', debounceUI((e) => {
         const days = parseInt(e.target.getAttribute('data-period'));
         if (currentPeriodDays === days) return;
         currentPeriodDays = days;
-        
-        // Update all period selectors to keep them in sync
+
         document.querySelectorAll('.period-btn').forEach(b => {
           if (parseInt(b.getAttribute('data-period')) === days) b.classList.add('active');
           else b.classList.remove('active');
         });
 
-        // If in chart view: re-render chart
+        // Chart view: re-render chart with new period
         if (!viewChart.classList.contains('hidden') && currentSector) {
           renderChart(currentSector, currentChartMode);
           return;
         }
-        
-        // Otherwise: re-render main ranking tables with period data
+
         if (currentPeriodDays === 1) {
-          if (document.getElementById('view-ranking').classList.contains('active')) renderRanking();
-          if (document.getElementById('view-theme-ranking').classList.contains('active')) renderThemeRanking();
-          if (document.getElementById('view-radar').classList.contains('active')) renderRadar();
+          const activeView = document.querySelector('.main-view:not(.hidden)')?.id;
+          if (activeView === 'view-ranking') renderRanking();
+          else if (activeView === 'view-theme-ranking') renderThemeRanking();
+          else if (activeView === 'view-radar') renderRadar();
         } else {
-          renderHistoricalRanking(currentPeriodDays);
+          // Wait for historical data if still loading
+          historicalPromise.then(() => renderHistoricalRanking(currentPeriodDays));
         }
-      }, 10));
+      }, 80));
     });
 
-    // ---- Detail table sorting (chart view) ----
+    // ---- Detail table sorting ----
     document.querySelectorAll('.detail-sortable').forEach(th => {
       th.addEventListener('click', () => {
         const column = th.getAttribute('data-sort');
@@ -207,21 +255,21 @@ async function init() {
     updateThemeSortUI();
     updateRadarSortUI();
 
-    // ---- Auto-refresh (live snapshot every 15 seconds) ----
+    // ---- Auto-refresh every 15s (live mode only) ----
     setInterval(() => {
-      if (currentPeriodDays === 1) {
-        processData(true); // silent refresh (no loading indicator)
-      }
+      if (currentPeriodDays === 1) processData(true);
     }, 15000);
 
   } catch (error) {
     console.error('Init failed:', error);
+    document.getElementById('last-updated').textContent = '初始化失敗，請重新整理頁面。';
   }
 }
 
 // ============================================================
 // DATA PROCESSING - LIVE SNAPSHOT
 // ============================================================
+
 async function processData(silent = false) {
   try {
     const result = await fetchSnapshot(allStocks);
@@ -325,23 +373,28 @@ function renderHistoricalRanking(days) {
     ? new Date(historicalRanking.updated_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })
     : '';
 
+  const activeView = document.querySelector('.main-view:not(.hidden)')?.id;
+
   // Temporarily override with historical data for rendering
   const origSector = [...sectorRankingData];
   const origTheme = [...themeRankingData];
-  const origMarket = [...allMarketData];
 
   sectorRankingData = periodData.sectors.filter(s => isFinite(s.avgReturn));
   themeRankingData = periodData.themes.filter(t => isFinite(t.avgReturn));
 
-  renderRanking(`近 ${days} 日排行 (更新: ${updatedAt})`);
-  renderThemeRanking(`近 ${days} 日排行`);
-    
-  const desc = document.getElementById('radar-description');
-  if (desc) desc.textContent = `顯示全市場近 ${days} 日累積成交金額最高的前 200 檔個股`;
-
-  // Radar: store historical radar data and render with current sort
-  currentRadarData = periodData.radar || [];
-  resortRadar();
+  if (activeView === 'view-ranking') {
+    renderRanking(`近 ${days} 日排行 (更新: ${updatedAt})`);
+  } else if (activeView === 'view-theme-ranking') {
+    renderThemeRanking(`近 ${days} 日排行`);
+  } else if (activeView === 'view-radar') {
+    const desc = document.getElementById('radar-description');
+    if (desc) desc.textContent = `顯示全市場近 ${days} 日累積成交金額最高的前 200 檔個股`;
+    currentRadarData = periodData.radar || [];
+    resortRadar();
+  } else {
+    // If we're on the chart view, still prepare radar data just in case
+    currentRadarData = periodData.radar || [];
+  }
 
   // Restore
   sectorRankingData = origSector;
