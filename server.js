@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import axios from 'axios';
+import YahooFinance from 'yahoo-finance2';
+const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -73,62 +74,66 @@ const INTRADAY_TTL  = 8000;  // 8 seconds during market hours
 const CLOSING_TTL   = 3600000; // 1 hour after close
 
 // ============================================================
-// API 1 — TWSE mis.twse.com.tw (即時盤中 - Real-time Intraday)
-// Handles: TSE + OTC in a single API (100 symbols per request)
-// Field guide:
-//   z = last transaction price (can be "-" if no trade yet)
-//   y = yesterday close price
-//   o = today open
-//   h = today high
-//   l = today low
-//   v = volume (張)
+// API 1: Yahoo Finance (Real-time Intraday Replacement)
 // ============================================================
 async function fetchIntraday() {
-  const CHUNK_SIZE = 80; // Reduced chunk size to prevent IP blocks
+  const CHUNK_SIZE = 500; // Yahoo can handle large chunks easily
   let updatedCount = 0;
 
-  for (let i = 0; i < allSymbols.length; i += CHUNK_SIZE) {
-    const chunk = allSymbols.slice(i, i + CHUNK_SIZE);
-    const url = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${chunk.join('|')}&json=1&delay=0`;
-    
+  // Convert local symbols to Yahoo Finance format
+  const yfSymbolsMap = {}; // Maps Yahoo symbol -> Local symbol (e.g. 2330.TW -> tse_2330.tw)
+  const yfQueries = [];
+
+  tseSymbols.forEach(s => {
+    const yf = `${s}.TW`;
+    yfSymbolsMap[yf] = `tse_${s}.tw`;
+    yfQueries.push(yf);
+  });
+  
+  otcSymbols.forEach(s => {
+    const yf = `${s}.TWO`;
+    yfSymbolsMap[yf] = `otc_${s}.tw`;
+    yfQueries.push(yf);
+  });
+
+  for (let i = 0; i < yfQueries.length; i += CHUNK_SIZE) {
+    const chunk = yfQueries.slice(i, i + CHUNK_SIZE);
     try {
-      const response = await axios.get(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-        timeout: 6000,
-        httpsAgent: httpsAgent
+      const quotes = await yahooFinance.quote(chunk);
+      
+      quotes.forEach(q => {
+        const localSymbol = yfSymbolsMap[q.symbol];
+        if (!localSymbol) return;
+
+        let price = q.regularMarketPrice;
+        let volume = q.regularMarketVolume || 0;
+        let prevClose = q.regularMarketPreviousClose;
+
+        // If marketCache already has the TRUE prevClose from OpenAPI, USE IT!
+        if (marketCache[localSymbol] && marketCache[localSymbol].prevClose > 0) {
+          prevClose = marketCache[localSymbol].prevClose;
+        }
+
+        if (!price || price <= 0) {
+          if (marketCache[localSymbol] && marketCache[localSymbol].price > 0) {
+            price = marketCache[localSymbol].price;
+          } else {
+            price = prevClose;
+          }
+        }
+
+        if (prevClose > 0) {
+          marketCache[localSymbol] = { price, prevClose, volume };
+          updatedCount++;
+        }
       });
-
-      if (response.data?.msgArray) {
-        response.data.msgArray.forEach(item => {
-          if (!item.c) return;
-          const prevClose = parseFloat(item.y) || 0;
-          let price = parseFloat(item.z);
-          if (isNaN(price) || price <= 0) {
-            if (marketCache[item.c] && marketCache[item.c].price > 0) {
-              price = marketCache[item.c].price;
-            } else {
-              price = prevClose;
-            }
-          }
-          const volume = parseInt(item.v) || 0;
-          if (prevClose > 0) {
-            marketCache[item.c] = { price, prevClose, volume };
-            updatedCount++;
-          }
-        });
-      }
     } catch (err) {
-      console.error(`[Intraday] Chunk error (index ${i}):`, err.message);
-    }
-
-    // Delay between chunks to prevent rate limiting (TWSE is very strict)
-    if (i + CHUNK_SIZE < allSymbols.length) {
-      await new Promise(r => setTimeout(r, 200));
+      console.error(`[Intraday] Yahoo chunk error (index ${i}):`, err.message);
     }
   }
 
   lastCacheTime = Date.now();
-  console.log(`[Intraday] Updated via TWSE MIS. Cache size: ${Object.keys(marketCache).length}`);
+  console.log(`[Intraday] Updated via Yahoo Finance. Cache size: ${Object.keys(marketCache).length}`);
 }
 
 // ============================================================
@@ -209,11 +214,18 @@ async function fetchOTCClosing() {
 // After close: use official closing price APIs (more accurate)
 // ============================================================
 async function fetchMarketData() {
+  // If cache is empty, we must fetch the official closing data FIRST to establish true prevClose,
+  // regardless of whether market is open or not.
+  if (Object.keys(marketCache).length === 0) {
+    console.log('[Dispatcher] Initializing cache with official EOD data...');
+    await Promise.all([fetchTSEClosing(), fetchOTCClosing()]);
+  }
+
   if (isMarketOpen()) {
-    // Real-time: TWSE mis (all symbols in parallel chunks)
+    // Real-time: Yahoo Finance (since TWSE blocks Render IP)
     await fetchIntraday();
   } else {
-    // After close: use both official closing APIs concurrently
+    // After close: update again using official closing APIs (more accurate than Yahoo)
     await Promise.all([fetchTSEClosing(), fetchOTCClosing()]);
   }
 }
