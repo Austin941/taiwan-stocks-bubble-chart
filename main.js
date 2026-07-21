@@ -82,7 +82,7 @@ function showTechChart(stockData) {
   const themeTags = document.getElementById('tech-theme-tags');
   themeTags.innerHTML = '';
   if (stock['題材清單']) {
-    stock['題材清單'].split(',').forEach(theme => {
+    stock['題材清單'].split(/[,、]/).forEach(theme => {
       if (!theme.trim()) return;
       const t = document.createElement('span');
       t.className = 'drawer-tag';
@@ -802,7 +802,8 @@ function switchView(targetViewId) {
 function showChart(identifier, mode = 'sector') {
   currentSector = identifier;
   currentChartMode = mode;
-  switchView('view-chart');
+  // REMOVED switchView('view-chart') to prevent hiding the right sidebar
+  showBubbleChart(identifier, mode);
 
   const modeText = mode === 'sector' ? '族群' : '題材概念';
   document.getElementById('tv-main-title').textContent = `${identifier} ${modeText}分析`;
