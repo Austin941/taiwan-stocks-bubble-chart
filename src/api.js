@@ -1,5 +1,3 @@
-// src/api.js
-
 let toastTimeout;
 
 export function showToast(message, type = 'error') {
@@ -28,43 +26,105 @@ export function showToast(message, type = 'error') {
 }
 
 let failCount = 0;
+let closingCache = null;
 
-export async function fetchSnapshot() {
-  const MAX_RETRIES = 3;
-  let delay = 2000;
+// Helper to split array into chunks
+function chunkArray(array, size) {
+  const result = [];
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size));
+  }
+  return result;
+}
 
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
-      
-      const response = await fetch('/api/snapshot', { signal: controller.signal });
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
-      
-      // Reset fail count on success
-      failCount = 0;
-      return data;
-    } catch (error) {
-      console.warn(`[Snapshot] Fetch failed (Attempt ${attempt}/${MAX_RETRIES}):`, error);
-      
-      if (attempt < MAX_RETRIES) {
-        await new Promise(r => setTimeout(r, delay));
-        delay *= 2; // Exponential backoff
+export async function fetchSnapshot(allStocks = []) {
+  try {
+    // 1. Fetch closing data once to get true prevClose
+    if (!closingCache) {
+      console.log('[Snapshot] Fetching EOD closing data...');
+      const closingRes = await fetch('/api/closing');
+      if (closingRes.ok) {
+        const data = await closingRes.json();
+        closingCache = data.data || {};
+      } else {
+        closingCache = {};
       }
     }
-  }
 
-  // If we reach here, all retries failed
-  failCount++;
-  console.error('[Snapshot] All retries failed.');
-  
-  if (failCount >= 1) {
-    showToast('無法取得即時資料，將自動切換為歷史模式。');
+    if (!allStocks || allStocks.length === 0) {
+      return { data: closingCache, isMarketOpen: true };
+    }
+
+    // 2. Build TWSE MIS symbols list
+    const misSymbols = allStocks.map(stock => {
+      const code = stock['股票代號'];
+      const market = stock['市場別'];
+      if (market && market.includes('上市')) {
+        return `tse_${code}.tw`;
+      } else {
+        return `otc_${code}.tw`;
+      }
+    });
+
+    // 3. Split into chunks of 100
+    const chunks = chunkArray(misSymbols, 100);
+    const finalCache = {};
+
+    // 4. Fetch all chunks in parallel through Vercel Proxy
+    const fetchPromises = chunks.map(async (chunk) => {
+      try {
+        const queryStr = chunk.join('|');
+        const res = await fetch(`/api/proxy?symbols=${queryStr}`);
+        if (!res.ok) return;
+        
+        const data = await res.json();
+        if (data && data.msgArray) {
+          data.msgArray.forEach(item => {
+            const code = item.c; // symbol like 2330
+            if (!code) return;
+
+            let prevClose = parseFloat(item.y) || 0;
+            // Use true prevClose from OpenAPI if available
+            if (closingCache[code] && closingCache[code].prevClose > 0) {
+              prevClose = closingCache[code].prevClose;
+            }
+
+            let price = parseFloat(item.z);
+            if (isNaN(price) || price <= 0) {
+               price = prevClose;
+            }
+
+            const volume = parseInt(item.v) || 0;
+            
+            if (prevClose > 0) {
+              finalCache[code] = { price, prevClose, volume };
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('[Snapshot] Chunk proxy failed:', err);
+      }
+    });
+
+    await Promise.all(fetchPromises);
+
+    failCount = 0;
+    
+    // If proxy completely failed (e.g. offline), fallback to closingCache
+    if (Object.keys(finalCache).length === 0) {
+      return { data: closingCache, isMarketOpen: true };
+    }
+
+    return { data: finalCache, isMarketOpen: true };
+
+  } catch (error) {
+    failCount++;
+    console.error('[Snapshot] All retries failed:', error);
+    if (failCount >= 1) {
+      showToast('無法取得最新資料，將顯示歷史模式。');
+    }
+    return { data: closingCache || {}, isMarketOpen: false };
   }
-  return null;
 }
 
 export async function fetchHistoricalRanking() {
@@ -75,6 +135,6 @@ export async function fetchHistoricalRanking() {
     return data;
   } catch (error) {
     console.warn('No historical data available:', error);
-    return null; // Silent fail for historical, it might not exist yet
+    return null; 
   }
 }

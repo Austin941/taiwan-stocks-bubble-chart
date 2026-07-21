@@ -1,15 +1,12 @@
-import { YahooFinance } from 'yahoo-finance2';
-
+import YahooFinance from 'yahoo-finance2';
 const yahooFinance = new YahooFinance();
 
-async function test() {
+async function run() {
   try {
-    const symbols = ['2330.TW', '2317.TW', '2454.TW'];
-    const results = await yahooFinance.quote(symbols);
-    console.log(results.map(r => `${r.symbol}: ${r.regularMarketPrice} (${r.regularMarketChangePercent}%)`));
-  } catch (err) {
-    console.error(err);
+    const quotes = await yahooFinance.quote(['2330.TW', '0050.TW']);
+    console.log(quotes.map(q => ({ symbol: q.symbol, price: q.regularMarketPrice, prev: q.regularMarketPreviousClose, vol: q.regularMarketVolume })));
+  } catch(e) {
+    console.error(e);
   }
 }
-
-test();
+run();

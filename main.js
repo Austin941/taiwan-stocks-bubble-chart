@@ -208,7 +208,7 @@ async function init() {
 // ============================================================
 async function processData(silent = false) {
   try {
-    const result = await fetchSnapshot();
+    const result = await fetchSnapshot(allStocks);
     if (!result) return; // Exit if fetch failed, keeping previous data
     
     const marketCache = result.data || result;
