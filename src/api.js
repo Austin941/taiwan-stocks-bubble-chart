@@ -72,7 +72,7 @@ export async function fetchSnapshot(allStocks = []) {
 
     // 4. Fetch all chunks in parallel through Vercel Proxy
     // 4. Fetch all chunks with concurrency limit and exponential backoff retry
-    const maxConcurrency = 3;
+    const maxConcurrency = 10;
     let active = 0;
     let index = 0;
     const fetchPromises = [];

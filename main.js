@@ -76,13 +76,12 @@ async function init() {
       console.log(`[HistoricalRanking] Loaded. Updated at: ${updatedAt}`);
     } else {
       console.warn('[HistoricalRanking] Not available, 5/10/20 day ranking will be disabled.');
-    }
-
-    // Load CSV
     const todayStr = new Date().toISOString().split('T')[0];
     Papa.parse(`./stocks.csv?v=${todayStr}`, {
       download: true,
       header: true,
+      worker: true,
+      fastMode: true,
       complete: function(results) {
         allStocks = results.data.filter(d => d['股票代號'] && d['股票名稱']);
         // Initial data fetch
@@ -183,7 +182,7 @@ async function init() {
         } else {
           renderHistoricalRanking(currentPeriodDays);
         }
-      }, 50));
+      }, 10));
     });
 
     // ---- Detail table sorting (chart view) ----
@@ -740,7 +739,7 @@ async function renderChart(identifier, mode) {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        animation: { duration: 500, easing: 'easeOutQuart' },
+        animation: { duration: 150, easing: 'easeOutQuad' },
         onClick: (event, elements) => {
           if (elements.length > 0) {
             const el = elements[0];
