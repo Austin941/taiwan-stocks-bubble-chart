@@ -157,14 +157,16 @@ async function init() {
 
     // ---- Period buttons (main page ranking) ----
     document.querySelectorAll('.period-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const selectedPeriod = parseInt(e.target.getAttribute('data-period'));
+      btn.addEventListener('click', debounceUI((e) => {
+        const days = parseInt(e.target.getAttribute('data-period'));
+        if (currentPeriodDays === days) return;
+        currentPeriodDays = days;
         
-        // Sync ALL period buttons with same data-period
-        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll(`.period-btn[data-period="${selectedPeriod}"]`).forEach(b => b.classList.add('active'));
-        
-        currentPeriodDays = selectedPeriod;
+        // Update all period selectors to keep them in sync
+        document.querySelectorAll('.period-btn').forEach(b => {
+          if (parseInt(b.getAttribute('data-period')) === days) b.classList.add('active');
+          else b.classList.remove('active');
+        });
 
         // If in chart view: re-render chart
         if (!viewChart.classList.contains('hidden') && currentSector) {
@@ -174,15 +176,13 @@ async function init() {
         
         // Otherwise: re-render main ranking tables with period data
         if (currentPeriodDays === 1) {
-          // Live data
-          renderRanking();
-          renderThemeRanking();
-          renderRadar();
+          if (document.getElementById('view-ranking').classList.contains('active')) renderRanking();
+          if (document.getElementById('view-theme-ranking').classList.contains('active')) renderThemeRanking();
+          if (document.getElementById('view-radar').classList.contains('active')) renderRadar();
         } else {
-          // Historical pre-calculated data
           renderHistoricalRanking(currentPeriodDays);
         }
-      });
+      }, 50));
     });
 
     // ---- Detail table sorting (chart view) ----
@@ -352,12 +352,9 @@ function renderHistoricalRanking(days) {
 // RENDER RANKING TABLE
 // ============================================================
 function renderRanking(subTitle = '') {
-  if (subTitle) {
-    rankingTableBody.innerHTML = '';
-    const infoRow = document.createElement('tr');
-    infoRow.setAttribute('data-ignore', 'true');
-    infoRow.innerHTML = `<td colspan="5" style="font-size:0.8rem;color:#64748b;padding:0.5rem 1rem;background:rgba(255,255,255,0.03)">${subTitle}</td>`;
-    rankingTableBody.appendChild(infoRow);
+  const desc = document.getElementById('ranking-description');
+  if (desc) {
+    desc.textContent = subTitle ? subTitle : '點擊各產業別標籤即可查看該族群的泡泡圖分析';
   }
 
   let data = [...sectorRankingData];
@@ -366,12 +363,6 @@ function renderRanking(subTitle = '') {
     const vB = sortCol === 'amount' ? b.totalAmount : sortCol === 'volume' ? b.totalVolume : b.avgReturn;
     return sortDesc ? vB - vA : vA - vB;
   });
-
-  if (subTitle) {
-    const infoRow = document.createElement('tr');
-    infoRow.innerHTML = `<td colspan="5" style="font-size:0.8rem;color:#64748b;padding:0.5rem 1rem;background:rgba(255,255,255,0.03)">${subTitle}</td>`;
-    rankingTableBody.appendChild(infoRow);
-  }
 
   const maxAmount = Math.max(...data.map(d => d.totalAmount), 1);
   const maxReturn = Math.max(...data.map(d => Math.abs(d.avgReturn)), 1);
@@ -418,12 +409,9 @@ function renderRanking(subTitle = '') {
 // RENDER THEME RANKING TABLE
 // ============================================================
 function renderThemeRanking(subTitle = '') {
-  if (subTitle) {
-    themeRankingTableBody.innerHTML = '';
-    const infoRow = document.createElement('tr');
-    infoRow.setAttribute('data-ignore', 'true');
-    infoRow.innerHTML = `<td colspan="5" style="font-size:0.8rem;color:#64748b;padding:0.5rem 1rem;background:rgba(255,255,255,0.03)">${subTitle}</td>`;
-    themeRankingTableBody.appendChild(infoRow);
+  const desc = document.getElementById('theme-ranking-description');
+  if (desc) {
+    desc.textContent = subTitle ? subTitle : '點擊各題材類別標籤即可查看該概念股的專屬泡泡圖';
   }
 
   let data = [...themeRankingData];
@@ -512,9 +500,8 @@ function resortRadar() {
 // RENDER RADAR TABLE (from any data source)
 // ============================================================
 function renderRadarFromData(stocks, periodLabel = '') {
-  radarTableBody.innerHTML = '';
   if (!stocks || stocks.length === 0) {
-    radarTableBody.innerHTML = '<tr><td colspan="6" class="text-center">目前無交易資料</td></tr>';
+    radarTableBody.innerHTML = '<tr><td colspan="6" class="text-center">查無交易資料</td></tr>';
     return;
   }
 
@@ -523,6 +510,8 @@ function renderRadarFromData(stocks, periodLabel = '') {
     let r = parseFloat(s.dailyReturn);
     return (isNaN(r) || !isFinite(r)) ? 0 : Math.abs(r);
   }), 1);
+
+  const frag = document.createDocumentFragment();
 
   stocks.forEach((stock, index) => {
     const tr = document.createElement('tr');
@@ -560,9 +549,14 @@ function renderRadarFromData(stocks, periodLabel = '') {
     tr.addEventListener('click', () => {
       if (stockSector) showChart(stockSector, 'sector');
     });
-    radarTableBody.appendChild(tr);
+    frag.appendChild(tr);
   });
+  
+  radarTableBody.innerHTML = '';
+  radarTableBody.appendChild(frag);
 }
+
+
 
 // ============================================================
 // SORT UI UPDATERS

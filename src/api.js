@@ -71,56 +71,76 @@ export async function fetchSnapshot(allStocks = []) {
     const finalCache = {};
 
     // 4. Fetch all chunks in parallel through Vercel Proxy
-    const fetchPromises = chunks.map(async (chunk) => {
-      try {
-        const queryStr = chunk.join('|');
-        const res = await fetch(`/api/proxy?symbols=${queryStr}`);
-        if (!res.ok) return;
-        
-        const data = await res.json();
-        if (data && data.msgArray) {
-          data.msgArray.forEach(item => {
-            const code = item.c; // symbol like 2330
-            if (!code) return;
+    // 4. Fetch all chunks with concurrency limit and exponential backoff retry
+    const maxConcurrency = 3;
+    let active = 0;
+    let index = 0;
+    const fetchPromises = [];
 
-            let prevClose = parseFloat(item.y) || 0;
-            // Only use closingCache if item.y is missing or 0 (e.g., newly listed stocks)
-            if (prevClose <= 0 && closingCache[code] && closingCache[code].prevClose > 0) {
-              prevClose = closingCache[code].prevClose;
-            }
+    const fetchChunkWithRetry = async (chunk, retries = 2) => {
+      const queryStr = chunk.join('|');
+      for (let i = 0; i <= retries; i++) {
+        try {
+          const res = await fetch(`/api/proxy?symbols=${queryStr}`);
+          if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
+          
+          const data = await res.json();
+          if (data && data.msgArray) {
+            data.msgArray.forEach(item => {
+              const code = item.c;
+              if (!code) return;
 
-            let price = parseFloat(item.z);
-            if (isNaN(price) || price <= 0) {
-               // Fallback 1: Simulated matching price
-               if (item.pz && item.pz !== '-') {
-                 price = parseFloat(item.pz);
-               } 
-               // Fallback 2: Average of best bid/ask
-               else if (item.a && item.b && item.a !== '-' && item.b !== '-') {
-                 const ask = parseFloat(item.a.split('_')[0]);
-                 const bid = parseFloat(item.b.split('_')[0]);
-                 if (!isNaN(ask) && !isNaN(bid)) {
-                   price = (ask + bid) / 2;
+              let prevClose = parseFloat(item.y) || 0;
+              if (prevClose <= 0 && closingCache[code] && closingCache[code].prevClose > 0) {
+                prevClose = closingCache[code].prevClose;
+              }
+
+              let price = parseFloat(item.z);
+              if (isNaN(price) || price <= 0) {
+                 if (item.pz && item.pz !== '-') {
+                   price = parseFloat(item.pz);
+                 } else if (item.a && item.b && item.a !== '-' && item.b !== '-') {
+                   const ask = parseFloat(item.a.split('_')[0]);
+                   const bid = parseFloat(item.b.split('_')[0]);
+                   if (!isNaN(ask) && !isNaN(bid)) {
+                     price = (ask + bid) / 2;
+                   }
                  }
-               }
-               
-               // Fallback 3: If still no live price, use previous close (0% return)
-               if (isNaN(price) || price <= 0) {
-                 price = prevClose;
-               }
-            }
+                 if (isNaN(price) || price <= 0) {
+                   price = prevClose;
+                 }
+              }
 
-            const volume = parseInt(item.v) || 0;
-            
-            if (prevClose > 0) {
-              finalCache[code] = { price, prevClose, volume };
-            }
-          });
+              const volume = parseInt(item.v) || 0;
+              if (prevClose > 0) {
+                finalCache[code] = { price, prevClose, volume };
+              }
+            });
+          }
+          return; // Success, exit retry loop
+        } catch (err) {
+          if (i === retries) {
+            console.warn(`[Snapshot] Chunk failed after ${retries} retries:`, err);
+          } else {
+            // Exponential backoff: 500ms, 1000ms
+            await new Promise(r => setTimeout(r, 500 * (i + 1)));
+          }
         }
-      } catch (err) {
-        console.warn('[Snapshot] Chunk proxy failed:', err);
       }
-    });
+    };
+
+    // Concurrency control loop
+    while (index < chunks.length) {
+      if (active < maxConcurrency) {
+        const chunk = chunks[index++];
+        active++;
+        const p = fetchChunkWithRetry(chunk).finally(() => { active--; });
+        fetchPromises.push(p);
+      } else {
+        // Wait for at least one promise to finish before spawning another
+        await Promise.race(fetchPromises);
+      }
+    }
 
     await Promise.all(fetchPromises);
 
