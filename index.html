@@ -72,9 +72,12 @@
              </div>
              
              <!-- Detail Table (Bottom of bubble chart) -->
-             <div id="detail-table-wrapper" class="detail-table-wrapper hidden">
-               <h3>成分股明細</h3>
-               <div class="table-responsive">
+              <div id="detail-table-wrapper" class="detail-table-wrapper hidden">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 8px;">
+                  <h3 style="margin: 0;">成分股明細</h3>
+                  <input type="text" id="detail-stock-search" placeholder="🔍 搜尋股票代號 / 名稱..." style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; width: 220px; outline: none; transition: all 0.2s;">
+                </div>
+                <div class="table-responsive">
                  <table class="ranking-table detail-table">
                    <thead>
                      <tr>

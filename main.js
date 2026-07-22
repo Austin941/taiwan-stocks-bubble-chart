@@ -910,6 +910,27 @@ function updateSortUI() {
     else { h.removeAttribute('data-active'); icon.textContent = ''; }
   });
 }
+
+// ---- Detail Stock Search Event ----
+document.addEventListener('DOMContentLoaded', () => {
+  const searchInput = document.getElementById('detail-stock-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.trim().toLowerCase();
+      const tbody = document.getElementById('detailTableBody');
+      if (!tbody) return;
+      const rows = tbody.querySelectorAll('tr');
+      rows.forEach(tr => {
+        const text = tr.textContent.toLowerCase();
+        if (!query || text.includes(query)) {
+          tr.style.display = '';
+        } else {
+          tr.style.display = 'none';
+        }
+      });
+    });
+  }
+});
 function updateThemeSortUI() {
   themeSortableHeaders.forEach(h => {
     const col = h.getAttribute('data-sort');
@@ -1132,6 +1153,15 @@ async function renderChart(identifier, mode) {
               const fullStockData = globalSectorDataForTable.find(d => d.symbol === dataPoint.raw.symbol);
               if (fullStockData) {
                 showTechChart(fullStockData);
+                // Highlight corresponding row in detail table & scroll to it
+                const tbody = document.getElementById('detailTableBody');
+                if (tbody) {
+                  const targetTr = tbody.querySelector(`tr[data-symbol="${dataPoint.raw.symbol}"]`);
+                  if (targetTr) {
+                    setActiveRow(targetTr);
+                    targetTr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                  }
+                }
               } else {
                 window.open(`https://tw.stock.yahoo.com/quote/${dataPoint.raw.symbol}`, '_blank');
               }
@@ -1201,7 +1231,10 @@ async function renderChart(identifier, mode) {
           },
           y: {
             title: { display: true, text: '報酬率 (%)', color: '#94a3b8' },
-            grid: { color: 'rgba(255,255,255,0.05)' },
+            grid: {
+              color: (ctx) => (ctx.tick && ctx.tick.value === 0 ? 'rgba(239, 68, 68, 0.7)' : 'rgba(255,255,255,0.05)'),
+              lineWidth: (ctx) => (ctx.tick && ctx.tick.value === 0 ? 2 : 1)
+            },
             ticks: { color: '#94a3b8' }
           }
         }
@@ -1267,6 +1300,7 @@ function renderDetailTable(data) {
           <td class="text-right">${(item.amount / 100000000).toFixed(2)}</td>
         `;
         
+        tr.setAttribute('data-symbol', item.symbol);
         if (!tr.hasAttribute('data-amount')) {
           tr.addEventListener('click', (e) => { e.preventDefault(); setActiveRow(tr); showTechChart({ stock: item.stock, dailyReturn: item.dailyReturn, volume: item.volume, amount: item.amount });
           });
