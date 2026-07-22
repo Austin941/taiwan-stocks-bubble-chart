@@ -69,19 +69,18 @@ export function updateTableDelta(tbody, data, getRowId, updateRow) {
  * @param {string|number} newValue - The new value
  */
 export function triggerFlashIfChanged(tr, oldValue, newValue) {
-  if (oldValue !== undefined && newValue !== undefined && oldValue !== newValue) {
-    tr.classList.remove('flash-up', 'flash-down');
-    // Force DOM reflow to restart animation
-    void tr.offsetWidth;
-    if (Number(newValue) > Number(oldValue)) {
-      tr.classList.add('flash-up');
-    } else {
-      tr.classList.add('flash-down');
-    }
-    
-    // Cleanup class after animation ends
-    setTimeout(() => {
+  if (oldValue !== null && oldValue !== undefined && newValue !== undefined && String(oldValue) !== String(newValue)) {
+    requestAnimationFrame(() => {
       tr.classList.remove('flash-up', 'flash-down');
-    }, 1000);
+      if (Number(newValue) > Number(oldValue)) {
+        tr.classList.add('flash-up');
+      } else {
+        tr.classList.add('flash-down');
+      }
+      
+      setTimeout(() => {
+        tr.classList.remove('flash-up', 'flash-down');
+      }, 1000);
+    });
   }
 }
