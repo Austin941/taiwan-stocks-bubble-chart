@@ -79,14 +79,16 @@ async function run() {
           return { dailyReturn: cumulativeReturn, volume: totalVolume, amount: totalAmount };
         };
         
+        const p3  = calcPeriod(3);
         const p5  = calcPeriod(5);
         const p10 = calcPeriod(10);
         const p20 = calcPeriod(20);
         
-        if (!p5 && !p10 && !p20) return null;
+        if (!p3 && !p5 && !p10 && !p20) return null;
         
         return {
           stock,
+          '3': p3,
           '5': p5,
           '10': p10,
           '20': p20
@@ -111,12 +113,13 @@ async function run() {
   // 3. Aggregate Data
   const finalJson = {
     updated_at: new Date().toISOString(),
+    '3': { sectors: [], themes: [], radar: [] },
     '5': { sectors: [], themes: [], radar: [] },
     '10': { sectors: [], themes: [], radar: [] },
     '20': { sectors: [], themes: [], radar: [] }
   };
   
-  const periods = ['5', '10', '20'];
+  const periods = ['3', '5', '10', '20'];
   const blacklist = ['半導體', '電子零組件', '電子代工', '通信網路', '其他電子', '光電', '電腦及週邊設備'];
   
   for (const days of periods) {

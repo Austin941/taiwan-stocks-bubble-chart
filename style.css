@@ -34,12 +34,11 @@ body {
 
 /* Glassmorphism Panels */
 .panel-glass {
-  background: var(--bg-panel);
+  background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 /* Layout */
@@ -119,7 +118,6 @@ body {
   flex: 1;
   position: relative;
   overflow: auto;
-  padding: 15px;
   display: flex;
   flex-direction: column;
 }
@@ -162,6 +160,62 @@ body {
   font-size: 0.9rem;
   color: var(--text-secondary);
   width: 70px;
+}
+
+/* High Contrast Stock Name Links (Yellow / Bright Gold for readability) */
+.stock-link, .stock-link:visited {
+  color: #facc15 !important;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.2s, text-shadow 0.2s;
+}
+.stock-link:hover {
+  color: #fde047 !important;
+  text-shadow: 0 0 8px rgba(250, 204, 21, 0.6);
+  text-decoration: underline;
+}
+.stock-name-cell strong {
+  color: #facc15;
+  font-weight: 600;
+}
+.stock-symbol {
+  color: #cbd5e1;
+  font-weight: normal;
+  font-size: 0.85em;
+  margin-left: 4px;
+}
+
+/* Sidebar Resizer Divider (Desktop Drag-to-Resize) */
+.sidebar-resizer {
+  width: 8px;
+  cursor: col-resize;
+  position: relative;
+  z-index: 20;
+  margin: 0 -4px;
+  flex-shrink: 0;
+  transition: background 0.2s, box-shadow 0.2s;
+  user-select: none;
+  touch-action: none;
+}
+.sidebar-resizer::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  transition: background 0.2s, height 0.2s;
+}
+.sidebar-resizer:hover, .sidebar-resizer.is-resizing {
+  background: rgba(56, 189, 248, 0.3);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+}
+.sidebar-resizer:hover::after, .sidebar-resizer.is-resizing::after {
+  background: #38bdf8;
+  height: 55px;
 }
 
 /* SIDEBAR (Right) */
@@ -236,6 +290,25 @@ body {
   font-weight: 600;
 }
 
+.size-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.size-btn:hover {
+  color: var(--text-primary);
+}
+.size-btn.active {
+  background: #facc15;
+  color: #0f172a;
+  font-weight: 600;
+}
+
 .interval-group {
   display: flex;
   gap: 4px;
@@ -296,6 +369,7 @@ body {
   color: var(--text-secondary);
   font-weight: 500;
   border-bottom: 1px solid rgba(255,255,255,0.05);
+  white-space: nowrap;
   position: sticky;
   top: 0;
   background: rgba(15, 23, 42, 0.95);
@@ -307,13 +381,16 @@ body {
   padding: 10px;
   border-bottom: 1px solid rgba(255,255,255,0.02);
   vertical-align: middle;
+  white-space: nowrap;
   transition: background 0.2s;
   cursor: pointer;
 }
 
 .ranking-table tbody tr:hover {
-  background: rgba(255,255,255,0.06);
-  box-shadow: inset 3px 0 0 var(--accent-hover);
+  background: rgba(255, 255, 255, 0.04);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  transition: all 0.2s ease;
 }
 .ranking-table tbody tr.active-row {
   background: rgba(56, 189, 248, 0.1);
@@ -349,18 +426,23 @@ body {
   gap: 6px;
 }
 .drawer-tag {
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  background: rgba(56, 189, 248, 0.1);
-  color: var(--accent-color);
-  border: 1px solid rgba(56, 189, 248, 0.2);
+  display: inline-block;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
 }
 .drawer-tag:hover {
   background: rgba(56, 189, 248, 0.2);
+  border-color: rgba(56, 189, 248, 0.5);
   color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
 }
 
 /* Animations */
@@ -425,6 +507,9 @@ body {
 
 /* RWD */
 @media (max-width: 1024px) {
+  .sidebar-resizer {
+    display: none !important;
+  }
   .tv-workspace {
     flex-direction: column;
   }

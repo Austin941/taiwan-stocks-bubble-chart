@@ -36,51 +36,30 @@ export function updateTableDelta(tbody, data, getRowId, updateRow) {
     }
   });
 
-  const chunkSize = 20; // Number of rows to render per animation frame
-  let currentIndex = 0;
+  for (let i = 0; i < data.length; i++) {
+    const d = data[i];
+    const id = getRowId(d);
+    let tr = rowMap.get(id);
 
-  function renderChunk() {
-    const end = Math.min(currentIndex + chunkSize, data.length);
-    for (let i = currentIndex; i < end; i++) {
-      const d = data[i];
-      const id = getRowId(d);
-      let tr = rowMap.get(id);
-
-      if (!tr) {
-        // Create new row
-        tr = document.createElement('tr');
-        tr.setAttribute('data-id', id);
-        tbody.appendChild(tr);
-      } else {
-        // Remove from map so we know it's processed
-        rowMap.delete(id);
-      }
-
-      // Ensure row is in correct order in the DOM
-      if (tbody.children[i] !== tr) {
-        tbody.insertBefore(tr, tbody.children[i]);
-      }
-
-      // Update row contents (only triggers flash if values change)
-      updateRow(tr, d, i);
-    }
-
-    currentIndex = end;
-
-    if (currentIndex < data.length) {
-      // Schedule next chunk
-      renderQueue.set(tbody, requestAnimationFrame(renderChunk));
+    if (!tr) {
+      tr = document.createElement('tr');
+      tr.setAttribute('data-id', id);
+      tbody.appendChild(tr);
     } else {
-      // Finished all chunks, remove any remaining rows that are no longer in the data
-      rowMap.forEach(tr => {
-        tbody.removeChild(tr);
-      });
-      renderQueue.delete(tbody);
+      rowMap.delete(id);
     }
+
+    if (tbody.children[i] !== tr) {
+      tbody.insertBefore(tr, tbody.children[i]);
+    }
+
+    updateRow(tr, d, i);
   }
 
-  // Execute the first chunk immediately synchronously to prevent visual blanking/stutter
-  renderChunk();
+  // Finished all data, remove any remaining rows that are no longer in the data
+  rowMap.forEach(tr => {
+    tbody.removeChild(tr);
+  });
 }
 
 /**

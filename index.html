@@ -35,9 +35,17 @@
             <!-- Period buttons for Bubble Chart -->
             <div id="bubble-period-selector" class="period-selector">
               <button class="period-btn active" data-days="1">1日</button>
+              <button class="period-btn" data-days="3">3日</button>
               <button class="period-btn" data-days="5">5日</button>
               <button class="period-btn" data-days="10">10日</button>
               <button class="period-btn" data-days="20">20日</button>
+            </div>
+            <!-- Bubble Size Mode Selector -->
+            <div id="bubble-size-selector" class="period-selector" style="margin-left: 8px;">
+              <span style="font-size:0.8rem;color:#cbd5e1;margin-right:2px;align-self:center">圓圈:</span>
+              <button class="size-btn" data-size-mode="amount">成交金額</button>
+              <button class="size-btn active" data-size-mode="sqrt_amount">金額(平方根)</button>
+              <button class="size-btn" data-size-mode="volume">成交張數</button>
             </div>
             <!-- Interval buttons for Tech Chart -->
             <div id="tech-interval-selector" class="interval-group hidden">
@@ -100,6 +108,9 @@
         </div>
       </div>
 
+      <!-- Sidebar Resizer Handle (Desktop Drag-to-Resize) -->
+      <div id="sidebar-resizer" class="sidebar-resizer" title="拖曳調整右側欄位寬度"></div>
+
       <!-- RIGHT: Sidebar Panels -->
       <div class="tv-sidebar panel-glass">
         <!-- Sidebar Tabs -->
@@ -107,6 +118,7 @@
           <button class="sidebar-tab active" data-target="view-ranking">產業</button>
           <button class="sidebar-tab" data-target="view-theme">題材</button>
           <button class="sidebar-tab" data-target="view-radar">熱門</button>
+          <button class="sidebar-tab" data-target="view-flow">資金建倉</button>
         </div>
 
         <div class="sidebar-content">
@@ -123,10 +135,11 @@
                    <th class="text-right sortable" data-sort="amount" data-active="true" data-order="desc">金額(億)<span class="sort-icon desc" id="sort-amount">↓</span></th>
                  </tr>
                </thead>
-               <tbody id="rankingTableBody_1"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
-               <tbody id="rankingTableBody_5" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
-               <tbody id="rankingTableBody_10" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
-               <tbody id="rankingTableBody_20" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="rankingTableBody_1"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="rankingTableBody_3" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="rankingTableBody_5" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="rankingTableBody_10" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="rankingTableBody_20" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
              </table>
              </div>
            </div>
@@ -144,10 +157,11 @@
                    <th class="text-right theme-sortable" data-sort="amount" data-active="true" data-order="desc">金額(億)<span class="sort-icon desc" id="theme-sort-amount">↓</span></th>
                  </tr>
                </thead>
-               <tbody id="themeRankingTableBody_1"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
-               <tbody id="themeRankingTableBody_5" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
-               <tbody id="themeRankingTableBody_10" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
-               <tbody id="themeRankingTableBody_20" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="themeRankingTableBody_1"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="themeRankingTableBody_3" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="themeRankingTableBody_5" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="themeRankingTableBody_10" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="themeRankingTableBody_20" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
              </table>
              </div>
            </div>
@@ -166,13 +180,36 @@
                    <th class="text-right radar-sortable" data-sort="amount" data-active="true" data-order="desc">金額(億)<span class="sort-icon desc" id="radar-sort-amount">↓</span></th>
                  </tr>
                </thead>
-               <tbody id="radarTableBody_1"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
-               <tbody id="radarTableBody_5" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
-               <tbody id="radarTableBody_10" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
-               <tbody id="radarTableBody_20" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
-             </table>
-             </div>
-           </div>
+                <tbody id="radarTableBody_1"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="radarTableBody_3" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="radarTableBody_5" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="radarTableBody_10" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="radarTableBody_20" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+              </table>
+              </div>
+            </div>
+
+            <!-- Flow (Capital Accumulation) View -->
+            <div id="view-flow" class="sidebar-view hidden">
+              <div class="table-responsive">
+              <table class="ranking-table flow-table">
+                <thead>
+                  <tr>
+                    <th style="width:30px">#</th>
+                    <th>股票</th>
+                    <th>產業</th>
+                    <th class="text-right flow-sortable" data-sort="return">漲跌<span class="sort-icon" id="flow-sort-return"></span></th>
+                    <th class="text-right flow-sortable" data-sort="amount" data-active="true" data-order="desc">金額(億)<span class="sort-icon desc" id="flow-sort-amount">↓</span></th>
+                  </tr>
+                </thead>
+                <tbody id="flowTableBody_1"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="flowTableBody_3" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="flowTableBody_5" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="flowTableBody_10" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+                <tbody id="flowTableBody_20" class="hidden"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
+              </table>
+              </div>
+            </div>
         </div>
       </div>
     </div>

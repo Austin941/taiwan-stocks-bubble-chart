@@ -27,6 +27,7 @@ function showBubbleChart(groupName, mode = 'sector') {
   document.getElementById('tv-main-title').textContent = title;
   document.getElementById('tv-main-subtitle').textContent = '';
 
+  // Ensure TradingView is hidden and Bubble chart is shown
   document.getElementById('tech-chart-view').classList.add('hidden');
   document.getElementById('tech-interval-selector').classList.add('hidden');
   document.getElementById('back-to-bubble-btn').classList.add('hidden');
@@ -34,13 +35,12 @@ function showBubbleChart(groupName, mode = 'sector') {
   document.getElementById('bubble-chart-view').classList.remove('hidden');
   document.getElementById('bubble-period-selector').classList.remove('hidden');
   document.getElementById('detail-table-wrapper').classList.remove('hidden');
-  
-  if (groupName && groupName !== 'ALL') {
-    showChart(groupName, mode);
-  }
 }
 
 function showTechChart(stockData) {
+  // 暫時取消技術分析功能 (The user requested to disable technical analysis for now)
+  return;
+  
   if (!stockData || !stockData.stock) return;
   const stock = stockData.stock;
   
@@ -57,6 +57,11 @@ function showTechChart(stockData) {
   techView.classList.add('fade-in');
   document.getElementById('tech-interval-selector').classList.remove('hidden');
   document.getElementById('back-to-bubble-btn').classList.remove('hidden');
+
+  // Scroll to view on mobile
+  if (window.innerWidth <= 1024) {
+    document.querySelector('.tv-main-panel').scrollIntoView({ behavior: 'smooth' });
+  }
   
   // Set Title
   document.getElementById('tv-main-title').textContent = stock['股票名稱'] + ' (' + stock['股票代號'] + ')';
@@ -137,6 +142,7 @@ let chartInstance = null;
 let currentSector = null;
 let currentChartMode = 'sector';
 let currentPeriodDays = 1;
+let currentSizeMode = 'sqrt_amount'; // 'sqrt_amount' | 'amount' | 'volume'
 let currentDetailSort = { column: 'amount', order: 'desc' };
 let globalSectorDataForTable = [];
 let historicalRanking = null; // Pre-calculated 5/10/20 day ranking data
@@ -175,6 +181,7 @@ function getTbody(viewId, days) {
   if (viewId === 'view-ranking') baseId = 'rankingTableBody';
   else if (viewId === 'view-theme') baseId = 'themeRankingTableBody';
   else if (viewId === 'view-radar') baseId = 'radarTableBody';
+  else if (viewId === 'view-flow') baseId = 'flowTableBody';
   return document.getElementById(`${baseId}_${days}`);
 }
 
@@ -183,8 +190,9 @@ function switchPeriodTbody(viewId, days) {
   if (viewId === 'view-ranking') baseId = 'rankingTableBody';
   else if (viewId === 'view-theme') baseId = 'themeRankingTableBody';
   else if (viewId === 'view-radar') baseId = 'radarTableBody';
+  else if (viewId === 'view-flow') baseId = 'flowTableBody';
   
-  [1, 5, 10, 20].forEach(d => {
+  [1, 3, 5, 10, 20].forEach(d => {
     const tbody = document.getElementById(`${baseId}_${d}`);
     if (tbody) {
       if (d === days) tbody.classList.remove('hidden');
@@ -270,6 +278,9 @@ async function init() {
     await csvPromise;
     processData(); // first live load — shows data ASAP
 
+    // ---- Sidebar Resizer (Desktop Drag-to-Resize) ----
+    initSidebarResizer();
+
     // ---- Navigation ----
     navBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -295,11 +306,14 @@ async function init() {
           } else if (targetViewId === 'view-radar') {
             currentRadarData = periodData.radar || [];
             resortRadar();
+          } else if (targetViewId === 'view-flow') {
+            renderFlowRanking();
           }
         } else if (currentPeriodDays === 1) {
           if (targetViewId === 'view-ranking') renderRanking();
           else if (targetViewId === 'view-theme') renderThemeRanking();
           else if (targetViewId === 'view-radar') renderRadar();
+          else if (targetViewId === 'view-flow') renderFlowRanking();
         }
       });
     });
@@ -367,6 +381,7 @@ async function init() {
         switchPeriodTbody('view-ranking', days);
         switchPeriodTbody('view-theme', days);
         switchPeriodTbody('view-radar', days);
+        switchPeriodTbody('view-flow', days);
         
         // If we are currently in bubble view, re-render chart if needed, 
         // wait, we can just update chart without calling showChart again if we just update the data.
@@ -392,7 +407,23 @@ async function init() {
       }, 80));
     });
 
-    // ---- Detail table sorting ----
+    // ---- Bubble Size Metric buttons ----
+    document.querySelectorAll('#bubble-size-selector .size-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const mode = e.currentTarget.getAttribute('data-size-mode');
+        if (currentSizeMode === mode) return;
+        currentSizeMode = mode;
+
+        document.querySelectorAll('#bubble-size-selector .size-btn').forEach(b => {
+          if (b.getAttribute('data-size-mode') === mode) b.classList.add('active');
+          else b.classList.remove('active');
+        });
+
+        if (currentSector) {
+          renderChart(currentSector, currentChartMode);
+        }
+      });
+    });
     document.querySelectorAll('.detail-sortable').forEach(th => {
       th.addEventListener('click', () => {
         const column = th.getAttribute('data-sort');
@@ -752,6 +783,122 @@ function renderRadarFromData(data, targetDays = currentPeriodDays) {
 }
 
 // ============================================================
+// RENDER CAPITAL FLOW RANKING TABLE (資金建倉 / 成交值連增)
+// ============================================================
+function renderFlowRanking(targetDays = currentPeriodDays) {
+  const tbody = getTbody('view-flow', targetDays);
+  if (!allMarketData || allMarketData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center">載入中...</td></tr>';
+    return;
+  }
+
+  let flowData = [...allMarketData].filter(d => d && d.stock && d.amount > 0);
+  flowData.sort((a, b) => b.amount - a.amount);
+  const sorted = flowData.slice(0, 100);
+
+  updateTableDelta(
+    tbody,
+    sorted,
+    (d) => d.stock ? d.stock['股票代號'] : d.symbol,
+    (tr, d, index) => {
+      const stock = d.stock;
+      if (!stock) return;
+      const stockSector = stock['產業別'] || '無';
+      const dReturn = d.dailyReturn;
+      const returnClass = dReturn > 0 ? 'color-positive' : (dReturn < 0 ? 'color-negative' : '');
+      const returnSign = dReturn > 0 ? '+' : '';
+      const amountStr = (d.amount / 100000000).toFixed(2);
+      const marketTag = (stock['市場別'] || '').includes('上市') ? '👑上市' : '💎上櫃';
+
+      tr.innerHTML = `
+        <td>${index + 1}</td>
+        <td>
+          <div class="stock-name-cell">
+            <a href="#" class="stock-link"><strong>${stock['股票名稱']}</strong></a>
+            <span class="stock-symbol">${stock['股票代號']} <small style="font-size:0.75em;color:#cbd5e1">${marketTag}</small></span>
+          </div>
+        </td>
+        <td><span class="badge-sector">${stockSector}</span></td>
+        <td class="text-right ${returnClass}">${returnSign}${dReturn.toFixed(2)}%</td>
+        <td class="text-right font-bold" style="color:#facc15">${amountStr}</td>
+      `;
+      
+      if (!tr.hasAttribute('data-amount')) {
+         tr.addEventListener('click', () => {
+             const fullStockData = globalSectorDataForTable.find(item => item.symbol === stock['股票代號']) || { stock, dailyReturn: d.dailyReturn, volume: d.volume, amount: d.amount };
+             showTechChart(fullStockData);
+         });
+      }
+      tr.setAttribute('data-amount', d.amount);
+    }
+  );
+}
+
+// ============================================================
+// SIDEBAR RESIZER (Desktop Drag-to-Resize)
+// ============================================================
+function initSidebarResizer() {
+  const resizer = document.getElementById('sidebar-resizer');
+  const sidebar = document.querySelector('.tv-sidebar');
+  if (!resizer || !sidebar) return;
+
+  // Restore saved width from localStorage if exists
+  const savedWidth = localStorage.getItem('tv_sidebar_width');
+  if (savedWidth && window.innerWidth > 1024) {
+    const parsedWidth = parseInt(savedWidth, 10);
+    if (parsedWidth >= 260 && parsedWidth <= Math.min(850, window.innerWidth * 0.65)) {
+      sidebar.style.width = `${parsedWidth}px`;
+    }
+  }
+
+  let isDragging = false;
+
+  const onPointerDown = (e) => {
+    if (window.innerWidth <= 1024) return;
+    isDragging = true;
+    resizer.classList.add('is-resizing');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    resizer.setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e) => {
+    if (!isDragging || window.innerWidth <= 1024) return;
+    
+    // Calculate sidebar width based on pointer position from right edge
+    const newWidth = window.innerWidth - e.clientX - 10;
+    const minWidth = 260;
+    const maxWidth = Math.min(850, Math.floor(window.innerWidth * 0.65));
+
+    if (newWidth >= minWidth && newWidth <= maxWidth) {
+      sidebar.style.width = `${newWidth}px`;
+      localStorage.setItem('tv_sidebar_width', newWidth);
+    }
+  };
+
+  const onPointerUp = (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    resizer.classList.remove('is-resizing');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    try {
+      resizer.releasePointerCapture(e.pointerId);
+    } catch (err) {}
+
+    // Resize Chart.js canvas if active
+    if (chartInstance) {
+      chartInstance.resize();
+    }
+  };
+
+  resizer.addEventListener('pointerdown', onPointerDown);
+  resizer.addEventListener('pointermove', onPointerMove);
+  resizer.addEventListener('pointerup', onPointerUp);
+  resizer.addEventListener('pointercancel', onPointerUp);
+}
+
+// ============================================================
 // SORT UI UPDATERS
 // ============================================================
 function updateSortUI() {
@@ -818,7 +965,8 @@ async function renderChart(identifier, mode) {
   currentFetchId++;
   const fetchId = currentFetchId;
 
-  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  // Optimized: Do not destroy the chart instance every time to avoid flickering
+  // if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
 
   const modeText = mode === 'sector' ? '族群' : '題材';
   document.getElementById('tv-main-title').textContent = `${identifier} ${modeText}分析`;
@@ -906,31 +1054,74 @@ async function renderChart(identifier, mode) {
     return;
   }
 
-  const datasets = [{
-    label: `${identifier} ${mode === 'sector' ? '族群' : '題材'}`,
-    data: chartPlotData.map(d => ({
-      x: Math.max((d.amount / 100000000) || 0.1, 0.1),
-      y: d.dailyReturn || 0,
-      r: Math.max(5, Math.min((d.volume || 0) / 2000, 28)),
-      raw: d
-    })),
-    backgroundColor: chartPlotData.map(d => (d.dailyReturn || 0) >= 0 ? 'rgba(239,68,68,0.75)' : 'rgba(34,197,94,0.75)'),
-    borderColor: chartPlotData.map(d => (d.dailyReturn || 0) >= 0 ? 'rgba(239,68,68,1)' : 'rgba(34,197,94,1)'),
-    borderWidth: 1.5, hoverBorderWidth: 3, hoverBorderColor: '#fff'
-  }];
+  // Split datasets by Market Type to distinguish 上市 (TWSE) vs 上櫃 (TPEX)
+  const twseData = chartPlotData.filter(d => (d.stock['市場別'] || '').includes('上市'));
+  const tpexData = chartPlotData.filter(d => !(d.stock['市場別'] || '').includes('上市'));
 
-  Chart.defaults.color = '#475569';
+  // Calculate bubble radius based on selected size metric (Amount, Sqrt Amount, or Volume)
+  const calcRadius = (d) => {
+    if (currentSizeMode === 'amount') {
+      const amountIn100M = (d.amount || 0) / 100000000;
+      return Math.max(6, Math.min(amountIn100M * 0.25 + 6, 40));
+    } else if (currentSizeMode === 'volume') {
+      const vol = (d.volume || 0) / 1000; // 張
+      return Math.max(6, Math.min(vol / 2000 + 6, 40));
+    } else {
+      // Default: Square Root of Amount (金額平方根 / 比例縮放)
+      return Math.max(7, Math.min(Math.sqrt((d.amount || 0) / 100000000) * 2.5 + 5, 38));
+    }
+  };
+
+  const datasets = [
+    {
+      label: `上市 (TWSE) 👑金環`,
+      data: twseData.map(d => ({
+        x: Math.max((d.amount / 100000000) || 0.1, 0.1),
+        y: d.dailyReturn || 0,
+        r: calcRadius(d),
+        raw: d
+      })),
+      backgroundColor: twseData.map(d => (d.dailyReturn || 0) >= 0 ? 'rgba(239,68,68,0.75)' : 'rgba(34,197,94,0.75)'),
+      borderColor: '#facc15', // Bright gold ring for TWSE (上市)
+      borderWidth: 3.5,
+      hoverBorderWidth: 5,
+      hoverBorderColor: '#ffffff'
+    },
+    {
+      label: `上櫃 (TPEX) 💎藍環`,
+      data: tpexData.map(d => ({
+        x: Math.max((d.amount / 100000000) || 0.1, 0.1),
+        y: d.dailyReturn || 0,
+        r: calcRadius(d),
+        raw: d
+      })),
+      backgroundColor: tpexData.map(d => (d.dailyReturn || 0) >= 0 ? 'rgba(239,68,68,0.75)' : 'rgba(34,197,94,0.75)'),
+      borderColor: '#38bdf8', // Bright cyan ring for TPEX (上櫃)
+      borderWidth: 2,
+      borderDash: [3, 3],
+      hoverBorderWidth: 4,
+      hoverBorderColor: '#ffffff'
+    }
+  ].filter(ds => ds.data.length > 0);
+
+  Chart.defaults.color = '#cbd5e1';
   Chart.defaults.font.family = 'Inter, sans-serif';
 
   try {
     const ctx = document.getElementById('bubbleChart').getContext('2d');
-    chartInstance = new Chart(ctx, {
-      type: 'bubble',
-      data: { datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: { duration: 150, easing: 'easeOutQuad' },
+    
+    if (chartInstance) {
+      chartInstance.data.datasets = datasets;
+      chartInstance.options.animation.duration = 400;
+      chartInstance.update();
+    } else {
+      chartInstance = new Chart(ctx, {
+        type: 'bubble',
+        data: { datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 400, easing: 'easeOutQuad' },
         onClick: (event, elements) => {
           if (elements.length > 0) {
             const el = elements[0];
@@ -949,7 +1140,14 @@ async function renderChart(identifier, mode) {
           chart.canvas.style.cursor = elements.length ? 'pointer' : 'default';
         },
         plugins: {
-          legend: { display: false },
+          legend: {
+            display: true,
+            position: 'top',
+            labels: {
+              color: '#cbd5e1',
+              font: { size: 12, family: 'Inter, sans-serif' }
+            }
+          },
           tooltip: {
             enabled: false,
             external: function(context) {
@@ -961,10 +1159,12 @@ async function renderChart(identifier, mode) {
                 const returnSign = d.dailyReturn > 0 ? '+' : '';
                 const returnColor = d.dailyReturn > 0 ? 'var(--positive-color)' : (d.dailyReturn < 0 ? 'var(--negative-color)' : 'white');
                 const amountStr = (d.amount / 100000000).toFixed(2);
+                const marketTag = (d.stock['市場別'] || '').includes('上市') ? '👑上市' : '💎上櫃';
                 tooltipEl.innerHTML = `
                   <div style="margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:4px">
-                    <strong style="font-size:1.1rem;color:#fff">${d.stock['股票名稱']}</strong>
-                    <span style="color:#94a3b8;font-size:0.9rem">(${d.stock['股票代號']})</span>
+                    <strong style="font-size:1.1rem;color:#facc15">${d.stock['股票名稱']}</strong>
+                    <span style="color:#cbd5e1;font-size:0.9rem">(${d.stock['股票代號']})</span>
+                    <span style="margin-left:6px;font-size:0.75rem;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.1);color:#38bdf8">${marketTag}</span>
                   </div>
                   <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:0.95rem">
                     <span style="color:#94a3b8">報酬率:</span>
@@ -1005,6 +1205,7 @@ async function renderChart(identifier, mode) {
         }
       }
     });
+    }
 
     globalSectorDataForTable = sectorData;
     renderDetailTable(sectorData);
