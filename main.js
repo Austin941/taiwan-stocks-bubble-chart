@@ -272,6 +272,13 @@ async function init() {
     // ---- Sidebar Resizer (Desktop Drag-to-Resize) ----
     initSidebarResizer();
 
+    // ---- Auto-select initial sector so chart is never blank on startup ----
+    if (sectorRankingData && sectorRankingData.length > 0 && sectorRankingData[0].sector) {
+      showChart(sectorRankingData[0].sector, 'sector');
+    } else {
+      showChart('半導體業', 'sector');
+    }
+
     // ---- Navigation ----
     navBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -374,9 +381,8 @@ async function init() {
         switchPeriodTbody('view-radar', days);
         switchPeriodTbody('view-flow', days);
         
-        // If we are currently in bubble view, re-render chart if needed, 
-        // wait, we can just update chart without calling showChart again if we just update the data.
-        if (!document.getElementById('bubble-chart-view').classList.contains('hidden') && currentSector) {
+        // If we are currently in bubble view, re-render chart with current sector
+        if (currentSector) {
            renderChart(currentSector, currentChartMode);
         }
 
@@ -589,8 +595,10 @@ function renderRanking(subTitle = '', targetDays = currentPeriodDays) {
 
   let data = [...sectorRankingData];
   data.sort((a, b) => {
-    const vA = sortCol === 'amount' ? a.totalAmount : sortCol === 'volume' ? a.totalVolume : a.avgReturn;
-    const vB = sortCol === 'amount' ? b.totalAmount : sortCol === 'volume' ? b.totalVolume : b.avgReturn;
+    const vA = (sortCol === 'amount' ? a.totalAmount : sortCol === 'volume' ? a.totalVolume : a.avgReturn) || 0;
+    const vB = (sortCol === 'amount' ? b.totalAmount : sortCol === 'volume' ? b.totalVolume : b.avgReturn) || 0;
+    if (!isFinite(vA)) return 1;
+    if (!isFinite(vB)) return -1;
     return sortDesc ? vB - vA : vA - vB;
   });
 
@@ -708,8 +716,10 @@ function renderRadar() {
 function resortRadar(targetDays = currentPeriodDays) {
   let sorted = [...currentRadarData];
   sorted.sort((a, b) => {
-    const vA = radarSortCol === 'amount' ? a.amount : (radarSortCol === 'volume' ? a.volume : a.dailyReturn);
-    const vB = radarSortCol === 'amount' ? b.amount : (radarSortCol === 'volume' ? b.volume : b.dailyReturn);
+    const vA = (radarSortCol === 'amount' ? a.amount : (radarSortCol === 'volume' ? a.volume : a.dailyReturn)) || 0;
+    const vB = (radarSortCol === 'amount' ? b.amount : (radarSortCol === 'volume' ? b.volume : b.dailyReturn)) || 0;
+    if (!isFinite(vA)) return 1;
+    if (!isFinite(vB)) return -1;
     return radarSortDesc ? vB - vA : vA - vB;
   });
   renderRadarFromData(sorted.slice(0, 200), targetDays);
@@ -1102,8 +1112,9 @@ async function renderChart(identifier, mode) {
     const ctx = document.getElementById('bubbleChart').getContext('2d');
     
     if (chartInstance) {
+      try { chartInstance.stop(); } catch(err){}
       chartInstance.data.datasets = datasets;
-      chartInstance.options.animation.duration = 400;
+      chartInstance.options.animation.duration = 220;
       chartInstance.update();
     } else {
       chartInstance = new Chart(ctx, {
