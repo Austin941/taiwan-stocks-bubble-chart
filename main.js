@@ -38,75 +38,66 @@ function showBubbleChart(groupName, mode = 'sector') {
 }
 
 function showTechChart(stockData) {
-  // 暫時取消技術分析功能 (The user requested to disable technical analysis for now)
-  return;
-  
   if (!stockData || !stockData.stock) return;
   const stock = stockData.stock;
-  
-  // Hide Bubble View
-  document.getElementById('bubble-chart-view').classList.add('hidden');
-  document.getElementById('bubble-period-selector').classList.add('hidden');
-  document.getElementById('detail-table-wrapper').classList.add('hidden');
-  
-  // Show Tech View
-  document.getElementById('tech-chart-view').classList.remove('hidden');
-  const techView = document.getElementById('tech-chart-view');
-  techView.classList.remove('fade-in');
-  void techView.offsetWidth;
-  techView.classList.add('fade-in');
-  document.getElementById('tech-interval-selector').classList.remove('hidden');
-  document.getElementById('back-to-bubble-btn').classList.remove('hidden');
 
-  // Scroll to view on mobile
-  if (window.innerWidth <= 1024) {
-    document.querySelector('.tv-main-panel').scrollIntoView({ behavior: 'smooth' });
-  }
-  
-  // Set Title
-  document.getElementById('tv-main-title').textContent = stock['股票名稱'] + ' (' + stock['股票代號'] + ')';
-  const dReturn = stockData.dailyReturn;
-  let returnText = '--';
-  if (dReturn !== undefined && isFinite(dReturn)) {
-     returnText = dReturn > 0 ? '+' + dReturn.toFixed(2) + '%' : dReturn.toFixed(2) + '%';
-     document.getElementById('tv-main-subtitle').className = 'subtitle ' + (dReturn > 0 ? 'color-positive' : (dReturn < 0 ? 'color-negative' : ''));
-  }
-  document.getElementById('tv-main-subtitle').textContent = '今日漲跌: ' + returnText;
+  const metaPanel = document.getElementById('stock-meta-panel');
+  if (metaPanel) {
+    metaPanel.classList.remove('hidden');
+    metaPanel.classList.remove('fade-in');
+    void metaPanel.offsetWidth;
+    metaPanel.classList.add('fade-in');
 
-  // Set Tags
+    const nameEl = document.getElementById('selected-stock-name');
+    const symbolEl = document.getElementById('selected-stock-symbol');
+    const marketEl = document.getElementById('selected-stock-market');
+    const returnEl = document.getElementById('selected-stock-return');
+
+    if (nameEl) nameEl.textContent = stock['股票名稱'];
+    if (symbolEl) symbolEl.textContent = `(${stock['股票代號']})`;
+    if (marketEl) marketEl.textContent = (stock['市場別'] || '').includes('上市') ? '👑上市' : '💎上櫃';
+
+    const dReturn = stockData.dailyReturn;
+    if (returnEl && dReturn !== undefined && isFinite(dReturn)) {
+      const returnSign = dReturn > 0 ? '+' : '';
+      returnEl.textContent = `${returnSign}${dReturn.toFixed(2)}%`;
+      returnEl.className = dReturn > 0 ? 'color-positive' : (dReturn < 0 ? 'color-negative' : '');
+    }
+  }
+
+  // Set Sector Tag
   const sectorTags = document.getElementById('tech-sector-tags');
-  sectorTags.innerHTML = '';
-  if (stock['產業別']) {
-    const t = document.createElement('span');
-    t.className = 'drawer-tag';
-    t.textContent = stock['產業別'];
-    t.addEventListener('click', () => { showBubbleChart(stock['產業別'], 'sector'); });
-    sectorTags.appendChild(t);
-  }
-
-  const themeTags = document.getElementById('tech-theme-tags');
-  themeTags.innerHTML = '';
-  if (stock['題材清單']) {
-    stock['題材清單'].split(/[,、]/).forEach(theme => {
-      if (!theme.trim()) return;
+  if (sectorTags) {
+    sectorTags.innerHTML = '';
+    if (stock['產業別']) {
       const t = document.createElement('span');
       t.className = 'drawer-tag';
-      t.textContent = theme.trim();
-      t.addEventListener('click', () => { showBubbleChart(theme.trim(), 'theme'); });
-      themeTags.appendChild(t);
-    });
+      t.textContent = stock['產業別'];
+      t.addEventListener('click', () => { showChart(stock['產業別'], 'sector'); });
+      sectorTags.appendChild(t);
+    }
   }
 
-  // TradingView Interval logic
-  const market = stock['市場別'] || '';
-  const tvSymbol = market.includes('上市') ? 'TWSE:' + stock['股票代號'] : 'TPEX:' + stock['股票代號'];
-  document.getElementById('tech-chart-view').setAttribute('data-tv-symbol', tvSymbol);
-  
-  // Set default interval active state
-  document.querySelectorAll('#tech-interval-selector .interval-btn').forEach(btn => btn.classList.remove('active'));
-  document.querySelector('#tech-interval-selector .interval-btn[data-interval="D"]').classList.add('active');
-  
-  renderTvWidget(tvSymbol, 'D');
+  // Set Theme Tags
+  const themeTags = document.getElementById('tech-theme-tags');
+  if (themeTags) {
+    themeTags.innerHTML = '';
+    if (stock['題材清單']) {
+      stock['題材清單'].split(/[,、]/).forEach(theme => {
+        if (!theme.trim()) return;
+        const t = document.createElement('span');
+        t.className = 'drawer-tag';
+        t.textContent = theme.trim();
+        t.addEventListener('click', () => { showChart(theme.trim(), 'theme'); });
+        themeTags.appendChild(t);
+      });
+    }
+  }
+
+  // Scroll to meta panel on mobile
+  if (window.innerWidth <= 1024 && metaPanel) {
+    metaPanel.scrollIntoView({ behavior: 'smooth' });
+  }
 }
 
 function renderTvWidget(symbol, interval) {

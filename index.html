@@ -87,23 +87,32 @@
                    <tbody id="detailTableBody"></tbody>
                  </table>
                </div>
+
+              <!-- Stock Details (Tags & Metadata Panel) -->
+              <div id="stock-meta-panel" class="stock-meta-panel panel-glass hidden" style="margin-top:1rem; padding:14px 18px; border-radius:10px;">
+                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px;">
+                   <div>
+                     <strong id="selected-stock-name" style="font-size:1.15rem; color:#facc15; margin-right:6px;">--</strong>
+                     <span id="selected-stock-symbol" style="color:#cbd5e1; font-size:0.9rem;"></span>
+                     <span id="selected-stock-market" style="margin-left:6px; font-size:0.75rem; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,0.1); color:#38bdf8"></span>
+                   </div>
+                   <span id="selected-stock-return" style="font-weight:700; font-size:1rem;"></span>
+                 </div>
+                 <div class="meta-row" style="margin-bottom:0.6rem; display:flex; align-items:center; gap:8px;">
+                   <span class="meta-label" style="font-size:0.85rem; color:#94a3b8; width:70px; flex-shrink:0;">所屬產業:</span>
+                   <div id="tech-sector-tags" class="tag-container" style="display:inline-flex; flex-wrap:wrap; gap:6px;"></div>
+                 </div>
+                 <div class="meta-row" style="display:flex; align-items:center; gap:8px;">
+                   <span class="meta-label" style="font-size:0.85rem; color:#94a3b8; width:70px; flex-shrink:0;">概念題材:</span>
+                   <div id="tech-theme-tags" class="tag-container" style="display:inline-flex; flex-wrap:wrap; gap:6px;"></div>
+                 </div>
+              </div>
              </div>
           </div>
 
           <!-- 2. Technical Analysis View (TradingView) -->
           <div id="tech-chart-view" class="chart-wrapper hidden" style="display: flex; flex-direction: column;">
              <div id="tradingview-widget-container" style="flex: 1; min-height: 500px; border-radius: 8px; overflow: hidden;"></div>
-             <!-- Stock Details (Tags) underneath the chart -->
-             <div class="stock-meta-panel" style="margin-top:1rem;">
-                <div class="meta-row" style="margin-bottom:0.5rem;">
-                  <span class="meta-label">所屬產業:</span>
-                  <div id="tech-sector-tags" class="tag-container" style="display:inline-flex;"></div>
-                </div>
-                <div class="meta-row">
-                  <span class="meta-label">概念題材:</span>
-                  <div id="tech-theme-tags" class="tag-container" style="display:inline-flex;"></div>
-                </div>
-             </div>
           </div>
         </div>
       </div>

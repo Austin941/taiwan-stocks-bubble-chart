@@ -535,22 +535,26 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* --- Smooth Fade-in Animations --- */
+/* --- Ultra-Smooth Fade-in Animations & Hardware Acceleration --- */
 @keyframes fadeInScale {
   0% {
     opacity: 0;
-    transform: scale(0.98);
+    transform: scale(0.985) translateY(4px);
   }
   100% {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1) translateY(0);
   }
 }
 .fade-in {
-  animation: fadeInScale 0.25s ease-out forwards;
+  animation: fadeInScale 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
 }
 
-/* Enhancing buttons with ripple/scale */
-.sidebar-tab:active, .period-btn:active, .interval-btn:active {
+/* Enhancing buttons with smooth cubic-bezier transitions */
+.sidebar-tab, .period-btn, .size-btn, .interval-btn {
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.sidebar-tab:active, .period-btn:active, .size-btn:active, .interval-btn:active {
   transform: scale(0.95);
 }
