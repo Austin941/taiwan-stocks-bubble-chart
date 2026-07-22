@@ -289,7 +289,7 @@ async function init() {
         navBtns.forEach(b => b.classList.remove('active'));
         e.currentTarget.classList.add('active');
         switchView(targetViewId);
-        if (targetViewId !== 'view-chart') currentSector = null;
+        // Do NOT reset currentSector so bubble chart stays active
 
         // Lazy Rendering on tab switch
         if (currentPeriodDays !== 1 && historicalRanking && historicalRanking[String(currentPeriodDays)]) {
@@ -367,9 +367,9 @@ async function init() {
       });
     });
 
-    // ---- Period buttons ----
+    // ---- Period buttons (Instant response, no artificial delay) ----
     document.querySelectorAll('#bubble-period-selector .period-btn').forEach(btn => {
-      btn.addEventListener('click', debounceUI((e) => {
+      btn.addEventListener('click', (e) => {
         const days = parseInt(e.target.getAttribute('data-days'));
         if (currentPeriodDays === days) return;
         currentPeriodDays = days;
@@ -379,32 +379,34 @@ async function init() {
           else b.classList.remove('active');
         });
 
+        // Switch active period table bodies
         switchPeriodTbody('view-ranking', days);
         switchPeriodTbody('view-theme', days);
         switchPeriodTbody('view-radar', days);
         switchPeriodTbody('view-flow', days);
         
-        // If we are currently in bubble view, re-render chart with current sector
+        // Instant Chart Re-render with active sector
         if (currentSector) {
            renderChart(currentSector, currentChartMode);
         }
 
-        if (!renderedPeriods.has(days)) {
-          if (days === 1) {
-            renderRanking();
-            renderThemeRanking();
-            renderRadar();
-            renderedPeriods.add(1);
-          } else if (historicalPromise) {
-            document.getElementById('chart-loading-overlay').classList.remove('hidden');
-            historicalPromise.then(() => {
-              renderHistoricalRanking(currentPeriodDays);
-              renderedPeriods.add(currentPeriodDays);
-              document.getElementById('chart-loading-overlay').classList.add('hidden');
-            });
-          }
+        // Lazy-render only active tab or historical data
+        const activeTab = document.querySelector('.sidebar-tab.active');
+        const activeTarget = activeTab ? activeTab.getAttribute('data-target') : 'view-ranking';
+
+        if (days === 1) {
+          if (activeTarget === 'view-ranking') renderRanking();
+          else if (activeTarget === 'view-theme') renderThemeRanking();
+          else if (activeTarget === 'view-radar') renderRadar();
+          else if (activeTarget === 'view-flow') renderFlowRanking();
+        } else if (historicalPromise) {
+          document.getElementById('chart-loading-overlay').classList.remove('hidden');
+          historicalPromise.then(() => {
+            renderHistoricalRanking(currentPeriodDays);
+            document.getElementById('chart-loading-overlay').classList.add('hidden');
+          });
         }
-      }, 80));
+      });
     });
 
     // ---- Bubble Size Metric buttons ----
