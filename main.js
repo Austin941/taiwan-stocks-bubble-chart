@@ -1342,7 +1342,9 @@ async function renderChart(identifier, mode) {
             position: 'top',
             labels: {
               color: '#cbd5e1',
-              font: { size: 12, family: 'Inter, sans-serif' }
+              font: { size: 12, family: 'Inter, sans-serif' },
+              padding: 18,
+              boxWidth: 28
             }
           },
           tooltip: {
@@ -1403,6 +1405,7 @@ async function renderChart(identifier, mode) {
             }
           },
           y: {
+            grace: '20%',
             title: { display: true, text: '報酬率 (%)', color: '#94a3b8' },
             grid: {
               color: (ctx) => (ctx.tick && ctx.tick.value === 0 ? 'rgba(239, 68, 68, 0.7)' : 'rgba(255,255,255,0.05)'),
