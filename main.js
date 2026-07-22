@@ -1306,15 +1306,19 @@ function renderDetailTable(data) {
           <td class="text-right text-slate-500">-</td>
         `;
       } else {
-        const returnClass = item.dailyReturn > 0 ? 'text-danger color-positive' : (item.dailyReturn < 0 ? 'text-success color-negative' : '');
-        const returnSign = item.dailyReturn > 0 ? '+' : '';
+        const dReturn = item.dailyReturn;
+        let returnClass = dReturn > 0 ? 'text-danger color-positive' : (dReturn < 0 ? 'text-success color-negative' : '');
+        if (dReturn >= 9.8) returnClass += ' badge-limit-up';
+        else if (dReturn <= -9.8) returnClass += ' badge-limit-down';
+
+        const returnSign = dReturn > 0 ? '+' : '';
         tr.innerHTML = `
           <td>
             <a href="#" class="stock-link">
               ${item.stock['股票名稱']} <span style="color:#94a3b8;font-size:0.9em">(${item.symbol})</span>
             </a>
           </td>
-          <td class="text-right font-bold ${returnClass}">${returnSign}${item.dailyReturn.toFixed(2)}%</td>
+          <td class="text-right font-bold"><span class="${returnClass}">${returnSign}${dReturn.toFixed(2)}%</span></td>
           <td class="text-right">${Math.round(item.volume).toLocaleString()}</td>
           <td class="text-right">${(item.amount / 100000000).toFixed(2)}</td>
         `;
