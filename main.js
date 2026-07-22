@@ -1080,17 +1080,27 @@ async function renderChart(identifier, mode) {
   const twseData = chartPlotData.filter(d => (d.stock['市場別'] || '').includes('上市'));
   const tpexData = chartPlotData.filter(d => !(d.stock['市場別'] || '').includes('上市'));
 
+  // Determine X-axis value and title based on selected metric mode
+  const xAxisTitle = currentSizeMode === 'volume' ? '成交張數 (張)' : '成交金額 (億)';
+
+  const getXVal = (d) => {
+    if (currentSizeMode === 'volume') {
+      return Math.max(d.volume || 1, 1);
+    }
+    return Math.max((d.amount / 100000000) || 0.1, 0.1);
+  };
+
   // Calculate bubble radius based on selected size metric (Amount, Sqrt Amount, or Volume)
   const calcRadius = (d) => {
-    if (currentSizeMode === 'amount') {
+    if (currentSizeMode === 'volume') {
+      const volK = (d.volume || 0) / 1000; // in K (千張)
+      return Math.max(7, Math.min(Math.sqrt(volK) * 2.8 + 6, 38));
+    } else if (currentSizeMode === 'amount') {
       const amountIn100M = (d.amount || 0) / 100000000;
-      return Math.max(6, Math.min(amountIn100M * 0.25 + 6, 40));
-    } else if (currentSizeMode === 'volume') {
-      const vol = (d.volume || 0) / 1000; // 張
-      return Math.max(6, Math.min(vol / 2000 + 6, 40));
+      return Math.max(7, Math.min(amountIn100M * 0.3 + 6, 40));
     } else {
       // Default: Square Root of Amount (金額平方根 / 比例縮放)
-      return Math.max(7, Math.min(Math.sqrt((d.amount || 0) / 100000000) * 2.5 + 5, 38));
+      return Math.max(7, Math.min(Math.sqrt((d.amount || 0) / 100000000) * 2.8 + 6, 38));
     }
   };
 
@@ -1098,7 +1108,7 @@ async function renderChart(identifier, mode) {
     {
       label: `上市 (TWSE) 👑金環`,
       data: twseData.map(d => ({
-        x: Math.max((d.amount / 100000000) || 0.1, 0.1),
+        x: getXVal(d),
         y: d.dailyReturn || 0,
         r: calcRadius(d),
         raw: d
@@ -1112,7 +1122,7 @@ async function renderChart(identifier, mode) {
     {
       label: `上櫃 (TPEX) 💎藍環`,
       data: tpexData.map(d => ({
-        x: Math.max((d.amount / 100000000) || 0.1, 0.1),
+        x: getXVal(d),
         y: d.dailyReturn || 0,
         r: calcRadius(d),
         raw: d
@@ -1135,6 +1145,7 @@ async function renderChart(identifier, mode) {
     if (chartInstance) {
       try { chartInstance.stop(); } catch(err){}
       chartInstance.data.datasets = datasets;
+      chartInstance.options.scales.x.title.text = xAxisTitle;
       chartInstance.options.animation.duration = 220;
       chartInstance.update();
     } else {
@@ -1225,9 +1236,17 @@ async function renderChart(identifier, mode) {
         scales: {
           x: {
             type: 'linear',
-            title: { display: true, text: '成交金額 (億)', color: '#94a3b8' },
+            title: { display: true, text: xAxisTitle, color: '#94a3b8' },
             grid: { color: 'rgba(255,255,255,0.05)' },
-            ticks: { color: '#94a3b8' }
+            ticks: {
+              color: '#94a3b8',
+              callback: function(value) {
+                if (currentSizeMode === 'volume') {
+                  return value >= 10000 ? (value / 10000).toFixed(1) + '萬張' : value.toLocaleString() + '張';
+                }
+                return value + '億';
+              }
+            }
           },
           y: {
             title: { display: true, text: '報酬率 (%)', color: '#94a3b8' },
