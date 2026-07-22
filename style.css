@@ -142,30 +142,176 @@ body {
   flex-shrink: 0;
 }
 
-.detail-table-wrapper h3 {
-  font-size: 1rem;
+/* ============================================================
+   LEFT-RIGHT SPLIT LAYOUT (detail section)
+   ============================================================ */
+.detail-split-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 16px;
+  align-items: start;
+  min-height: 220px;
+}
+
+/* LEFT — table column */
+.detail-split-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* prevent grid blowout */
+}
+
+.detail-split-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.detail-split-header h3 {
+  font-size: 1rem;
+  margin: 0;
   color: var(--text-secondary);
 }
 
-/* Tech Meta Panel (Bottom of Tech Chart) */
-.stock-meta-panel {
-  padding: 15px;
-  background: rgba(0,0,0,0.15);
-  border-radius: 8px;
-  margin-top: 15px;
-  border: 1px solid rgba(255,255,255,0.05);
+.detail-search-input {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-color);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  width: 200px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
+.detail-search-input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56,189,248,0.15);
+}
+
+.detail-table-scroll {
+  max-height: 320px;
+  overflow-y: auto;
+  border-radius: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56,189,248,0.3) transparent;
+}
+
+/* RIGHT — stock info panel */
+.detail-split-right {
+  position: sticky;
+  top: 16px;
+}
+
+/* Tech Meta Panel */
+.stock-meta-panel {
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+}
+
+.meta-stock-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.meta-stock-name {
+  font-size: 1.15rem;
+  color: #facc15;
+  margin-right: 6px;
+}
+.meta-stock-symbol {
+  color: #cbd5e1;
+  font-size: 0.9rem;
+}
+.meta-stock-market-badge {
+  margin-left: 6px;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.1);
+  color: #38bdf8;
+}
+.meta-stock-return {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.meta-empty-hint {
+  display: none; /* 選中股票後隱藏 */
+  text-align: center;
+  color: #64748b;
+  font-size: 0.85rem;
+  padding: 20px 0 8px;
+  line-height: 1.7;
+}
+
+/* 尚未選擇股票時的佔位提示 */
+.detail-select-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  color: #475569;
+  text-align: center;
+  border: 1px dashed rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 24px 16px;
+  transition: opacity 0.3s;
+}
+.detail-select-hint.hidden {
+  display: none;
+}
+.detail-hint-icon {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  opacity: 0.5;
+}
+.detail-select-hint p {
+  font-size: 0.88rem;
+  line-height: 1.7;
+  margin: 0;
+}
+
 .meta-row {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 8px;
 }
 .meta-label {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  width: 70px;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  flex-shrink: 0;
+  padding-top: 3px;
 }
+.tag-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Responsive: stack vertically on small screens */
+@media (max-width: 900px) {
+  .detail-split-layout {
+    grid-template-columns: 1fr;
+  }
+  .detail-split-right {
+    position: static;
+  }
+  .detail-table-scroll {
+    max-height: 260px;
+  }
+}
+
+
 
 /* High Contrast Stock Name Links (Yellow / Bright Gold for readability) */
 .stock-link, .stock-link:visited {

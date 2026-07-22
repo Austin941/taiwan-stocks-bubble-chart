@@ -37,9 +37,12 @@ export function showTechChart(stockData) {
   if (!stockData || !stockData.stock) return;
   const stock = stockData.stock;
 
-  const metaPanel = document.getElementById('stock-meta-panel');
+  const metaPanel  = document.getElementById('stock-meta-panel');
+  const selectHint = document.getElementById('detail-select-hint');
+
   if (metaPanel) {
     metaPanel.classList.remove('hidden');
+    if (selectHint) selectHint.classList.add('hidden'); // hide placeholder
     requestAnimationFrame(() => {
       metaPanel.classList.remove('fade-in');
       requestAnimationFrame(() => metaPanel.classList.add('fade-in'));

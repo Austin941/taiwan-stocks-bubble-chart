@@ -83,46 +83,69 @@
                  <canvas id="bubbleChart"></canvas>
              </div>
              
-             <!-- Detail Table (Bottom of bubble chart) -->
+             <!-- Detail Panel: Left=Table / Right=Stock Info -->
               <div id="detail-table-wrapper" class="detail-table-wrapper hidden">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 8px;">
-                  <h3 style="margin: 0;">成分股明細</h3>
-                  <input type="text" id="detail-stock-search" placeholder="🔍 搜尋股票代號 / 名稱..." style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; width: 220px; outline: none; transition: all 0.2s;">
-                </div>
-                <div class="table-responsive">
-                 <table class="ranking-table detail-table">
-                   <thead>
-                     <tr>
-                       <th class="sortable detail-sortable" data-sort="symbol">股票名稱 <span class="sort-icon" id="detail-sort-symbol"></span></th>
-                       <th class="text-right sortable detail-sortable" data-sort="return">漲跌幅(%) <span class="sort-icon" id="detail-sort-return"></span></th>
-                       <th class="text-right sortable detail-sortable" data-sort="volume">成交量(張) <span class="sort-icon" id="detail-sort-volume"></span></th>
-                       <th class="text-right sortable detail-sortable" data-sort="amount" data-active="true" data-order="desc">成交金額(億) <span class="sort-icon desc" id="detail-sort-amount">↓</span></th>
-                     </tr>
-                   </thead>
-                   <tbody id="detailTableBody"></tbody>
-                 </table>
-               </div>
+                <!-- 左右分區容器 -->
+                <div class="detail-split-layout">
 
-              <!-- Stock Details (Tags & Metadata Panel) -->
-              <div id="stock-meta-panel" class="stock-meta-panel panel-glass hidden" style="margin-top:1rem; padding:14px 18px; border-radius:10px;">
-                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px;">
-                   <div>
-                     <strong id="selected-stock-name" style="font-size:1.15rem; color:#facc15; margin-right:6px;">--</strong>
-                     <span id="selected-stock-symbol" style="color:#cbd5e1; font-size:0.9rem;"></span>
-                     <span id="selected-stock-market" style="margin-left:6px; font-size:0.75rem; padding:2px 6px; border-radius:4px; background:rgba(255,255,255,0.1); color:#38bdf8"></span>
-                   </div>
-                   <span id="selected-stock-return" style="font-weight:700; font-size:1rem;"></span>
-                 </div>
-                 <div class="meta-row" style="margin-bottom:0.6rem; display:flex; align-items:center; gap:8px;">
-                   <span class="meta-label" style="font-size:0.85rem; color:#94a3b8; width:70px; flex-shrink:0;">所屬產業:</span>
-                   <div id="tech-sector-tags" class="tag-container" style="display:inline-flex; flex-wrap:wrap; gap:6px;"></div>
-                 </div>
-                 <div class="meta-row" style="display:flex; align-items:center; gap:8px;">
-                   <span class="meta-label" style="font-size:0.85rem; color:#94a3b8; width:70px; flex-shrink:0;">概念題材:</span>
-                   <div id="tech-theme-tags" class="tag-container" style="display:inline-flex; flex-wrap:wrap; gap:6px;"></div>
-                 </div>
+                  <!-- ===== LEFT: 成分股表格 ===== -->
+                  <div class="detail-split-left">
+                    <div class="detail-split-header">
+                      <h3>成分股明細</h3>
+                      <input type="text" id="detail-stock-search"
+                        placeholder="🔍 搜尋股票代號 / 名稱..."
+                        class="detail-search-input">
+                    </div>
+                    <div class="table-responsive detail-table-scroll">
+                      <table class="ranking-table detail-table">
+                        <thead>
+                          <tr>
+                            <th class="sortable detail-sortable" data-sort="symbol">股票名稱 <span class="sort-icon" id="detail-sort-symbol"></span></th>
+                            <th class="text-right sortable detail-sortable" data-sort="return">漲跌幅(%) <span class="sort-icon" id="detail-sort-return"></span></th>
+                            <th class="text-right sortable detail-sortable" data-sort="volume">成交量(張) <span class="sort-icon" id="detail-sort-volume"></span></th>
+                            <th class="text-right sortable detail-sortable" data-sort="amount" data-active="true" data-order="desc">成交金額(億) <span class="sort-icon desc" id="detail-sort-amount">↓</span></th>
+                          </tr>
+                        </thead>
+                        <tbody id="detailTableBody"></tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <!-- ===== RIGHT: 選中股票詳情 ===== -->
+                  <div class="detail-split-right">
+                    <div id="stock-meta-panel" class="stock-meta-panel panel-glass hidden">
+                      <!-- 股票標題列 -->
+                      <div class="meta-stock-header">
+                        <div>
+                          <strong id="selected-stock-name" class="meta-stock-name">--</strong>
+                          <span id="selected-stock-symbol" class="meta-stock-symbol"></span>
+                          <span id="selected-stock-market" class="meta-stock-market-badge"></span>
+                        </div>
+                        <span id="selected-stock-return" class="meta-stock-return"></span>
+                      </div>
+                      <!-- 產業 & 題材標籤 -->
+                      <div class="meta-row">
+                        <span class="meta-label">所屬產業:</span>
+                        <div id="tech-sector-tags" class="tag-container"></div>
+                      </div>
+                      <div class="meta-row" style="margin-top:10px">
+                        <span class="meta-label">概念題材:</span>
+                        <div id="tech-theme-tags" class="tag-container"></div>
+                      </div>
+                      <!-- 空狀態提示 -->
+                      <div class="meta-empty-hint">
+                        👆 點擊左側個股<br>查看產業族群與題材
+                      </div>
+                    </div>
+                    <!-- 尚未選擇時的佔位提示 -->
+                    <div id="detail-select-hint" class="detail-select-hint">
+                      <div class="detail-hint-icon">📊</div>
+                      <p>點擊左側個股<br>查看所屬產業與概念題材</p>
+                    </div>
+                  </div>
+
+                </div>
               </div>
-             </div>
           </div>
 
           <!-- 2. Technical Analysis View (TradingView) -->
