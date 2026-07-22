@@ -778,6 +778,9 @@ function renderRadarFromData(data, targetDays = currentPeriodDays) {
       `;
       if (!tr.hasAttribute('data-amount')) {
          tr.addEventListener('click', () => {
+             if (stock && stock['產業別']) {
+               showChart(stock['產業別'], 'sector');
+             }
              showTechChart(d);
          });
       }
@@ -832,6 +835,9 @@ function renderFlowRanking(targetDays = currentPeriodDays) {
       if (!tr.hasAttribute('data-amount')) {
          tr.addEventListener('click', () => {
              const fullStockData = globalSectorDataForTable.find(item => item.symbol === stock['股票代號']) || { stock, dailyReturn: d.dailyReturn, volume: d.volume, amount: d.amount };
+             if (stock && stock['產業別']) {
+               showChart(stock['產業別'], 'sector');
+             }
              showTechChart(fullStockData);
          });
       }
@@ -1379,8 +1385,13 @@ async function renderChart(identifier, mode) {
               }
               const pos = context.chart.canvas.getBoundingClientRect();
               tooltipEl.style.opacity = 1;
-              tooltipEl.style.left = (pos.left + window.scrollX + tooltipModel.caretX + 15) + 'px';
-              tooltipEl.style.top = (pos.top + window.scrollY + tooltipModel.caretY - 15) + 'px';
+              let left = pos.left + window.scrollX + tooltipModel.caretX + 15;
+              let top = pos.top + window.scrollY + tooltipModel.caretY - 15;
+              if (left + 220 > window.innerWidth - 10) {
+                left = pos.left + window.scrollX + tooltipModel.caretX - 220;
+              }
+              tooltipEl.style.left = left + 'px';
+              tooltipEl.style.top = top + 'px';
             }
           },
           datalabels: {
