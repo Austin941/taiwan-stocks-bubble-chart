@@ -13,9 +13,21 @@
     <header class="tv-header panel-glass">
       <div class="header-left">
         <h1>台股全方位儀表板</h1>
-        <span class="subtitle">族群動能與技術分析</span>
+        <span class="subtitle">族群動態與大戶資金分析</span>
       </div>
-      <div class="header-right">
+
+      <!-- Global Search Bar with Keyboard Shortcut (Ctrl+K) -->
+      <div class="header-center" style="position: relative; flex: 1; max-width: 380px; margin: 0 16px;">
+        <div class="global-search-wrapper" style="position: relative; display: flex; align-items: center;">
+          <input type="text" id="global-search-input" placeholder="🔍 搜尋股票代號、名稱、產業或題材... (Ctrl+K)" autocomplete="off" style="width: 100%; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.3); color: #fff; padding: 7px 32px 7px 12px; border-radius: 8px; font-size: 0.85rem; outline: none; transition: all 0.2s;">
+          <span style="position: absolute; right: 10px; font-size: 0.75rem; color: #94a3b8; border: 1px solid rgba(255,255,255,0.15); padding: 1px 5px; border-radius: 4px; pointer-events: none;">Ctrl+K</span>
+        </div>
+        <!-- Search Dropdown Results -->
+        <div id="global-search-dropdown" class="search-dropdown hidden panel-glass"></div>
+      </div>
+
+      <div class="header-right" style="display: flex; align-items: center; gap: 10px;">
+        <button id="reset-view-btn" class="btn-secondary" style="display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; font-size: 0.8rem; height: 32px;">🏠 重置總覽</button>
         <span id="last-updated" class="last-updated">資料載入中...</span>
       </div>
     </header>

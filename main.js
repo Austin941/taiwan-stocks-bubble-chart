@@ -269,6 +269,9 @@ async function init() {
     await csvPromise;
     processData(); // first live load — shows data ASAP
 
+    // ---- Global Search (Ctrl+K) & Reset Button ----
+    initGlobalSearch();
+
     // ---- Sidebar Resizer (Desktop Drag-to-Resize) ----
     initSidebarResizer();
 
@@ -833,6 +836,157 @@ function renderFlowRanking(targetDays = currentPeriodDays) {
       tr.setAttribute('data-amount', d.amount);
     }
   );
+}
+
+// ============================================================
+// GLOBAL SEARCH & KEYBOARD SHORTCUT (Ctrl+K)
+// ============================================================
+function initGlobalSearch() {
+  const searchInput = document.getElementById('global-search-input');
+  const dropdown = document.getElementById('global-search-dropdown');
+  const resetBtn = document.getElementById('reset-view-btn');
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      if (dropdown) dropdown.classList.add('hidden');
+      const defaultSector = (sectorRankingData && sectorRankingData[0]) ? sectorRankingData[0].sector : '半導體業';
+      showChart(defaultSector, 'sector');
+    });
+  }
+
+  if (!searchInput || !dropdown) return;
+
+  // Keyboard shortcut: Ctrl+K or /
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    } else if (e.key === '/' && document.activeElement !== searchInput) {
+      e.preventDefault();
+      searchInput.focus();
+    } else if (e.key === 'Escape') {
+      dropdown.classList.add('hidden');
+      searchInput.blur();
+    }
+  });
+
+  let debounceTimer;
+  searchInput.addEventListener('input', (e) => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      const q = e.target.value.trim().toLowerCase();
+      if (!q) {
+        dropdown.classList.add('hidden');
+        dropdown.innerHTML = '';
+        return;
+      }
+
+      // Search matching stocks
+      const matchingStocks = allMarketData.filter(d => {
+        const name = (d.stock['股票名稱'] || '').toLowerCase();
+        const symbol = (d.stock['股票代號'] || '').toLowerCase();
+        return name.includes(q) || symbol.includes(q);
+      }).slice(0, 6);
+
+      // Search matching sectors
+      const matchingSectors = sectorRankingData.filter(s => {
+        return (s.sector || '').toLowerCase().includes(q);
+      }).slice(0, 4);
+
+      // Search matching themes
+      const matchingThemes = themeRankingData.filter(t => {
+        return (t.theme || '').toLowerCase().includes(q);
+      }).slice(0, 4);
+
+      if (matchingStocks.length === 0 && matchingSectors.length === 0 && matchingThemes.length === 0) {
+        dropdown.innerHTML = `<div style="padding:14px;color:#94a3b8;text-align:center;">🔍 找不到與「${q}」相關的標的或主題</div>`;
+        dropdown.classList.remove('hidden');
+        return;
+      }
+
+      let html = '';
+
+      if (matchingStocks.length > 0) {
+        html += `<div class="search-category-header">📈 個股 (${matchingStocks.length})</div>`;
+        matchingStocks.forEach(d => {
+          const ret = d.dailyReturn || 0;
+          const retSign = ret > 0 ? '+' : '';
+          const retColor = ret > 0 ? 'var(--positive-color)' : (ret < 0 ? 'var(--negative-color)' : '#fff');
+          const marketTag = (d.stock['市場別'] || '').includes('上市') ? '👑上市' : '💎上櫃';
+          html += `
+            <div class="search-item" data-type="stock" data-symbol="${d.stock['股票代號']}">
+              <div>
+                <strong style="color:#facc15">${d.stock['股票名稱']}</strong>
+                <span style="color:#94a3b8;font-size:0.85em;margin-left:4px">(${d.stock['股票代號']})</span>
+                <small style="margin-left:4px;color:#38bdf8;font-size:0.75em">${marketTag}</small>
+              </div>
+              <span style="color:${retColor};font-weight:bold">${retSign}${ret.toFixed(2)}%</span>
+            </div>
+          `;
+        });
+      }
+
+      if (matchingSectors.length > 0) {
+        html += `<div class="search-category-header">🏢 產業族群 (${matchingSectors.length})</div>`;
+        matchingSectors.forEach(s => {
+          html += `
+            <div class="search-item" data-type="sector" data-name="${s.sector}">
+              <div><span class="badge-sector">${s.sector}</span></div>
+              <span style="color:#94a3b8;font-size:0.85em">查看族群泡泡圖 →</span>
+            </div>
+          `;
+        });
+      }
+
+      if (matchingThemes.length > 0) {
+        html += `<div class="search-category-header">💡 概念題材 (${matchingThemes.length})</div>`;
+        matchingThemes.forEach(t => {
+          html += `
+            <div class="search-item" data-type="theme" data-name="${t.theme}">
+              <div><span class="badge-sector" style="background:rgba(56,189,248,0.2);color:#38bdf8;border-color:rgba(56,189,248,0.4)">${t.theme}</span></div>
+              <span style="color:#94a3b8;font-size:0.85em">查看題材泡泡圖 →</span>
+            </div>
+          `;
+        });
+      }
+
+      dropdown.innerHTML = html;
+      dropdown.classList.remove('hidden');
+
+      // Click event inside dropdown
+      dropdown.querySelectorAll('.search-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const type = item.getAttribute('data-type');
+          if (type === 'stock') {
+            const symbol = item.getAttribute('data-symbol');
+            const targetData = allMarketData.find(d => d.stock['股票代號'] === symbol);
+            if (targetData) {
+              const sector = targetData.stock['產業別'] || '半導體業';
+              showChart(sector, 'sector');
+              showTechChart(targetData);
+            }
+          } else if (type === 'sector') {
+            const sectorName = item.getAttribute('data-name');
+            showChart(sectorName, 'sector');
+          } else if (type === 'theme') {
+            const themeName = item.getAttribute('data-name');
+            showChart(themeName, 'theme');
+          }
+          dropdown.classList.add('hidden');
+          searchInput.value = '';
+        });
+      });
+    }, 120);
+  });
+
+  // Hide dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.classList.add('hidden');
+    }
+  });
 }
 
 // ============================================================
