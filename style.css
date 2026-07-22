@@ -412,8 +412,46 @@ body {
   color: var(--accent-color);
 }
 
-.text-right { text-align: right; }
-.text-center { text-align: center; }
+.ranking-table th.text-right,
+.ranking-table td.text-right,
+.text-right {
+  text-align: right !important;
+}
+
+.ranking-table th.text-left,
+.ranking-table td.text-left,
+.text-left {
+  text-align: left !important;
+}
+
+.ranking-table th.text-center,
+.ranking-table td.text-center,
+.text-center {
+  text-align: center !important;
+}
+
+/* Data bar cell positioning */
+.data-bar-cell {
+  position: relative;
+  overflow: hidden;
+}
+.data-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+.data-bar-text {
+  position: relative;
+  z-index: 2;
+  text-align: right;
+  display: block;
+  width: 100%;
+}
 
 /* Color utilities */
 .color-positive { color: var(--positive-color) !important; }
