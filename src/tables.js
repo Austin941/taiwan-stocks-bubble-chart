@@ -368,7 +368,7 @@ export function renderGroupRanking(subTitle = '', targetDays = state.currentPeri
   if (desc) desc.textContent = subTitle || '點擊各集團標籤即可查看該集團旗下的股票泡泡圖（如台塑、中美晶、鴻海、聯電集團）';
 
   const data = [...state.groupRankingData].sort((a, b) => {
-    const key = state.sortCol;
+    const key = state.groupSortCol;
     let vA = 0, vB = 0;
     if (key === 'amount') {
       vA = state.flowMetricMode === 'diff' ? (a.totalAmountDiff ?? a.totalAmount) : a.totalAmount;
@@ -380,7 +380,7 @@ export function renderGroupRanking(subTitle = '', targetDays = state.currentPeri
     }
     if (!isFinite(vA)) return 1;
     if (!isFinite(vB)) return -1;
-    return state.sortDesc ? vB - vA : vA - vB;
+    return state.groupSortDesc ? vB - vA : vA - vB;
   });
 
   const tbody = getTbody('view-group', targetDays);

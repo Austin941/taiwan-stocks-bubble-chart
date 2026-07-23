@@ -15,6 +15,7 @@ export function getTbody(viewId, days) {
   const baseIdMap = {
     'view-ranking': 'rankingTableBody',
     'view-theme':   'themeRankingTableBody',
+    'view-group':   'groupRankingTableBody',
     'view-radar':   'radarTableBody',
     'view-flow':    'flowTableBody',
   };

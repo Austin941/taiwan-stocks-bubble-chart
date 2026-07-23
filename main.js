@@ -7,7 +7,7 @@ import { state } from './src/state.js';
 import { showChart, renderChart } from './src/chart.js';
 import { initGlobalSearch } from './src/search.js';
 import { initSidebarResizer, initVerticalResizer } from './src/resizer.js';
-import { initEvents, updateSortUI, updateThemeSortUI, updateRadarSortUI } from './src/events.js';
+import { initEvents, updateSortUI, updateThemeSortUI, updateGroupSortUI, updateRadarSortUI } from './src/events.js';
 import { renderRanking, renderThemeRanking, renderGroupRanking, renderRadar } from './src/tables.js';
 import { getConglomeratesByStockCode } from './src/stock_api.js';
 
@@ -58,6 +58,7 @@ async function init() {
     // 5. Init sort UI indicators
     updateSortUI();
     updateThemeSortUI();
+    updateGroupSortUI();
     updateRadarSortUI();
 
     // 6. Auto-select the top sector so chart is never blank at startup

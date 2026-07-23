@@ -35,4 +35,6 @@ export const state = {
   radarSortDesc:  true,
   themeSortCol:   'amount',
   themeSortDesc:  true,
+  groupSortCol:   'amount',
+  groupSortDesc:  true,
 };

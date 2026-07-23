@@ -11,8 +11,9 @@ import {
 } from './tables.js';
 
 // Sort UI updaters (exported for init use)
-const sortableHeaders      = document.querySelectorAll('.ranking-table th.sortable:not(.radar-sortable):not(.theme-sortable)');
+const sortableHeaders      = document.querySelectorAll('.ranking-table th.sortable:not(.radar-sortable):not(.theme-sortable):not(.group-sortable)');
 const themeSortableHeaders = document.querySelectorAll('.theme-sortable');
+const groupSortableHeaders = document.querySelectorAll('.group-sortable');
 const radarSortableHeaders = document.querySelectorAll('.radar-sortable');
 const navBtns              = document.querySelectorAll('.sidebar-tab');
 const backBtn              = document.getElementById('back-to-bubble-btn');
@@ -30,6 +31,14 @@ export function updateThemeSortUI() {
     const col  = h.getAttribute('data-sort');
     const icon = h.querySelector('.sort-icon');
     if (col === state.themeSortCol) { h.setAttribute('data-active', 'true'); icon.textContent = state.themeSortDesc ? '▼' : '▲'; }
+    else { h.removeAttribute('data-active'); icon.textContent = ''; }
+  });
+}
+export function updateGroupSortUI() {
+  groupSortableHeaders.forEach(h => {
+    const col  = h.getAttribute('data-sort');
+    const icon = h.querySelector('.sort-icon');
+    if (col === state.groupSortCol) { h.setAttribute('data-active', 'true'); icon.textContent = state.groupSortDesc ? '▼' : '▲'; }
     else { h.removeAttribute('data-active'); icon.textContent = ''; }
   });
 }
@@ -123,6 +132,24 @@ export function initEvents(historicalPromise) {
         state.themeRankingData = state.historicalRanking[String(state.currentPeriodDays)].themes.filter(t => isFinite(t.avgReturn));
         renderThemeRanking(`近 ${state.currentPeriodDays} 日排行`);
         state.themeRankingData = orig;
+      }
+    });
+  });
+
+  // Group sort headers
+  groupSortableHeaders.forEach(h => {
+    h.addEventListener('click', () => {
+      const col = h.getAttribute('data-sort');
+      if (state.groupSortCol === col) state.groupSortDesc = !state.groupSortDesc;
+      else { state.groupSortCol = col; state.groupSortDesc = true; }
+      updateGroupSortUI();
+      if (state.currentPeriodDays === 1) {
+        renderGroupRanking();
+      } else if (state.historicalRanking?.[String(state.currentPeriodDays)]) {
+        const orig = [...state.groupRankingData];
+        state.groupRankingData = (state.historicalRanking[String(state.currentPeriodDays)].groups || []).filter(g => isFinite(g.avgReturn));
+        renderGroupRanking(`近 ${state.currentPeriodDays} 日排行`);
+        state.groupRankingData = orig;
       }
     });
   });
