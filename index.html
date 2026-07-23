@@ -147,7 +147,7 @@
       <div class="tv-sidebar panel-glass">
         <!-- Control Selectors Panel (Placed above Sidebar Tabs) -->
         <div class="sidebar-control-panel">
-          <!-- Period buttons -->
+          <!-- Row 1: Period buttons -->
           <div id="bubble-period-selector" class="period-selector">
             <button class="period-btn active" data-days="1">1日</button>
             <button class="period-btn" data-days="3">3日</button>
@@ -155,18 +155,20 @@
             <button class="period-btn" data-days="10">10日</button>
             <button class="period-btn" data-days="20">20日</button>
           </div>
-          <!-- Flow Metric Mode (Diff vs Absolute) Selector -->
+          <!-- Row 2: Flow Metric Mode (Diff vs Absolute) Selector -->
           <div id="flow-metric-selector" class="period-selector">
-            <button class="size-btn active" data-flow-mode="diff" title="顯示近期資金變化增減差值">⚡ 資金差值</button>
-            <button class="size-btn" data-flow-mode="abs" title="顯示累積成交金額">💰 累積金額</button>
+            <button class="size-btn active" data-flow-mode="diff" title="顯示近期資金變化增減差值">⚡ 資金差值模式</button>
+            <button class="size-btn" data-flow-mode="abs" title="顯示累積成交金額">💰 累積金額模式</button>
           </div>
-          <!-- Bubble Size Mode Selector -->
-          <div id="bubble-size-selector" class="period-selector">
-            <span style="font-size:0.8rem;color:#cbd5e1;margin-right:4px;align-self:center;flex-shrink:0">圓圈:</span>
-            <button class="size-btn" data-size-mode="amount_diff">資金差值</button>
-            <button class="size-btn active" data-size-mode="sqrt_amount">金額(平方根)</button>
-            <button class="size-btn" data-size-mode="amount">成交金額</button>
-            <button class="size-btn" data-size-mode="volume">成交張數</button>
+          <!-- Row 3: Bubble Size Mode Selector (2x2 Grid) -->
+          <div class="size-selector-group">
+            <div class="size-selector-label">🎈 泡泡圓圈大小依據:</div>
+            <div id="bubble-size-selector" class="size-grid-selector">
+              <button class="size-btn" data-size-mode="amount_diff">⚡ 資金差值</button>
+              <button class="size-btn active" data-size-mode="sqrt_amount">📐 金額(平方根)</button>
+              <button class="size-btn" data-size-mode="amount">💰 成交金額</button>
+              <button class="size-btn" data-size-mode="volume">📊 成交張數</button>
+            </div>
           </div>
         </div>
 

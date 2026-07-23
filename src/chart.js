@@ -54,6 +54,7 @@ export async function renderChart(identifier, mode) {
     sectorData = baseData.map(d => ({
       symbol: d.stock['股票代號'], name: d.stock['股票名稱'], stock: d.stock,
       dailyReturn: d.dailyReturn || 0, volume: d.volume, amount: d.amount,
+      amountDiff: d.amountDiff || 0, volumeDiff: d.volumeDiff || 0,
     }));
   } else {
     overlay.classList.add('hidden');
@@ -69,8 +70,15 @@ export async function renderChart(identifier, mode) {
       const sym = d.stock['股票代號'];
       const p   = periodMap[sym];
       return p
-        ? { symbol: sym, name: d.stock['股票名稱'], stock: d.stock, dailyReturn: p.dailyReturn || 0, volume: p.volume, amount: p.amount }
-        : { symbol: sym, name: d.stock['股票名稱'], stock: d.stock, dailyReturn: 0, volume: 0, amount: 0, isMissing: true };
+        ? {
+            symbol: sym, name: d.stock['股票名稱'], stock: d.stock,
+            dailyReturn: p.dailyReturn || 0, volume: p.volume, amount: p.amount,
+            amountDiff: p.amountDiff || 0, volumeDiff: p.volumeDiff || 0,
+          }
+        : {
+            symbol: sym, name: d.stock['股票名稱'], stock: d.stock,
+            dailyReturn: 0, volume: 0, amount: 0, amountDiff: 0, volumeDiff: 0, isMissing: true,
+          };
     });
     sectorData = sectorData.sort((a, b) => b.amount - a.amount).slice(0, 50);
     document.getElementById('tv-main-title').textContent = `${identifier} ${modeText}分析 (近 ${state.currentPeriodDays} 日)`;
@@ -210,12 +218,17 @@ export async function renderChart(identifier, mode) {
             x: {
               type: 'linear',
               title: { display: true, text: xAxisTitle, color: '#94a3b8' },
-              grid:  { color: 'rgba(255,255,255,0.05)' },
+              grid: {
+                color:     ctx => ctx.tick?.value === 0 ? 'rgba(56,189,248,0.6)' : 'rgba(255,255,255,0.05)',
+                lineWidth: ctx => ctx.tick?.value === 0 ? 2 : 1,
+              },
               ticks: {
                 color: '#94a3b8',
                 callback(value) {
                   if (state.currentSizeMode === 'volume')
                     return value >= 10000 ? (value / 10000).toFixed(1) + '萬張' : value.toLocaleString() + '張';
+                  if (state.currentSizeMode === 'amount_diff')
+                    return (value > 0 ? '+' : '') + value.toFixed(1) + '億';
                   return value + '億';
                 },
               },

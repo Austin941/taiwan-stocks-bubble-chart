@@ -428,7 +428,7 @@ body {
 .sidebar-control-panel {
   padding: 10px 12px;
   border-bottom: 1px solid var(--border-color);
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(15, 23, 42, 0.4);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -438,32 +438,55 @@ body {
   width: 100%;
   display: flex;
   margin: 0 !important;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
 }
 
 .sidebar-control-panel #bubble-period-selector .period-btn {
   flex: 1;
   text-align: center;
   padding: 5px 0;
+  font-size: 0.82rem;
 }
 
 .sidebar-control-panel #flow-metric-selector .size-btn {
   flex: 1;
   text-align: center;
   padding: 5px 0;
+  font-size: 0.82rem;
   font-weight: 600;
 }
 
-.sidebar-control-panel #bubble-size-selector {
+.size-selector-group {
   display: flex;
-  flex-wrap: nowrap;
-  gap: 2px;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.sidebar-control-panel #bubble-size-selector .size-btn {
-  flex: 1;
-  text-align: center;
-  padding: 4px 4px;
+.size-selector-label {
+  font-size: 0.76rem;
+  color: #94a3b8;
+  font-weight: 500;
+  padding-left: 2px;
+}
+
+.size-grid-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.size-grid-selector .size-btn {
+  padding: 5px 4px;
   font-size: 0.78rem;
+  text-align: center;
+  border-radius: 4px;
   white-space: nowrap;
 }
 
