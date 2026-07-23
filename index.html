@@ -64,10 +64,15 @@
                <div class="spinner"></div><div class="loading-text">計算歷史數據中...</div>
              </div>
              <!-- The canvas itself -->
-             <div class="canvas-container" style="flex: 1; min-height: 400px; position: relative;">
+             <div class="canvas-container" style="flex: 1; min-height: 320px; position: relative;">
                  <canvas id="bubbleChart"></canvas>
              </div>
              
+             <!-- Vertical Resizer Handle (Drag to adjust chart vs detail table height) -->
+             <div id="main-vertical-resizer" class="main-vertical-resizer hidden" title="↕ 上下拖曳調整圖表與成分股明細高度">
+               <div class="resizer-handle-icon"></div>
+             </div>
+
              <!-- Detail Panel: Left=Table / Right=Stock Info -->
               <div id="detail-table-wrapper" class="detail-table-wrapper hidden">
                 <!-- 左右分區容器 -->

@@ -6,7 +6,7 @@ import { fetchSnapshot, fetchHistoricalRanking } from './src/api.js';
 import { state } from './src/state.js';
 import { showChart, renderChart } from './src/chart.js';
 import { initGlobalSearch } from './src/search.js';
-import { initSidebarResizer } from './src/resizer.js';
+import { initSidebarResizer, initVerticalResizer } from './src/resizer.js';
 import { initEvents, updateSortUI, updateThemeSortUI, updateRadarSortUI } from './src/events.js';
 import { renderRanking, renderThemeRanking, renderRadar } from './src/tables.js';
 
@@ -52,6 +52,7 @@ async function init() {
     initEvents(historicalPromise);
     initGlobalSearch();
     initSidebarResizer();
+    initVerticalResizer();
 
     // 5. Init sort UI indicators
     updateSortUI();

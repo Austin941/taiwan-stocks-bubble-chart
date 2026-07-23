@@ -30,6 +30,7 @@ export function showBubbleChart(groupName, mode = 'sector') {
   document.getElementById('bubble-chart-view').classList.remove('hidden');
   document.getElementById('bubble-period-selector').classList.remove('hidden');
   document.getElementById('detail-table-wrapper').classList.remove('hidden');
+  document.getElementById('main-vertical-resizer')?.classList.remove('hidden');
 }
 
 // Show stock meta panel and set TradingView widget
