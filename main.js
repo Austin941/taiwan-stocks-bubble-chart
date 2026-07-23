@@ -122,7 +122,9 @@ async function processData(isSilentRefresh = false) {
           volumeDiff = volume * (dailyReturn / 100);
         }
       }
-      return { stock, dailyReturn, volume, amount, price, symbol: sym, volumeDiff, amountDiff };
+      const groupName = getConglomeratesByStockCode(sym);
+      stock.group = groupName;
+      return { stock, dailyReturn, volume, amount, price, symbol: sym, volumeDiff, amountDiff, group: groupName };
     });
 
     // Aggregate sector, theme & group rankings

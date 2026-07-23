@@ -35,7 +35,7 @@ export async function renderChart(identifier, mode, isSilentRefresh = false) {
   if (mode === 'sector') {
     baseData = state.allMarketData.filter(d => d.stock['產業別'] === identifier);
   } else if (mode === 'group') {
-    baseData = state.allMarketData.filter(d => (d.stock.group || d.stock['集團別']) === identifier);
+    baseData = state.allMarketData.filter(d => (d.group || d.stock?.group || d.stock?.['集團別']) === identifier);
   } else {
     baseData = state.allMarketData.filter(d => d.stock['題材清單']?.includes(identifier));
   }

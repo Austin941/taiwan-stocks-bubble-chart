@@ -86,9 +86,7 @@ export function renderRanking(subTitle = '', targetDays = state.currentPeriodDay
       <td class="text-right">${Math.round(d.totalVolume).toLocaleString()}</td>
       ${amtCell}
     `;
-    if (!tr.hasAttribute('data-amount')) {
-      tr.addEventListener('click', () => _showChart(d.sector, 'sector'));
-    }
+    tr.onclick = () => _showChart(d.sector, 'sector');
     tr.setAttribute('data-amount', d.totalAmount);
     triggerFlashIfChanged(tr, oldAmt, d.totalAmount);
   });
@@ -143,9 +141,7 @@ export function renderThemeRanking(subTitle = '', targetDays = state.currentPeri
       <td class="text-right">${Math.round(d.totalVolume).toLocaleString()}</td>
       ${amtCell}
     `;
-    if (!tr.hasAttribute('data-amount')) {
-      tr.addEventListener('click', () => _showChart(d.theme, 'theme'));
-    }
+    tr.onclick = () => _showChart(d.theme, 'theme');
     tr.setAttribute('data-amount', d.totalAmount);
     triggerFlashIfChanged(tr, oldAmt, d.totalAmount);
   });
@@ -412,9 +408,7 @@ export function renderGroupRanking(subTitle = '', targetDays = state.currentPeri
       <td class="text-right">${Math.round(d.totalVolume).toLocaleString()}</td>
       ${amtCell}
     `;
-    if (!tr.hasAttribute('data-amount')) {
-      tr.addEventListener('click', () => _showChart(d.group, 'group'));
-    }
+    tr.onclick = () => _showChart(d.group, 'group');
     tr.setAttribute('data-amount', d.totalAmount);
     triggerFlashIfChanged(tr, oldAmt, d.totalAmount);
   });
