@@ -6,7 +6,7 @@ import { switchView, showBubbleChart, renderTvWidget } from './views.js';
 import { showChart, renderChart } from './chart.js';
 import { switchPeriodTbody } from './dom.js';
 import {
-  renderRanking, renderThemeRanking, renderRadar, resortRadar,
+  renderRanking, renderThemeRanking, renderGroupRanking, renderRadar, resortRadar,
   renderFlowRanking, renderDetailTable, renderHistoricalRanking,
 } from './tables.js';
 
@@ -70,6 +70,11 @@ export function initEvents(historicalPromise) {
           state.themeRankingData = pd.themes.filter(t => isFinite(t.avgReturn));
           renderThemeRanking(`近 ${state.currentPeriodDays} 日排行`);
           state.themeRankingData = orig;
+        } else if (targetViewId === 'view-group') {
+          const orig = [...state.groupRankingData];
+          state.groupRankingData = (pd.groups || []).filter(g => isFinite(g.avgReturn));
+          renderGroupRanking(`近 ${state.currentPeriodDays} 日排行`);
+          state.groupRankingData = orig;
         } else if (targetViewId === 'view-radar') {
           state.currentRadarData = pd.radar || [];
           resortRadar();
@@ -77,6 +82,7 @@ export function initEvents(historicalPromise) {
       } else if (state.currentPeriodDays === 1) {
         if (targetViewId === 'view-ranking') renderRanking();
         else if (targetViewId === 'view-theme') renderThemeRanking();
+        else if (targetViewId === 'view-group') renderGroupRanking();
         else if (targetViewId === 'view-radar') renderRadar();
       }
     });
@@ -146,7 +152,7 @@ export function initEvents(historicalPromise) {
       });
 
       // Switch period tbody for all views
-      ['view-ranking', 'view-theme', 'view-radar'].forEach(v => switchPeriodTbody(v, days));
+      ['view-ranking', 'view-theme', 'view-group', 'view-radar'].forEach(v => switchPeriodTbody(v, days));
 
       // Re-render chart instantly
       if (state.currentSector) renderChart(state.currentSector, state.currentChartMode);
@@ -156,6 +162,7 @@ export function initEvents(historicalPromise) {
       if (days === 1) {
         if (active === 'view-ranking') renderRanking();
         else if (active === 'view-theme') renderThemeRanking();
+        else if (active === 'view-group') renderGroupRanking();
         else if (active === 'view-radar') renderRadar();
       } else if (historicalPromise) {
         document.getElementById('chart-loading-overlay').classList.remove('hidden');
@@ -190,6 +197,7 @@ export function initEvents(historicalPromise) {
       if (state.currentPeriodDays === 1) {
         if (active === 'view-ranking') renderRanking();
         else if (active === 'view-theme') renderThemeRanking();
+        else if (active === 'view-group') renderGroupRanking();
         else if (active === 'view-radar') renderRadar();
       } else {
         renderHistoricalRanking(state.currentPeriodDays);

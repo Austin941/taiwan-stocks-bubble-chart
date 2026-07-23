@@ -366,12 +366,67 @@ export function renderDetailTable(data) {
   });
 }
 
+// ---- RENDER GROUP RANKING ----
+export function renderGroupRanking(subTitle = '', targetDays = state.currentPeriodDays) {
+  const desc = document.getElementById('group-ranking-description');
+  if (desc) desc.textContent = subTitle || '點擊各集團標籤即可查看該集團旗下的股票泡泡圖（如台塑、中美晶、鴻海、聯電集團）';
+
+  const data = [...state.groupRankingData].sort((a, b) => {
+    const key = state.sortCol;
+    let vA = 0, vB = 0;
+    if (key === 'amount') {
+      vA = state.flowMetricMode === 'diff' ? (a.totalAmountDiff ?? a.totalAmount) : a.totalAmount;
+      vB = state.flowMetricMode === 'diff' ? (b.totalAmountDiff ?? b.totalAmount) : b.totalAmount;
+    } else if (key === 'volume') {
+      vA = a.totalVolume; vB = b.totalVolume;
+    } else {
+      vA = a.avgReturn; vB = b.avgReturn;
+    }
+    if (!isFinite(vA)) return 1;
+    if (!isFinite(vB)) return -1;
+    return state.sortDesc ? vB - vA : vA - vB;
+  });
+
+  const tbody = getTbody('view-group', targetDays);
+  if (!tbody) return;
+  const maxVal = state.flowMetricMode === 'diff'
+    ? (Math.max(...data.map(d => Math.abs(d.totalAmountDiff ?? d.totalAmount))) || 1)
+    : (data[0]?.totalAmount || 1);
+
+  updateTableDelta(tbody, data, d => d.group, (tr, d, index) => {
+    const cls     = d.avgReturn > 0 ? 'color-positive' : d.avgReturn < 0 ? 'color-negative' : '';
+    const sign    = d.avgReturn > 0 ? '+' : '';
+    const retPct  = Math.min(Math.abs(d.avgReturn) / 10 * 100, 100);
+    const retBar  = d.avgReturn >= 0 ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)';
+    const oldAmt  = tr.getAttribute('data-amount');
+    const amtCell = renderAmountCell(d.totalAmount, d.totalAmountDiff, maxVal);
+    const countBadge = d.count ? `<small style="font-size:0.75em;color:#cbd5e1;margin-left:3px">(${d.count})</small>` : '';
+
+    tr.innerHTML = `
+      <td>${index + 1}</td>
+      <td><span class="badge-sector" style="background:rgba(168,85,247,0.2);color:#c084fc;border:1px solid rgba(168,85,247,0.4);">${d.group}${countBadge}</span></td>
+      <td class="text-right ${cls} data-bar-cell">
+        <div class="data-bar" style="width:${retPct}%;background:${retBar}"></div>
+        <strong class="data-bar-text">${sign}${d.avgReturn.toFixed(2)}%</strong>
+      </td>
+      <td class="text-right">${Math.round(d.totalVolume).toLocaleString()}</td>
+      ${amtCell}
+    `;
+    if (!tr.hasAttribute('data-amount')) {
+      tr.addEventListener('click', () => _showChart(d.group, 'group'));
+    }
+    tr.setAttribute('data-amount', d.totalAmount);
+    triggerFlashIfChanged(tr, oldAmt, d.totalAmount);
+  });
+}
+
 // ---- RENDER HISTORICAL RANKING (5/10/20 day) ----
 export function renderHistoricalRanking(days) {
   const hr = state.historicalRanking;
   if (!hr || !hr[String(days)]) {
     getTbody('view-ranking', days).innerHTML = `<tr><td colspan="5" class="text-center" style="color:#94a3b8">歷史資料尚未產生，請稍後再試</td></tr>`;
     getTbody('view-theme',   days).innerHTML = `<tr><td colspan="5" class="text-center" style="color:#94a3b8">歷史資料尚未產生</td></tr>`;
+    getTbody('view-group',   days).innerHTML = `<tr><td colspan="5" class="text-center" style="color:#94a3b8">歷史資料尚未產生</td></tr>`;
     getTbody('view-radar',   days).innerHTML = `<tr><td colspan="6" class="text-center" style="color:#94a3b8">歷史資料尚未產生</td></tr>`;
     return;
   }
@@ -383,12 +438,15 @@ export function renderHistoricalRanking(days) {
 
   const origSector = [...state.sectorRankingData];
   const origTheme  = [...state.themeRankingData];
+  const origGroup  = [...state.groupRankingData];
 
   state.sectorRankingData = periodData.sectors.filter(s => isFinite(s.avgReturn));
   state.themeRankingData  = periodData.themes.filter(t => isFinite(t.avgReturn));
+  state.groupRankingData  = (periodData.groups || []).filter(g => isFinite(g.avgReturn));
 
   renderRanking(`近 ${days} 日排行 (更新: ${updatedAt})`, days);
   renderThemeRanking(`近 ${days} 日排行`, days);
+  renderGroupRanking(`近 ${days} 日排行`, days);
 
   const desc = document.getElementById('radar-description');
   if (desc) desc.textContent = `顯示全市場近 ${days} 日累積成交金額最高的前 200 檔個股`;
@@ -397,4 +455,5 @@ export function renderHistoricalRanking(days) {
 
   state.sectorRankingData = origSector;
   state.themeRankingData  = origTheme;
+  state.groupRankingData  = origGroup;
 }

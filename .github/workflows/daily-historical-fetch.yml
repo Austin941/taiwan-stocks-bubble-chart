@@ -1,14 +1,13 @@
-name: Daily Historical Ranking Fetch
+name: Daily Stock Dictionary & Historical Fetch
 
 on:
   schedule:
-    # Run at 12:00 UTC every weekday (Monday-Friday)
-    # 12:00 UTC = 20:00 Taiwan Time (After Yahoo historical data is fully updated)
+    # 台灣時間平日每晚 20:00 (12:00 UTC) 自動執行
     - cron: '0 12 * * 1-5'
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch: # 支援手動一鍵觸發
 
 jobs:
-  fetch-data:
+  update-stock-database:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -26,15 +25,14 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    - name: Run Fetch Script
-      run: node scripts/fetch_historical_ranking.js
+    - name: Run Full Auto Update Script
+      run: node scripts/update_stock_database.cjs
       env:
         NODE_ENV: production
 
-    - name: Commit and Push Changes
+    - name: Commit and Push Updated Dictionary & Rankings
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git add public/historical_ranking.json
-        # Only commit if there are changes
-        git diff --quiet && git diff --staged --quiet || (git commit -m "chore: auto-update historical ranking data" && git pull --rebase && git push)
+        git add public/historical_ranking.json stock_dictionary/
+        git diff --quiet && git diff --staged --quiet || (git commit -m "chore: auto-update stock dictionary, news trends & historical ranking" && git pull --rebase && git push)

@@ -7,6 +7,7 @@ export const state = {
   allMarketData:        [],
   sectorRankingData:    [],
   themeRankingData:     [],
+  groupRankingData:     [],
   historicalRanking:    null,
   liveSnapshotCache:    {},
   globalSectorDataForTable: [],

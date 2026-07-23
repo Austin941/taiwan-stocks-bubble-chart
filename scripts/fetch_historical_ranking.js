@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import YahooFinance from 'yahoo-finance2';
+import { getConglomeratesByStockCode } from './conglomerates_database.js';
 
 const yahooFinance = new YahooFinance({ suppressNotices: ['ripHistorical'] });
 
@@ -134,11 +135,11 @@ async function run() {
   // 3. Aggregate Data
   const finalJson = {
     updated_at: new Date().toISOString(),
-    '1': { sectors: [], themes: [], radar: [] },
-    '3': { sectors: [], themes: [], radar: [] },
-    '5': { sectors: [], themes: [], radar: [] },
-    '10': { sectors: [], themes: [], radar: [] },
-    '20': { sectors: [], themes: [], radar: [] }
+    '1': { sectors: [], themes: [], groups: [], radar: [] },
+    '3': { sectors: [], themes: [], groups: [], radar: [] },
+    '5': { sectors: [], themes: [], groups: [], radar: [] },
+    '10': { sectors: [], themes: [], groups: [], radar: [] },
+    '20': { sectors: [], themes: [], groups: [], radar: [] }
   };
   
   const periods = ['1', '3', '5', '10', '20'];
@@ -147,6 +148,7 @@ async function run() {
   for (const days of periods) {
     const sectorMap = {};
     const themeMap = {};
+    const groupMap = {};
     const validStocks = [];
     
     for (const symbol in results) {
@@ -212,6 +214,28 @@ async function run() {
           themeMap[t].count += 1;
         }
       }
+
+      // Group (集團股)
+      const groupName = getConglomeratesByStockCode(stock['股票代號']);
+      if (groupName && groupName !== '獨立/未歸類') {
+        if (!groupMap[groupName]) {
+          groupMap[groupName] = {
+            group: groupName,
+            totalVolume: 0,
+            totalAmount: 0,
+            totalVolumeDiff: 0,
+            totalAmountDiff: 0,
+            weightedReturnSum: 0,
+            count: 0
+          };
+        }
+        groupMap[groupName].totalVolume += pData.volume;
+        groupMap[groupName].totalAmount += pData.amount;
+        groupMap[groupName].totalVolumeDiff += (pData.volumeDiff || 0);
+        groupMap[groupName].totalAmountDiff += (pData.amountDiff || 0);
+        groupMap[groupName].weightedReturnSum += (pData.dailyReturn * pData.amount);
+        groupMap[groupName].count += 1;
+      }
     }
     
     // Convert maps to arrays and calculate avgReturn
@@ -226,6 +250,12 @@ async function run() {
       delete t.weightedReturnSum;
       return t;
     }).filter(t => isFinite(t.avgReturn));
+
+    finalJson[days].groups = Object.values(groupMap).map(g => {
+      g.avgReturn = g.totalAmount > 0 ? g.weightedReturnSum / g.totalAmount : 0;
+      delete g.weightedReturnSum;
+      return g;
+    }).filter(g => isFinite(g.avgReturn));
     
     // Sort all stocks by amountDiff descending (or amount)
     validStocks.sort((a, b) => b.amountDiff - a.amountDiff);

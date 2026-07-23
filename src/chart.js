@@ -17,7 +17,7 @@ export function showChart(identifier, mode = 'sector') {
   state.currentSector    = identifier;
   state.currentChartMode = mode;
   showBubbleChart(identifier, mode);
-  const modeText = mode === 'sector' ? '族群' : '題材概念';
+  const modeText = mode === 'sector' ? '族群' : (mode === 'group' ? '集團股' : '題材概念');
   document.getElementById('tv-main-title').textContent = `${identifier} ${modeText}分析`;
   renderChart(identifier, mode);
 }
@@ -27,13 +27,18 @@ export async function renderChart(identifier, mode, isSilentRefresh = false) {
   state.currentFetchId++;
   const fetchId = state.currentFetchId;
 
-  const modeText = mode === 'sector' ? '族群' : '題材';
+  const modeText = mode === 'sector' ? '族群' : (mode === 'group' ? '集團股' : '題材');
   document.getElementById('tv-main-title').textContent = `${identifier} ${modeText}分析`;
 
   // Filter & sort base data
-  let baseData = mode === 'sector'
-    ? state.allMarketData.filter(d => d.stock['產業別'] === identifier)
-    : state.allMarketData.filter(d => d.stock['題材清單']?.includes(identifier));
+  let baseData = [];
+  if (mode === 'sector') {
+    baseData = state.allMarketData.filter(d => d.stock['產業別'] === identifier);
+  } else if (mode === 'group') {
+    baseData = state.allMarketData.filter(d => (d.stock.group || d.stock['集團別']) === identifier);
+  } else {
+    baseData = state.allMarketData.filter(d => d.stock['題材清單']?.includes(identifier));
+  }
 
   baseData = baseData
     .filter(d => d?.stock?.['股票代號'] && d.amount > 0 && d.volume > 0 && isFinite(d.dailyReturn))

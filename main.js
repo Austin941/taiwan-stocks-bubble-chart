@@ -8,7 +8,8 @@ import { showChart, renderChart } from './src/chart.js';
 import { initGlobalSearch } from './src/search.js';
 import { initSidebarResizer, initVerticalResizer } from './src/resizer.js';
 import { initEvents, updateSortUI, updateThemeSortUI, updateRadarSortUI } from './src/events.js';
-import { renderRanking, renderThemeRanking, renderRadar } from './src/tables.js';
+import { renderRanking, renderThemeRanking, renderGroupRanking, renderRadar } from './src/tables.js';
+import { getConglomeratesByStockCode } from './src/stock_api.js';
 
 // ---- Global error handlers ----
 window.onerror = (msg, _src, _line, _col, err) => console.error('Global Error:', msg, err);
@@ -124,8 +125,8 @@ async function processData(isSilentRefresh = false) {
       return { stock, dailyReturn, volume, amount, price, symbol: sym, volumeDiff, amountDiff };
     });
 
-    // Aggregate sector & theme rankings
-    const sectorMap = {}, themeMap = {};
+    // Aggregate sector, theme & group rankings
+    const sectorMap = {}, themeMap = {}, groupMap = {};
     const THEME_BLACKLIST = new Set(['半導體', '電子零組件', '電子代工', '通信網路', '其他電子', '光電', '電腦及週邊設備']);
 
     state.allMarketData.forEach(d => {
@@ -137,6 +138,16 @@ async function processData(isSilentRefresh = false) {
         s.totalVolumeDiff   += d.volumeDiff || 0;
         s.totalAmountDiff   += d.amountDiff || 0;
         s.weightedReturnSum += d.dailyReturn * d.amount;
+      }
+      const groupName = getConglomeratesByStockCode(d.stock['股票代號']);
+      if (groupName && groupName !== '獨立/未歸類') {
+        const g = groupMap[groupName] ||= { group: groupName, totalVolume: 0, totalAmount: 0, totalVolumeDiff: 0, totalAmountDiff: 0, weightedReturnSum: 0, count: 0 };
+        g.totalVolume       += d.volume;
+        g.totalAmount       += d.amount;
+        g.totalVolumeDiff   += d.volumeDiff || 0;
+        g.totalAmountDiff   += d.amountDiff || 0;
+        g.weightedReturnSum += d.dailyReturn * d.amount;
+        g.count             += 1;
       }
       const themes = d.stock['題材清單'];
       if (themes) {
@@ -167,10 +178,18 @@ async function processData(isSilentRefresh = false) {
       count: t.count,
     }));
 
+    state.groupRankingData = Object.values(groupMap).map(g => ({
+      group: g.group, totalVolume: g.totalVolume, totalAmount: g.totalAmount,
+      totalVolumeDiff: g.totalVolumeDiff, totalAmountDiff: g.totalAmountDiff,
+      avgReturn: g.totalAmount > 0 ? g.weightedReturnSum / g.totalAmount : 0,
+      count: g.count,
+    }));
+
     // Render tables for the active period
     if (state.currentPeriodDays === 1) {
       renderRanking();
       renderThemeRanking();
+      renderGroupRanking();
       renderRadar();
     }
 
