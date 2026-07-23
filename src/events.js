@@ -198,6 +198,24 @@ export function initEvents(historicalPromise) {
     });
   });
 
+  // Theme count filter (cluster vs all)
+  document.querySelectorAll('#theme-count-filter .size-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const filter = e.currentTarget.getAttribute('data-filter');
+      const hide = filter === 'cluster';
+      if (state.hideSingleStockThemes === hide) return;
+      state.hideSingleStockThemes = hide;
+      document.querySelectorAll('#theme-count-filter .size-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-filter') === filter);
+      });
+      if (state.currentPeriodDays === 1) {
+        renderThemeRanking();
+      } else if (state.historicalRanking?.[String(state.currentPeriodDays)]) {
+        renderHistoricalRanking(state.currentPeriodDays);
+      }
+    });
+  });
+
   // Bubble size buttons
   document.querySelectorAll('#bubble-size-selector .size-btn').forEach(btn => {
     btn.addEventListener('click', e => {

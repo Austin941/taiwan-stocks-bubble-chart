@@ -99,7 +99,12 @@ export function renderThemeRanking(subTitle = '', targetDays = state.currentPeri
   const desc = document.getElementById('theme-ranking-description');
   if (desc) desc.textContent = subTitle || '點擊各題材類別標籤即可查看該概念股的專屬泡泡圖';
 
-  const data = [...state.themeRankingData].sort((a, b) => {
+  let data = [...state.themeRankingData];
+  if (state.hideSingleStockThemes) {
+    data = data.filter(d => d.count === undefined || d.count >= 2);
+  }
+
+  data.sort((a, b) => {
     const key = state.themeSortCol;
     let vA = 0, vB = 0;
     if (key === 'amount') {
@@ -126,10 +131,11 @@ export function renderThemeRanking(subTitle = '', targetDays = state.currentPeri
     const retBar = d.avgReturn >= 0 ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)';
     const oldAmt = tr.getAttribute('data-amount');
     const amtCell = renderAmountCell(d.totalAmount, d.totalAmountDiff, maxVal);
+    const countBadge = d.count ? `<small style="font-size:0.75em;color:#94a3b8;margin-left:3px">(${d.count})</small>` : '';
 
     tr.innerHTML = `
       <td>${index + 1}</td>
-      <td><span class="badge-sector">${d.theme}</span></td>
+      <td><span class="badge-sector">${d.theme}${countBadge}</span></td>
       <td class="text-right ${cls} data-bar-cell">
         <div class="data-bar" style="width:${retPct}%;background:${retBar}"></div>
         <strong class="data-bar-text">${sign}${d.avgReturn.toFixed(2)}%</strong>

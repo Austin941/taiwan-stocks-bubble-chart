@@ -142,12 +142,13 @@ async function processData(silent = false) {
         themes.split('、').map(t => t.trim())
           .filter(t => t && t !== sector && !THEME_BLACKLIST.has(t))
           .forEach(theme => {
-            const t = themeMap[theme] ||= { theme, totalVolume: 0, totalAmount: 0, totalVolumeDiff: 0, totalAmountDiff: 0, weightedReturnSum: 0 };
+            const t = themeMap[theme] ||= { theme, totalVolume: 0, totalAmount: 0, totalVolumeDiff: 0, totalAmountDiff: 0, weightedReturnSum: 0, count: 0 };
             t.totalVolume       += d.volume;
             t.totalAmount       += d.amount;
             t.totalVolumeDiff   += d.volumeDiff || 0;
             t.totalAmountDiff   += d.amountDiff || 0;
             t.weightedReturnSum += d.dailyReturn * d.amount;
+            t.count             += 1;
           });
       }
     });
@@ -162,6 +163,7 @@ async function processData(silent = false) {
       theme: t.theme, totalVolume: t.totalVolume, totalAmount: t.totalAmount,
       totalVolumeDiff: t.totalVolumeDiff, totalAmountDiff: t.totalAmountDiff,
       avgReturn: t.totalAmount > 0 ? t.weightedReturnSum / t.totalAmount : 0,
+      count: t.count,
     }));
 
     // Render tables for the active period
