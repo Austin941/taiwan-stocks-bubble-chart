@@ -73,14 +73,11 @@ export function initEvents(historicalPromise) {
         } else if (targetViewId === 'view-radar') {
           state.currentRadarData = pd.radar || [];
           resortRadar();
-        } else if (targetViewId === 'view-flow') {
-          renderFlowRanking();
         }
       } else if (state.currentPeriodDays === 1) {
         if (targetViewId === 'view-ranking') renderRanking();
         else if (targetViewId === 'view-theme') renderThemeRanking();
         else if (targetViewId === 'view-radar') renderRadar();
-        else if (targetViewId === 'view-flow') renderFlowRanking();
       }
     });
   });
@@ -149,7 +146,7 @@ export function initEvents(historicalPromise) {
       });
 
       // Switch period tbody for all views
-      ['view-ranking', 'view-theme', 'view-radar', 'view-flow'].forEach(v => switchPeriodTbody(v, days));
+      ['view-ranking', 'view-theme', 'view-radar'].forEach(v => switchPeriodTbody(v, days));
 
       // Re-render chart instantly
       if (state.currentSector) renderChart(state.currentSector, state.currentChartMode);
@@ -160,7 +157,6 @@ export function initEvents(historicalPromise) {
         if (active === 'view-ranking') renderRanking();
         else if (active === 'view-theme') renderThemeRanking();
         else if (active === 'view-radar') renderRadar();
-        else if (active === 'view-flow') renderFlowRanking();
       } else if (historicalPromise) {
         document.getElementById('chart-loading-overlay').classList.remove('hidden');
         historicalPromise.then(() => {
@@ -195,7 +191,6 @@ export function initEvents(historicalPromise) {
         if (active === 'view-ranking') renderRanking();
         else if (active === 'view-theme') renderThemeRanking();
         else if (active === 'view-radar') renderRadar();
-        else if (active === 'view-flow') renderFlowRanking();
       } else {
         renderHistoricalRanking(state.currentPeriodDays);
       }

@@ -119,6 +119,16 @@ body {
   font-weight: 600;
 }
 
+.toolbar-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.toolbar-right .period-selector {
+  margin-left: 0 !important;
+}
+
 .tv-main-content {
   flex: 1;
   position: relative;
