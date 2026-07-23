@@ -164,19 +164,14 @@
             <button class="period-btn" data-days="10">10日</button>
             <button class="period-btn" data-days="20">20日</button>
           </div>
-          <!-- Row 2: Flow Metric Mode (Diff vs Absolute) Selector -->
-          <div id="flow-metric-selector" class="period-selector">
-            <button class="size-btn active" data-flow-mode="diff" title="顯示近期資金變化增減差值">⚡ 資金差值模式</button>
-            <button class="size-btn" data-flow-mode="abs" title="顯示累積成交金額">💰 累積金額模式</button>
-          </div>
-          <!-- Row 3: Bubble Size Mode Selector (2x2 Grid) -->
+          <!-- Row 2: Bubble Size Mode Selector (2x2 Grid) -->
           <div class="size-selector-group">
             <div class="size-selector-label">🎈 泡泡圓圈大小依據:</div>
             <div id="bubble-size-selector" class="size-grid-selector">
-              <button class="size-btn" data-size-mode="amount_diff">⚡ 資金差值</button>
-              <button class="size-btn active" data-size-mode="sqrt_amount">📐 金額(平方根)</button>
+              <button class="size-btn active" data-size-mode="amount_diff">⚡ 資金變化</button>
               <button class="size-btn" data-size-mode="amount">💰 成交金額</button>
               <button class="size-btn" data-size-mode="volume">📊 成交張數</button>
+              <button class="size-btn" data-size-mode="return">📈 漲跌幅度</button>
             </div>
           </div>
         </div>

@@ -122,10 +122,11 @@ export async function renderChart(identifier, mode, isSilentRefresh = false) {
     if (state.currentSizeMode === 'amount') {
       return Math.max(7, Math.min((d.amount || 0) / 1e8 * 0.3 + 6, 40));
     }
-    if (state.currentSizeMode === 'amount_diff') {
-      return Math.max(7, Math.min(Math.sqrt(Math.abs(d.amountDiff || 0) / 1e8) * 3.5 + 6, 40));
+    if (state.currentSizeMode === 'return') {
+      return Math.max(7, Math.min(Math.abs(d.dailyReturn || 0) * 2.5 + 6, 38));
     }
-    return Math.max(7, Math.min(Math.sqrt((d.amount || 0) / 1e8) * 2.8 + 6, 38));
+    // Default: amount_diff (資金變化)
+    return Math.max(7, Math.min(Math.sqrt(Math.abs(d.amountDiff || 0) / 1e8) * 3.5 + 6, 40));
   };
 
   const mkDataset = (label, data, borderColor, borderDash) => ({

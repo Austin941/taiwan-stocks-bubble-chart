@@ -16,29 +16,20 @@ async function _showTechChart(d) {
 }
 
 // ---- HELPER: RENDER AMOUNT CELL (DIFF VS ABS) ----
+// ---- HELPER: RENDER AMOUNT CELL (DEFAULT AMOUNT DIFF) ----
 function renderAmountCell(amount, amountDiff, maxVal) {
-  if (state.flowMetricMode === 'diff' && amountDiff !== undefined) {
-    const diffIn100M = amountDiff / 1e8;
-    const sign = diffIn100M > 0 ? '+' : '';
-    const cls = diffIn100M > 0 ? 'color-positive' : diffIn100M < 0 ? 'color-negative' : '';
-    const pct = Math.min((Math.abs(amountDiff) / (maxVal || 1)) * 100, 100);
-    const barBg = diffIn100M >= 0 ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)';
-    return `
-      <td class="text-right data-bar-cell ${cls}">
-        <div class="data-bar" style="width:${pct}%;background:${barBg}"></div>
-        <strong class="data-bar-text">${sign}${diffIn100M.toFixed(2)}</strong>
-      </td>
-    `;
-  } else {
-    const amt = (amount / 1e8).toFixed(2);
-    const pct = Math.min((amount / (maxVal || 1)) * 100, 100);
-    return `
-      <td class="text-right data-bar-cell">
-        <div class="data-bar" style="width:${pct}%;background:rgba(56,189,248,0.15)"></div>
-        <span class="data-bar-text">${amt}</span>
-      </td>
-    `;
-  }
+  const diffVal = amountDiff !== undefined ? amountDiff : (amount || 0);
+  const diffIn100M = diffVal / 1e8;
+  const sign = diffIn100M > 0 ? '+' : '';
+  const cls = diffIn100M > 0 ? 'color-positive' : diffIn100M < 0 ? 'color-negative' : '';
+  const pct = Math.min((Math.abs(diffVal) / (maxVal || 1)) * 100, 100);
+  const barBg = diffIn100M >= 0 ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)';
+  return `
+    <td class="text-right data-bar-cell ${cls}" title="成交金額: ${(amount/1e8).toFixed(2)}億">
+      <div class="data-bar" style="width:${pct}%;background:${barBg}"></div>
+      <strong class="data-bar-text">${sign}${diffIn100M.toFixed(2)}</strong>
+    </td>
+  `;
 }
 
 // ---- RENDER SECTOR RANKING ----
@@ -50,8 +41,8 @@ export function renderRanking(subTitle = '', targetDays = state.currentPeriodDay
     const key = state.sortCol;
     let vA = 0, vB = 0;
     if (key === 'amount') {
-      vA = state.flowMetricMode === 'diff' ? (a.totalAmountDiff ?? a.totalAmount) : a.totalAmount;
-      vB = state.flowMetricMode === 'diff' ? (b.totalAmountDiff ?? b.totalAmount) : b.totalAmount;
+      vA = a.totalAmountDiff ?? a.totalAmount;
+      vB = b.totalAmountDiff ?? b.totalAmount;
     } else if (key === 'volume') {
       vA = a.totalVolume; vB = b.totalVolume;
     } else {
@@ -64,9 +55,7 @@ export function renderRanking(subTitle = '', targetDays = state.currentPeriodDay
 
   const tbody = getTbody('view-ranking', targetDays);
   if (!tbody) return;
-  const maxVal = state.flowMetricMode === 'diff'
-    ? (Math.max(...data.map(d => Math.abs(d.totalAmountDiff ?? d.totalAmount))) || 1)
-    : (data[0]?.totalAmount || 1);
+  const maxVal = Math.max(...data.map(d => Math.abs(d.totalAmountDiff ?? d.totalAmount))) || 1;
 
   updateTableDelta(tbody, data, d => d.sector, (tr, d, index) => {
     const cls     = d.avgReturn > 0 ? 'color-positive' : d.avgReturn < 0 ? 'color-negative' : '';
@@ -106,8 +95,8 @@ export function renderThemeRanking(subTitle = '', targetDays = state.currentPeri
     const key = state.themeSortCol;
     let vA = 0, vB = 0;
     if (key === 'amount') {
-      vA = state.flowMetricMode === 'diff' ? (a.totalAmountDiff ?? a.totalAmount) : a.totalAmount;
-      vB = state.flowMetricMode === 'diff' ? (b.totalAmountDiff ?? b.totalAmount) : b.totalAmount;
+      vA = a.totalAmountDiff ?? a.totalAmount;
+      vB = b.totalAmountDiff ?? b.totalAmount;
     } else if (key === 'volume') {
       vA = a.totalVolume; vB = b.totalVolume;
     } else {
@@ -118,9 +107,7 @@ export function renderThemeRanking(subTitle = '', targetDays = state.currentPeri
 
   const tbody = getTbody('view-theme', targetDays);
   if (!tbody) return;
-  const maxVal = state.flowMetricMode === 'diff'
-    ? (Math.max(...data.map(d => Math.abs(d.totalAmountDiff ?? d.totalAmount))) || 1)
-    : (data[0]?.totalAmount || 1);
+  const maxVal = Math.max(...data.map(d => Math.abs(d.totalAmountDiff ?? d.totalAmount))) || 1;
 
   updateTableDelta(tbody, data, d => d.theme, (tr, d, index) => {
     const cls    = d.avgReturn > 0 ? 'color-positive' : d.avgReturn < 0 ? 'color-negative' : '';
@@ -371,8 +358,8 @@ export function renderGroupRanking(subTitle = '', targetDays = state.currentPeri
     const key = state.groupSortCol;
     let vA = 0, vB = 0;
     if (key === 'amount') {
-      vA = state.flowMetricMode === 'diff' ? (a.totalAmountDiff ?? a.totalAmount) : a.totalAmount;
-      vB = state.flowMetricMode === 'diff' ? (b.totalAmountDiff ?? b.totalAmount) : b.totalAmount;
+      vA = a.totalAmountDiff ?? a.totalAmount;
+      vB = b.totalAmountDiff ?? b.totalAmount;
     } else if (key === 'volume') {
       vA = a.totalVolume; vB = b.totalVolume;
     } else {
@@ -385,9 +372,7 @@ export function renderGroupRanking(subTitle = '', targetDays = state.currentPeri
 
   const tbody = getTbody('view-group', targetDays);
   if (!tbody) return;
-  const maxVal = state.flowMetricMode === 'diff'
-    ? (Math.max(...data.map(d => Math.abs(d.totalAmountDiff ?? d.totalAmount))) || 1)
-    : (data[0]?.totalAmount || 1);
+  const maxVal = Math.max(...data.map(d => Math.abs(d.totalAmountDiff ?? d.totalAmount))) || 1;
 
   updateTableDelta(tbody, data, d => d.group, (tr, d, index) => {
     const cls     = d.avgReturn > 0 ? 'color-positive' : d.avgReturn < 0 ? 'color-negative' : '';

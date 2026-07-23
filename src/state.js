@@ -22,9 +22,8 @@ export const state = {
   currentSector:        null,
   currentChartMode:     'sector',
   currentPeriodDays:    1,
-  currentSizeMode:      'sqrt_amount', // 'sqrt_amount' | 'amount' | 'volume'
+  currentSizeMode:      'amount_diff', // 'amount_diff' (資金變化) | 'amount' | 'volume' | 'return'
   currentDetailSort:    { column: 'amount', order: 'desc' },
-  flowMetricMode:       'diff', // 'diff' (資金變化量/差值) | 'abs' (累積金額)
   hideSingleStockThemes: true,  // 預設隱藏單兵題材 (家數 < 2)
   isMarketOpenNow:      false,
 
