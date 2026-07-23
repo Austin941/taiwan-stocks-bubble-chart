@@ -2,8 +2,8 @@ name: Daily Stock Dictionary & Historical Fetch
 
 on:
   schedule:
-    # 台灣時間平日每晚 20:00 (12:00 UTC) 自動執行
-    - cron: '0 12 * * 1-5'
+    # 台灣時間平日每天下午 17:00 (09:00 UTC) 收盤盤後自動更新字典庫與預算歷史排行
+    - cron: '0 9 * * 1-5'
   workflow_dispatch: # 支援手動一鍵觸發
 
 jobs:
