@@ -23,7 +23,7 @@ export function showChart(identifier, mode = 'sector') {
 }
 
 // ---- RENDER BUBBLE CHART ----
-export async function renderChart(identifier, mode) {
+export async function renderChart(identifier, mode, isSilentRefresh = false) {
   state.currentFetchId++;
   const fetchId = state.currentFetchId;
 
@@ -143,8 +143,12 @@ export async function renderChart(identifier, mode) {
       try { state.chartInstance.stop(); } catch (_) {}
       state.chartInstance.data.datasets = datasets;
       state.chartInstance.options.scales.x.title.text = xAxisTitle;
-      state.chartInstance.options.animation.duration  = 220;
-      state.chartInstance.update();
+      if (isSilentRefresh) {
+        state.chartInstance.update('none');
+      } else {
+        state.chartInstance.options.animation.duration = 220;
+        state.chartInstance.update();
+      }
     } else {
       state.chartInstance = new Chart(ctx, {
         type: 'bubble',

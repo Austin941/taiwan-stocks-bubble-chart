@@ -77,7 +77,7 @@ async function init() {
 // ============================================================
 // DATA PROCESSING — Fetch live snapshot, build allMarketData
 // ============================================================
-async function processData(silent = false) {
+async function processData(isSilentRefresh = false) {
   try {
     const result = await fetchSnapshot(state.allStocks);
     if (!result) return;
@@ -87,7 +87,7 @@ async function processData(silent = false) {
     state.liveSnapshotCache = marketCache;
 
     // Update timestamp
-    const status = state.isMarketOpenNow ? ' 🟢 盤中即時' : ' 🔴 已收盤';
+    const status = state.isMarketOpenNow ? ' 🟢 盤中即時 (15s自動刷新)' : ' 🔴 已收盤';
     document.getElementById('last-updated').textContent =
       `最後更新：${new Date().toLocaleTimeString('zh-TW', { hour12: false })}${status}`;
 
@@ -174,9 +174,9 @@ async function processData(silent = false) {
       renderRadar();
     }
 
-    // Refresh chart if already open
+    // Refresh chart silently if already open
     if (state.currentSector && !document.getElementById('bubble-chart-view').classList.contains('hidden') && state.currentPeriodDays === 1) {
-      renderChart(state.currentSector, state.currentChartMode);
+      renderChart(state.currentSector, state.currentChartMode, isSilentRefresh);
     }
   } catch (err) {
     console.error('processData error:', err);
