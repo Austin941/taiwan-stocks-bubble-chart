@@ -90,11 +90,17 @@ export async function renderChart(identifier, mode) {
   // Build datasets split by market
   const twseData = chartPlotData.filter(d => (d.stock['市場別'] || '').includes('上市'));
   const tpexData = chartPlotData.filter(d => !(d.stock['市場別'] || '').includes('上市'));
-  const xAxisTitle = state.currentSizeMode === 'volume' ? '成交張數 (張)' : '成交金額 (億)';
+  const xAxisTitle = state.currentSizeMode === 'volume'
+    ? '成交張數 (張)'
+    : state.currentSizeMode === 'amount_diff'
+      ? '資金變化量 (億)'
+      : '成交金額 (億)';
 
-  const getX = d => state.currentSizeMode === 'volume'
-    ? Math.max(d.volume || 1, 1)
-    : Math.max((d.amount / 1e8) || 0.1, 0.1);
+  const getX = d => {
+    if (state.currentSizeMode === 'volume') return Math.max(d.volume || 1, 1);
+    if (state.currentSizeMode === 'amount_diff') return (d.amountDiff || 0) / 1e8;
+    return Math.max((d.amount / 1e8) || 0.1, 0.1);
+  };
 
   const getR = d => {
     if (state.currentSizeMode === 'volume') {
@@ -102,6 +108,9 @@ export async function renderChart(identifier, mode) {
     }
     if (state.currentSizeMode === 'amount') {
       return Math.max(7, Math.min((d.amount || 0) / 1e8 * 0.3 + 6, 40));
+    }
+    if (state.currentSizeMode === 'amount_diff') {
+      return Math.max(7, Math.min(Math.sqrt(Math.abs(d.amountDiff || 0) / 1e8) * 3.5 + 6, 40));
     }
     return Math.max(7, Math.min(Math.sqrt((d.amount || 0) / 1e8) * 2.8 + 6, 38));
   };
@@ -160,11 +169,14 @@ export async function renderChart(identifier, mode) {
                 const model = context.tooltip;
                 if (model.opacity === 0) { el.style.opacity = 0; return; }
                 if (!model.body) return;
-                const d     = model.dataPoints[0].raw.raw;
-                const sign  = d.dailyReturn > 0 ? '+' : '';
-                const col   = d.dailyReturn > 0 ? 'var(--positive-color)' : d.dailyReturn < 0 ? 'var(--negative-color)' : 'white';
-                const amt   = (d.amount / 1e8).toFixed(2);
-                const mkt   = (d.stock['市場別'] || '').includes('上市') ? '👑上市' : '💎上櫃';
+                const d        = model.dataPoints[0].raw.raw;
+                const sign     = d.dailyReturn > 0 ? '+' : '';
+                const col      = d.dailyReturn > 0 ? 'var(--positive-color)' : d.dailyReturn < 0 ? 'var(--negative-color)' : 'white';
+                const amt      = (d.amount / 1e8).toFixed(2);
+                const diffVal  = (d.amountDiff || 0) / 1e8;
+                const diffSign = diffVal > 0 ? '+' : '';
+                const diffCol  = diffVal > 0 ? 'var(--positive-color)' : diffVal < 0 ? 'var(--negative-color)' : '#94a3b8';
+                const mkt      = (d.stock['市場別'] || '').includes('上市') ? '👑上市' : '💎上櫃';
                 el.innerHTML = `
                   <div style="margin-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:4px">
                     <strong style="font-size:1.1rem;color:#facc15">${d.stock['股票名稱']}</strong>
@@ -173,6 +185,7 @@ export async function renderChart(identifier, mode) {
                   </div>
                   <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:0.95rem">
                     <span style="color:#94a3b8">報酬率:</span><span style="color:${col};font-weight:bold;text-align:right">${sign}${d.dailyReturn.toFixed(2)}%</span>
+                    <span style="color:#94a3b8">資金變化:</span><span style="color:${diffCol};font-weight:bold;text-align:right">${diffSign}${diffVal.toFixed(2)} 億</span>
                     <span style="color:#94a3b8">成交量:</span><span style="color:#fff;text-align:right">${Math.round(d.volume).toLocaleString()} 張</span>
                     <span style="color:#94a3b8">成交額:</span><span style="color:#fff;text-align:right">${amt} 億</span>
                   </div>

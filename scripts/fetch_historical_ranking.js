@@ -75,19 +75,40 @@ async function run() {
             totalVolume += vol;
             totalAmount += (vol * day.close * 1000); // TWD
           }
+
+          // Prior period of same length for delta (差值) calculation
+          const prior = validHist.slice(Math.max(0, validHist.length - days * 2), validHist.length - days);
+          let priorVolume = 0;
+          let priorAmount = 0;
+          for (const day of prior) {
+            const vol = day.volume / 1000;
+            priorVolume += vol;
+            priorAmount += (vol * day.close * 1000);
+          }
+
+          if (prior.length > 0 && prior.length < days) {
+            const scale = recent.length / prior.length;
+            priorVolume *= scale;
+            priorAmount *= scale;
+          }
+
+          const amountDiff = prior.length > 0 ? (totalAmount - priorAmount) : (totalAmount * (cumulativeReturn / 100));
+          const volumeDiff = prior.length > 0 ? (totalVolume - priorVolume) : 0;
           
-          return { dailyReturn: cumulativeReturn, volume: totalVolume, amount: totalAmount };
+          return { dailyReturn: cumulativeReturn, volume: totalVolume, amount: totalAmount, volumeDiff, amountDiff };
         };
         
+        const p1  = calcPeriod(1);
         const p3  = calcPeriod(3);
         const p5  = calcPeriod(5);
         const p10 = calcPeriod(10);
         const p20 = calcPeriod(20);
         
-        if (!p3 && !p5 && !p10 && !p20) return null;
+        if (!p1 && !p3 && !p5 && !p10 && !p20) return null;
         
         return {
           stock,
+          '1': p1,
           '3': p3,
           '5': p5,
           '10': p10,
@@ -113,13 +134,14 @@ async function run() {
   // 3. Aggregate Data
   const finalJson = {
     updated_at: new Date().toISOString(),
+    '1': { sectors: [], themes: [], radar: [] },
     '3': { sectors: [], themes: [], radar: [] },
     '5': { sectors: [], themes: [], radar: [] },
     '10': { sectors: [], themes: [], radar: [] },
     '20': { sectors: [], themes: [], radar: [] }
   };
   
-  const periods = ['3', '5', '10', '20'];
+  const periods = ['1', '3', '5', '10', '20'];
   const blacklist = ['半導體', '電子零組件', '電子代工', '通信網路', '其他電子', '光電', '電腦及週邊設備'];
   
   for (const days of periods) {
@@ -139,16 +161,28 @@ async function run() {
         stock: stock, // The raw stock object, exactly matching frontend expectations
         dailyReturn: pData.dailyReturn,
         volume: pData.volume,
-        amount: pData.amount
+        amount: pData.amount,
+        volumeDiff: pData.volumeDiff || 0,
+        amountDiff: pData.amountDiff || 0
       });
       
       // Sector
       if (stock['產業別'] && stock['產業別'] !== '無' && stock['產業別'] !== '') {
         if (!sectorMap[stock['產業別']]) {
-          sectorMap[stock['產業別']] = { sector: stock['產業別'], totalVolume: 0, totalAmount: 0, weightedReturnSum: 0, count: 0 };
+          sectorMap[stock['產業別']] = {
+            sector: stock['產業別'],
+            totalVolume: 0,
+            totalAmount: 0,
+            totalVolumeDiff: 0,
+            totalAmountDiff: 0,
+            weightedReturnSum: 0,
+            count: 0
+          };
         }
         sectorMap[stock['產業別']].totalVolume += pData.volume;
         sectorMap[stock['產業別']].totalAmount += pData.amount;
+        sectorMap[stock['產業別']].totalVolumeDiff += (pData.volumeDiff || 0);
+        sectorMap[stock['產業別']].totalAmountDiff += (pData.amountDiff || 0);
         sectorMap[stock['產業別']].weightedReturnSum += (pData.dailyReturn * pData.amount);
         sectorMap[stock['產業別']].count += 1;
       }
@@ -160,10 +194,20 @@ async function run() {
           
         for (const t of themesArr) {
           if (!themeMap[t]) {
-            themeMap[t] = { theme: t, totalVolume: 0, totalAmount: 0, weightedReturnSum: 0, count: 0 };
+            themeMap[t] = {
+              theme: t,
+              totalVolume: 0,
+              totalAmount: 0,
+              totalVolumeDiff: 0,
+              totalAmountDiff: 0,
+              weightedReturnSum: 0,
+              count: 0
+            };
           }
           themeMap[t].totalVolume += pData.volume;
           themeMap[t].totalAmount += pData.amount;
+          themeMap[t].totalVolumeDiff += (pData.volumeDiff || 0);
+          themeMap[t].totalAmountDiff += (pData.amountDiff || 0);
           themeMap[t].weightedReturnSum += (pData.dailyReturn * pData.amount);
           themeMap[t].count += 1;
         }
@@ -183,8 +227,8 @@ async function run() {
       return t;
     }).filter(t => isFinite(t.avgReturn));
     
-    // Sort all stocks by amount
-    validStocks.sort((a, b) => b.amount - a.amount);
+    // Sort all stocks by amountDiff descending (or amount)
+    validStocks.sort((a, b) => b.amountDiff - a.amountDiff);
     
     // Store all stocks for bubble chart, but radar can just use the same array
     finalJson[days].allStocks = validStocks;

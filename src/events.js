@@ -171,6 +171,38 @@ export function initEvents(historicalPromise) {
     });
   });
 
+  // Flow metric mode (Diff vs Abs) buttons
+  document.querySelectorAll('#flow-metric-selector .size-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const mode = e.currentTarget.getAttribute('data-flow-mode');
+      if (state.flowMetricMode === mode) return;
+      state.flowMetricMode = mode;
+      document.querySelectorAll('#flow-metric-selector .size-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-flow-mode') === mode);
+      });
+
+      // Update table amount header titles
+      document.querySelectorAll('th[data-sort="amount"]').forEach(th => {
+        const textNode = Array.from(th.childNodes).find(n => n.nodeType === Node.TEXT_NODE);
+        if (textNode) {
+          textNode.textContent = mode === 'diff' ? '資金差值(億)' : '金額(億)';
+        }
+      });
+
+      // Re-render active view
+      const active = activeTabTarget();
+      if (state.currentPeriodDays === 1) {
+        if (active === 'view-ranking') renderRanking();
+        else if (active === 'view-theme') renderThemeRanking();
+        else if (active === 'view-radar') renderRadar();
+        else if (active === 'view-flow') renderFlowRanking();
+      } else {
+        renderHistoricalRanking(state.currentPeriodDays);
+      }
+      if (state.globalSectorDataForTable.length) renderDetailTable(state.globalSectorDataForTable);
+    });
+  });
+
   // Bubble size buttons
   document.querySelectorAll('#bubble-size-selector .size-btn').forEach(btn => {
     btn.addEventListener('click', e => {

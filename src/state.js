@@ -23,6 +23,7 @@ export const state = {
   currentPeriodDays:    1,
   currentSizeMode:      'sqrt_amount', // 'sqrt_amount' | 'amount' | 'volume'
   currentDetailSort:    { column: 'amount', order: 'desc' },
+  flowMetricMode:       'diff', // 'diff' (資金變化量/差值) | 'abs' (累積金額)
   isMarketOpenNow:      false,
 
   // Sorting

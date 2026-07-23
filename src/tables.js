@@ -15,6 +15,32 @@ async function _showTechChart(d) {
   showTechChart(d);
 }
 
+// ---- HELPER: RENDER AMOUNT CELL (DIFF VS ABS) ----
+function renderAmountCell(amount, amountDiff, maxVal) {
+  if (state.flowMetricMode === 'diff' && amountDiff !== undefined) {
+    const diffIn100M = amountDiff / 1e8;
+    const sign = diffIn100M > 0 ? '+' : '';
+    const cls = diffIn100M > 0 ? 'color-positive' : diffIn100M < 0 ? 'color-negative' : '';
+    const pct = Math.min((Math.abs(amountDiff) / (maxVal || 1)) * 100, 100);
+    const barBg = diffIn100M >= 0 ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)';
+    return `
+      <td class="text-right data-bar-cell ${cls}">
+        <div class="data-bar" style="width:${pct}%;background:${barBg}"></div>
+        <strong class="data-bar-text">${sign}${diffIn100M.toFixed(2)}</strong>
+      </td>
+    `;
+  } else {
+    const amt = (amount / 1e8).toFixed(2);
+    const pct = Math.min((amount / (maxVal || 1)) * 100, 100);
+    return `
+      <td class="text-right data-bar-cell">
+        <div class="data-bar" style="width:${pct}%;background:rgba(56,189,248,0.15)"></div>
+        <span class="data-bar-text">${amt}</span>
+      </td>
+    `;
+  }
+}
+
 // ---- RENDER SECTOR RANKING ----
 export function renderRanking(subTitle = '', targetDays = state.currentPeriodDays) {
   const desc = document.getElementById('ranking-description');
@@ -22,8 +48,15 @@ export function renderRanking(subTitle = '', targetDays = state.currentPeriodDay
 
   const data = [...state.sectorRankingData].sort((a, b) => {
     const key = state.sortCol;
-    const vA = (key === 'amount' ? a.totalAmount : key === 'volume' ? a.totalVolume : a.avgReturn) || 0;
-    const vB = (key === 'amount' ? b.totalAmount : key === 'volume' ? b.totalVolume : b.avgReturn) || 0;
+    let vA = 0, vB = 0;
+    if (key === 'amount') {
+      vA = state.flowMetricMode === 'diff' ? (a.totalAmountDiff ?? a.totalAmount) : a.totalAmount;
+      vB = state.flowMetricMode === 'diff' ? (b.totalAmountDiff ?? b.totalAmount) : b.totalAmount;
+    } else if (key === 'volume') {
+      vA = a.totalVolume; vB = b.totalVolume;
+    } else {
+      vA = a.avgReturn; vB = b.avgReturn;
+    }
     if (!isFinite(vA)) return 1;
     if (!isFinite(vB)) return -1;
     return state.sortDesc ? vB - vA : vA - vB;
@@ -31,16 +64,17 @@ export function renderRanking(subTitle = '', targetDays = state.currentPeriodDay
 
   const tbody = getTbody('view-ranking', targetDays);
   if (!tbody) return;
-  const maxAmount = data[0]?.totalAmount || 1;
+  const maxVal = state.flowMetricMode === 'diff'
+    ? (Math.max(...data.map(d => Math.abs(d.totalAmountDiff ?? d.totalAmount))) || 1)
+    : (data[0]?.totalAmount || 1);
 
   updateTableDelta(tbody, data, d => d.sector, (tr, d, index) => {
     const cls     = d.avgReturn > 0 ? 'color-positive' : d.avgReturn < 0 ? 'color-negative' : '';
     const sign    = d.avgReturn > 0 ? '+' : '';
-    const amt     = (d.totalAmount / 1e8).toFixed(2);
-    const amtPct  = Math.min((d.totalAmount / maxAmount) * 100, 100);
     const retPct  = Math.min(Math.abs(d.avgReturn) / 10 * 100, 100);
     const retBar  = d.avgReturn >= 0 ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)';
     const oldAmt  = tr.getAttribute('data-amount');
+    const amtCell = renderAmountCell(d.totalAmount, d.totalAmountDiff, maxVal);
 
     tr.innerHTML = `
       <td>${index + 1}</td>
@@ -50,10 +84,7 @@ export function renderRanking(subTitle = '', targetDays = state.currentPeriodDay
         <strong class="data-bar-text">${sign}${d.avgReturn.toFixed(2)}%</strong>
       </td>
       <td class="text-right">${Math.round(d.totalVolume).toLocaleString()}</td>
-      <td class="text-right data-bar-cell">
-        <div class="data-bar" style="width:${amtPct}%;background:rgba(56,189,248,0.15)"></div>
-        <span class="data-bar-text">${amt}</span>
-      </td>
+      ${amtCell}
     `;
     if (!tr.hasAttribute('data-amount')) {
       tr.addEventListener('click', () => _showChart(d.sector, 'sector'));
@@ -70,23 +101,31 @@ export function renderThemeRanking(subTitle = '', targetDays = state.currentPeri
 
   const data = [...state.themeRankingData].sort((a, b) => {
     const key = state.themeSortCol;
-    const vA  = key === 'amount' ? a.totalAmount : key === 'volume' ? a.totalVolume : a.avgReturn;
-    const vB  = key === 'amount' ? b.totalAmount : key === 'volume' ? b.totalVolume : b.avgReturn;
+    let vA = 0, vB = 0;
+    if (key === 'amount') {
+      vA = state.flowMetricMode === 'diff' ? (a.totalAmountDiff ?? a.totalAmount) : a.totalAmount;
+      vB = state.flowMetricMode === 'diff' ? (b.totalAmountDiff ?? b.totalAmount) : b.totalAmount;
+    } else if (key === 'volume') {
+      vA = a.totalVolume; vB = b.totalVolume;
+    } else {
+      vA = a.avgReturn; vB = b.avgReturn;
+    }
     return state.themeSortDesc ? vB - vA : vA - vB;
   });
 
   const tbody = getTbody('view-theme', targetDays);
   if (!tbody) return;
-  const maxAmount = data[0]?.totalAmount || 1;
+  const maxVal = state.flowMetricMode === 'diff'
+    ? (Math.max(...data.map(d => Math.abs(d.totalAmountDiff ?? d.totalAmount))) || 1)
+    : (data[0]?.totalAmount || 1);
 
   updateTableDelta(tbody, data, d => d.theme, (tr, d, index) => {
     const cls    = d.avgReturn > 0 ? 'color-positive' : d.avgReturn < 0 ? 'color-negative' : '';
     const sign   = d.avgReturn > 0 ? '+' : '';
-    const amt    = (d.totalAmount / 1e8).toFixed(2);
-    const amtPct = Math.min((d.totalAmount / maxAmount) * 100, 100);
     const retPct = Math.min(Math.abs(d.avgReturn) / 10 * 100, 100);
     const retBar = d.avgReturn >= 0 ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)';
     const oldAmt = tr.getAttribute('data-amount');
+    const amtCell = renderAmountCell(d.totalAmount, d.totalAmountDiff, maxVal);
 
     tr.innerHTML = `
       <td>${index + 1}</td>
@@ -96,10 +135,7 @@ export function renderThemeRanking(subTitle = '', targetDays = state.currentPeri
         <strong class="data-bar-text">${sign}${d.avgReturn.toFixed(2)}%</strong>
       </td>
       <td class="text-right">${Math.round(d.totalVolume).toLocaleString()}</td>
-      <td class="text-right data-bar-cell">
-        <div class="data-bar" style="width:${amtPct}%;background:rgba(56,189,248,0.15)"></div>
-        <span class="data-bar-text">${amt}</span>
-      </td>
+      ${amtCell}
     `;
     if (!tr.hasAttribute('data-amount')) {
       tr.addEventListener('click', () => _showChart(d.theme, 'theme'));
@@ -112,7 +148,7 @@ export function renderThemeRanking(subTitle = '', targetDays = state.currentPeri
 // ---- RENDER RADAR (live) ----
 export function renderRadar() {
   const desc = document.getElementById('radar-description');
-  if (desc) desc.textContent = '顯示全市場即時成交金額最高的前 100 檔個股';
+  if (desc) desc.textContent = '顯示全市場即時成交金額與資金變化前 100 檔個股';
   state.currentRadarData = [...state.allMarketData].filter(d => d.amount > 0);
   resortRadar(1);
 }
@@ -121,8 +157,15 @@ export function renderRadar() {
 export function resortRadar(targetDays = state.currentPeriodDays) {
   const sorted = [...state.currentRadarData].sort((a, b) => {
     const key = state.radarSortCol;
-    const vA  = (key === 'amount' ? a.amount : key === 'volume' ? a.volume : a.dailyReturn) || 0;
-    const vB  = (key === 'amount' ? b.amount : key === 'volume' ? b.volume : b.dailyReturn) || 0;
+    let vA = 0, vB = 0;
+    if (key === 'amount') {
+      vA = state.flowMetricMode === 'diff' ? (a.amountDiff ?? a.amount) : a.amount;
+      vB = state.flowMetricMode === 'diff' ? (b.amountDiff ?? b.amount) : b.amount;
+    } else if (key === 'volume') {
+      vA = a.volume; vB = b.volume;
+    } else {
+      vA = a.dailyReturn; vB = b.dailyReturn;
+    }
     if (!isFinite(vA)) return 1;
     if (!isFinite(vB)) return -1;
     return state.radarSortDesc ? vB - vA : vA - vB;
@@ -138,7 +181,9 @@ export function renderRadarFromData(data, targetDays = state.currentPeriodDays) 
     tbody.innerHTML = '<tr><td colspan="6" class="text-center">暫無交易資料</td></tr>';
     return;
   }
-  const maxAmount = data[0]?.amount || 1;
+  const maxVal = state.flowMetricMode === 'diff'
+    ? (Math.max(...data.map(d => Math.abs(d.amountDiff ?? d.amount))) || 1)
+    : (data[0]?.amount || 1);
 
   updateTableDelta(tbody, data,
     d => d.stock ? d.stock['股票代號'] : d.symbol,
@@ -149,10 +194,9 @@ export function renderRadarFromData(data, targetDays = state.currentPeriodDays) 
       const ret     = d.dailyReturn;
       const cls     = ret > 0 ? 'color-positive' : ret < 0 ? 'color-negative' : '';
       const sign    = ret > 0 ? '+' : '';
-      const amt     = (d.amount / 1e8).toFixed(2);
-      const amtPct  = Math.min((d.amount / maxAmount) * 100, 100);
       const retPct  = Math.min(Math.abs(ret) / 10 * 100, 100);
       const retBar  = ret > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)';
+      const amtCell = renderAmountCell(d.amount, d.amountDiff, maxVal);
 
       tr.innerHTML = `
         <td>${index + 1}</td>
@@ -166,10 +210,7 @@ export function renderRadarFromData(data, targetDays = state.currentPeriodDays) 
           <strong class="data-bar-text">${sign}${ret.toFixed(2)}%</strong>
         </td>
         <td class="text-right">${Math.round(d.volume).toLocaleString()}</td>
-        <td class="text-right data-bar-cell">
-          <div class="data-bar" style="width:${amtPct}%;background:rgba(56,189,248,0.15)"></div>
-          <span class="data-bar-text">${amt}</span>
-        </td>
+        ${amtCell}
       `;
       const oldAmt = tr.getAttribute('data-amount');
       if (!tr.hasAttribute('data-amount')) {
@@ -195,7 +236,11 @@ export function renderFlowRanking(targetDays = state.currentPeriodDays) {
 
   const sorted = [...state.allMarketData]
     .filter(d => d?.stock && d.amount > 0)
-    .sort((a, b) => b.amount - a.amount)
+    .sort((a, b) => {
+      const vA = state.flowMetricMode === 'diff' ? (a.amountDiff ?? a.amount) : a.amount;
+      const vB = state.flowMetricMode === 'diff' ? (b.amountDiff ?? b.amount) : b.amount;
+      return vB - vA;
+    })
     .slice(0, 100);
 
   updateTableDelta(tbody, sorted,
@@ -207,7 +252,14 @@ export function renderFlowRanking(targetDays = state.currentPeriodDays) {
       const ret    = d.dailyReturn;
       const cls    = ret > 0 ? 'color-positive' : ret < 0 ? 'color-negative' : '';
       const sign   = ret > 0 ? '+' : '';
-      const amt    = (d.amount / 1e8).toFixed(2);
+      
+      const diffVal  = (d.amountDiff ?? d.amount) / 1e8;
+      const diffSign = diffVal > 0 ? '+' : '';
+      const diffCls  = diffVal > 0 ? 'color-positive' : diffVal < 0 ? 'color-negative' : '';
+      const amtDisplay = state.flowMetricMode === 'diff'
+        ? `<span class="${diffCls} font-bold">${diffSign}${diffVal.toFixed(2)}</span>`
+        : `<span class="font-bold" style="color:#facc15">${(d.amount / 1e8).toFixed(2)}</span>`;
+
       const mktTag = (stock['市場別'] || '').includes('上市') ? '👑上市' : '💎上櫃';
 
       tr.innerHTML = `
@@ -218,7 +270,7 @@ export function renderFlowRanking(targetDays = state.currentPeriodDays) {
         </div></td>
         <td><span class="badge-sector">${sector}</span></td>
         <td class="text-right ${cls}">${sign}${ret.toFixed(2)}%</td>
-        <td class="text-right font-bold" style="color:#facc15">${amt}</td>
+        <td class="text-right">${amtDisplay}</td>
       `;
       if (!tr.hasAttribute('data-amount')) {
         tr.addEventListener('click', () => {
@@ -245,12 +297,23 @@ export function renderDetailTable(data) {
 
   const sorted = [...data].sort((a, b) => {
     const col = state.currentDetailSort.column;
-    let vA = col === 'return' ? a.dailyReturn : col === 'volume' ? a.volume : col === 'amount' ? a.amount : (a.symbol || '');
-    let vB = col === 'return' ? b.dailyReturn : col === 'volume' ? b.volume : col === 'amount' ? b.amount : (b.symbol || '');
+    let vA, vB;
+    if (col === 'return')  { vA = a.dailyReturn; vB = b.dailyReturn; }
+    else if (col === 'volume') { vA = a.volume; vB = b.volume; }
+    else if (col === 'amount') {
+      vA = state.flowMetricMode === 'diff' ? (a.amountDiff ?? a.amount) : a.amount;
+      vB = state.flowMetricMode === 'diff' ? (b.amountDiff ?? b.amount) : b.amount;
+    }
+    else { vA = a.symbol || ''; vB = b.symbol || ''; }
+
     if (vA < vB) return state.currentDetailSort.order === 'desc' ? 1 : -1;
     if (vA > vB) return state.currentDetailSort.order === 'desc' ? -1 : 1;
     return 0;
   });
+
+  const maxVal = state.flowMetricMode === 'diff'
+    ? (Math.max(...sorted.map(d => Math.abs(d.amountDiff ?? d.amount))) || 1)
+    : (sorted[0]?.amount || 1);
 
   updateTableDelta(tbody, sorted, item => item.symbol, (tr, item) => {
     const oldAmt = tr.getAttribute('data-amount');
@@ -268,13 +331,20 @@ export function renderDetailTable(data) {
       if (ret <= -9.8) cls += ' badge-limit-down';
       const sign = ret > 0 ? '+' : '';
 
+      const diffVal  = (item.amountDiff ?? item.amount) / 1e8;
+      const diffSign = diffVal > 0 ? '+' : '';
+      const diffCls  = diffVal > 0 ? 'color-positive' : diffVal < 0 ? 'color-negative' : '';
+      const amtDisplay = state.flowMetricMode === 'diff'
+        ? `<span class="${diffCls} font-bold">${diffSign}${diffVal.toFixed(2)}</span>`
+        : `${(item.amount / 1e8).toFixed(2)}`;
+
       tr.innerHTML = `
         <td><a href="#" class="stock-link">
           ${item.stock['股票名稱']} <span style="color:#94a3b8;font-size:0.9em">(${item.symbol})</span>
         </a></td>
         <td class="text-right font-bold"><span class="${cls}">${sign}${ret.toFixed(2)}%</span></td>
         <td class="text-right">${Math.round(item.volume).toLocaleString()}</td>
-        <td class="text-right">${(item.amount / 1e8).toFixed(2)}</td>
+        <td class="text-right">${amtDisplay}</td>
       `;
       tr.setAttribute('data-symbol', item.symbol);
       if (!tr.hasAttribute('data-amount')) {

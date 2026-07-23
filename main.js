@@ -90,19 +90,37 @@ async function processData(silent = false) {
     document.getElementById('last-updated').textContent =
       `最後更新：${new Date().toLocaleTimeString('zh-TW', { hour12: false })}${status}`;
 
+    // Build lookup for 1-day reference historical data
+    const hist1Map = {};
+    if (state.historicalRanking?.[1]?.allStocks) {
+      state.historicalRanking[1].allStocks.forEach(s => {
+        hist1Map[s.stock['股票代號']] = s;
+      });
+    }
+
     // Build allMarketData from CSV stock list + live snapshot
     state.allMarketData = state.allStocks.map(stock => {
       const sym  = stock['股票代號'];
       const snap = marketCache[sym];
       let dailyReturn = 0, volume = 0, amount = 0, price = 0;
+      let volumeDiff = 0, amountDiff = 0;
       if (snap) {
         price  = snap.price  || 0;
         volume = snap.volume || 0;
         if (snap.prevClose > 0 && price > 0)
           dailyReturn = ((price - snap.prevClose) / snap.prevClose) * 100;
         amount = price * volume * 1000;
+
+        const h1 = hist1Map[sym];
+        if (h1 && h1.amount > 0) {
+          amountDiff = amount - h1.amount;
+          volumeDiff = volume - h1.volume;
+        } else {
+          amountDiff = amount * (dailyReturn / 100);
+          volumeDiff = volume * (dailyReturn / 100);
+        }
       }
-      return { stock, dailyReturn, volume, amount, price, symbol: sym };
+      return { stock, dailyReturn, volume, amount, price, symbol: sym, volumeDiff, amountDiff };
     });
 
     // Aggregate sector & theme rankings
@@ -112,9 +130,11 @@ async function processData(silent = false) {
     state.allMarketData.forEach(d => {
       const sector = d.stock['產業別'];
       if (sector && sector !== '無' && sector !== '') {
-        const s = sectorMap[sector] ||= { sector, totalVolume: 0, totalAmount: 0, weightedReturnSum: 0 };
+        const s = sectorMap[sector] ||= { sector, totalVolume: 0, totalAmount: 0, totalVolumeDiff: 0, totalAmountDiff: 0, weightedReturnSum: 0 };
         s.totalVolume       += d.volume;
         s.totalAmount       += d.amount;
+        s.totalVolumeDiff   += d.volumeDiff || 0;
+        s.totalAmountDiff   += d.amountDiff || 0;
         s.weightedReturnSum += d.dailyReturn * d.amount;
       }
       const themes = d.stock['題材清單'];
@@ -122,9 +142,11 @@ async function processData(silent = false) {
         themes.split('、').map(t => t.trim())
           .filter(t => t && t !== sector && !THEME_BLACKLIST.has(t))
           .forEach(theme => {
-            const t = themeMap[theme] ||= { theme, totalVolume: 0, totalAmount: 0, weightedReturnSum: 0 };
+            const t = themeMap[theme] ||= { theme, totalVolume: 0, totalAmount: 0, totalVolumeDiff: 0, totalAmountDiff: 0, weightedReturnSum: 0 };
             t.totalVolume       += d.volume;
             t.totalAmount       += d.amount;
+            t.totalVolumeDiff   += d.volumeDiff || 0;
+            t.totalAmountDiff   += d.amountDiff || 0;
             t.weightedReturnSum += d.dailyReturn * d.amount;
           });
       }
@@ -132,11 +154,13 @@ async function processData(silent = false) {
 
     state.sectorRankingData = Object.values(sectorMap).map(s => ({
       sector: s.sector, totalVolume: s.totalVolume, totalAmount: s.totalAmount,
+      totalVolumeDiff: s.totalVolumeDiff, totalAmountDiff: s.totalAmountDiff,
       avgReturn: s.totalAmount > 0 ? s.weightedReturnSum / s.totalAmount : 0,
     }));
 
     state.themeRankingData = Object.values(themeMap).map(t => ({
       theme: t.theme, totalVolume: t.totalVolume, totalAmount: t.totalAmount,
+      totalVolumeDiff: t.totalVolumeDiff, totalAmountDiff: t.totalAmountDiff,
       avgReturn: t.totalAmount > 0 ? t.weightedReturnSum / t.totalAmount : 0,
     }));
 
