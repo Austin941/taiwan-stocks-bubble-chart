@@ -44,27 +44,6 @@
              <span id="tv-main-subtitle" class="subtitle"></span>
           </div>
           <div class="toolbar-right">
-            <!-- Period buttons for Bubble Chart -->
-            <div id="bubble-period-selector" class="period-selector">
-              <button class="period-btn active" data-days="1">1日</button>
-              <button class="period-btn" data-days="3">3日</button>
-              <button class="period-btn" data-days="5">5日</button>
-              <button class="period-btn" data-days="10">10日</button>
-              <button class="period-btn" data-days="20">20日</button>
-            </div>
-            <!-- Flow Metric Mode (Diff vs Absolute) Selector -->
-            <div id="flow-metric-selector" class="period-selector" style="margin-left: 8px;">
-              <button class="size-btn active" data-flow-mode="diff" title="顯示近期資金變化增減差值">⚡ 資金差值</button>
-              <button class="size-btn" data-flow-mode="abs" title="顯示累積成交金額">💰 累積金額</button>
-            </div>
-            <!-- Bubble Size Mode Selector -->
-            <div id="bubble-size-selector" class="period-selector" style="margin-left: 8px;">
-              <span style="font-size:0.8rem;color:#cbd5e1;margin-right:2px;align-self:center">圓圈:</span>
-              <button class="size-btn" data-size-mode="amount_diff">資金差值</button>
-              <button class="size-btn active" data-size-mode="sqrt_amount">金額(平方根)</button>
-              <button class="size-btn" data-size-mode="amount">成交金額</button>
-              <button class="size-btn" data-size-mode="volume">成交張數</button>
-            </div>
             <!-- Interval buttons for Tech Chart -->
             <div id="tech-interval-selector" class="interval-group hidden">
               <button class="interval-btn" data-interval="5">5分</button>
@@ -166,6 +145,31 @@
 
       <!-- RIGHT: Sidebar Panels -->
       <div class="tv-sidebar panel-glass">
+        <!-- Control Selectors Panel (Placed above Sidebar Tabs) -->
+        <div class="sidebar-control-panel">
+          <!-- Period buttons -->
+          <div id="bubble-period-selector" class="period-selector">
+            <button class="period-btn active" data-days="1">1日</button>
+            <button class="period-btn" data-days="3">3日</button>
+            <button class="period-btn" data-days="5">5日</button>
+            <button class="period-btn" data-days="10">10日</button>
+            <button class="period-btn" data-days="20">20日</button>
+          </div>
+          <!-- Flow Metric Mode (Diff vs Absolute) Selector -->
+          <div id="flow-metric-selector" class="period-selector">
+            <button class="size-btn active" data-flow-mode="diff" title="顯示近期資金變化增減差值">⚡ 資金差值</button>
+            <button class="size-btn" data-flow-mode="abs" title="顯示累積成交金額">💰 累積金額</button>
+          </div>
+          <!-- Bubble Size Mode Selector -->
+          <div id="bubble-size-selector" class="period-selector">
+            <span style="font-size:0.8rem;color:#cbd5e1;margin-right:4px;align-self:center;flex-shrink:0">圓圈:</span>
+            <button class="size-btn" data-size-mode="amount_diff">資金差值</button>
+            <button class="size-btn active" data-size-mode="sqrt_amount">金額(平方根)</button>
+            <button class="size-btn" data-size-mode="amount">成交金額</button>
+            <button class="size-btn" data-size-mode="volume">成交張數</button>
+          </div>
+        </div>
+
         <!-- Sidebar Tabs -->
         <div class="sidebar-tabs">
           <button class="sidebar-tab active" data-target="view-ranking">產業</button>
