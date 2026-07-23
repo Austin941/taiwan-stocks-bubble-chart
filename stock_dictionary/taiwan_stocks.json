@@ -4,7 +4,7 @@
     "name": "台泥",
     "sector": "水泥工業",
     "market": "上市",
-    "group": "和信集團",
+    "group": "獨立/未歸類",
     "listed_date": "1962/02/09",
     "isin": "TW0001101004",
     "themes": [
@@ -23,7 +23,7 @@
     "name": "亞泥",
     "sector": "水泥工業",
     "market": "上市",
-    "group": "亞東/遠東集團",
+    "group": "遠東集團",
     "listed_date": "1962/06/08",
     "isin": "TW0001102002",
     "themes": [
@@ -63,7 +63,7 @@
     "name": "環泥",
     "sector": "水泥工業",
     "market": "上市",
-    "group": "台南幫集團",
+    "group": "獨立/未歸類",
     "listed_date": "1971/02/01",
     "isin": "TW0001104008",
     "themes": [
@@ -221,7 +221,7 @@
     "name": "統一",
     "sector": "食品工業",
     "market": "上市",
-    "group": "台南幫集團",
+    "group": "統一集團",
     "listed_date": "1987/12/28",
     "isin": "TW0001216000",
     "themes": [
@@ -241,7 +241,7 @@
     "name": "愛之味",
     "sector": "食品工業",
     "market": "上市",
-    "group": "耐斯集團",
+    "group": "獨立/未歸類",
     "listed_date": "1989/10/28",
     "isin": "TW0001217008",
     "themes": [
@@ -260,7 +260,7 @@
     "name": "泰山",
     "sector": "食品工業",
     "market": "上市",
-    "group": "泰山集團",
+    "group": "獨立/未歸類",
     "listed_date": "1989/11/11",
     "isin": "TW0001218006",
     "themes": [
@@ -359,7 +359,7 @@
     "name": "聯華",
     "sector": "食品工業",
     "market": "上市",
-    "group": "神達集團",
+    "group": "神達/聯華神通集團",
     "listed_date": "1976/07/19",
     "isin": "TW0001229003",
     "themes": [
@@ -395,7 +395,7 @@
     "name": "大統益",
     "sector": "食品工業",
     "market": "上市",
-    "group": "統一集團",
+    "group": "獨立/未歸類",
     "listed_date": "1996/02/09",
     "isin": "TW0001232007",
     "themes": [
@@ -432,7 +432,7 @@
     "name": "黑松",
     "sector": "食品工業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "統一集團",
     "listed_date": "1999/03/12",
     "isin": "TW0001234003",
     "themes": [
@@ -563,7 +563,7 @@
     "name": "台聚",
     "sector": "塑膠工業",
     "market": "上市",
-    "group": "台聚集團",
+    "group": "獨立/未歸類",
     "listed_date": "1972/05/20",
     "isin": "TW0001304004",
     "themes": [
@@ -581,7 +581,7 @@
     "name": "華夏",
     "sector": "塑膠工業",
     "market": "上市",
-    "group": "台聚集團",
+    "group": "獨立/未歸類",
     "listed_date": "1973/03/05",
     "isin": "TW0001305001",
     "themes": [
@@ -617,7 +617,7 @@
     "name": "亞聚",
     "sector": "塑膠工業",
     "market": "上市",
-    "group": "台聚集團",
+    "group": "獨立/未歸類",
     "listed_date": "1986/06/20",
     "isin": "TW0001308005",
     "themes": [
@@ -633,7 +633,7 @@
     "name": "台達化",
     "sector": "塑膠工業",
     "market": "上市",
-    "group": "台聚集團",
+    "group": "獨立/未歸類",
     "listed_date": "1986/06/27",
     "isin": "TW0001309003",
     "themes": [
@@ -666,7 +666,7 @@
     "name": "國喬",
     "sector": "塑膠工業",
     "market": "上市",
-    "group": "金仁寶集團",
+    "group": "獨立/未歸類",
     "listed_date": "1988/12/21",
     "isin": "TW0001312007",
     "themes": [
@@ -682,7 +682,7 @@
     "name": "聯成",
     "sector": "塑膠工業",
     "market": "上市",
-    "group": "神達集團",
+    "group": "獨立/未歸類",
     "listed_date": "1989/03/27",
     "isin": "TW0001313005",
     "themes": [
@@ -699,7 +699,7 @@
     "name": "中石化",
     "sector": "塑膠工業",
     "market": "上市",
-    "group": "威京集團",
+    "group": "獨立/未歸類",
     "listed_date": "1991/07/12",
     "isin": "TW0001314003",
     "themes": [
@@ -761,7 +761,7 @@
     "name": "東陽",
     "sector": "汽車工業",
     "market": "上市",
-    "group": "東陽集團",
+    "group": "獨立/未歸類",
     "listed_date": "1994/12/12",
     "isin": "TW0001319002",
     "themes": [
@@ -979,7 +979,7 @@
     "name": "遠東新",
     "sector": "紡織纖維",
     "market": "上市",
-    "group": "亞東/遠東集團",
+    "group": "遠東集團",
     "listed_date": "1967/04/14",
     "isin": "TW0001402006",
     "themes": [
@@ -1010,7 +1010,7 @@
     "name": "新纖",
     "sector": "紡織纖維",
     "market": "上市",
-    "group": "新光集團",
+    "group": "獨立/未歸類",
     "listed_date": "1973/08/31",
     "isin": "TW0001409001",
     "themes": [
@@ -1099,7 +1099,7 @@
     "name": "嘉裕",
     "sector": "紡織纖維",
     "market": "上市",
-    "group": "裕隆集團",
+    "group": "獨立/未歸類",
     "listed_date": "1976/12/28",
     "isin": "TW0001417004",
     "themes": [
@@ -1132,7 +1132,7 @@
     "name": "新紡",
     "sector": "紡織纖維",
     "market": "上市",
-    "group": "新光集團",
+    "group": "獨立/未歸類",
     "listed_date": "1977/03/14",
     "isin": "TW0001419000",
     "themes": [
@@ -1291,7 +1291,7 @@
     "name": "南紡",
     "sector": "紡織纖維",
     "market": "上市",
-    "group": "台南幫集團",
+    "group": "獨立/未歸類",
     "listed_date": "1989/10/03",
     "isin": "TW0001440006",
     "themes": [
@@ -1365,7 +1365,7 @@
     "name": "力麗",
     "sector": "紡織纖維",
     "market": "上市",
-    "group": "力麗集團",
+    "group": "獨立/未歸類",
     "listed_date": "1990/08/08",
     "isin": "TW0001444008",
     "themes": [
@@ -1417,7 +1417,7 @@
     "name": "力鵬",
     "sector": "紡織纖維",
     "market": "上市",
-    "group": "力麗集團",
+    "group": "獨立/未歸類",
     "listed_date": "1992/01/28",
     "isin": "TW0001447001",
     "themes": [
@@ -1587,7 +1587,7 @@
     "name": "宏遠",
     "sector": "紡織纖維",
     "market": "上市",
-    "group": "亞東/遠東集團",
+    "group": "獨立/未歸類",
     "listed_date": "1995/04/28",
     "isin": "TW0001460004",
     "themes": [
@@ -1833,7 +1833,7 @@
     "name": "士電",
     "sector": "電機機械",
     "market": "上市",
-    "group": "仰德集團",
+    "group": "獨立/未歸類",
     "listed_date": "1969/12/15",
     "isin": "TW0001503001",
     "themes": [
@@ -1970,7 +1970,7 @@
     "name": "亞力",
     "sector": "電機機械",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "東元集團",
     "listed_date": "1994/03/26",
     "isin": "TW0001514008",
     "themes": [
@@ -1995,7 +1995,7 @@
     "name": "力山",
     "sector": "電機機械",
     "market": "上市",
-    "group": "力山集團",
+    "group": "獨立/未歸類",
     "listed_date": "1995/02/04",
     "isin": "TW0001515005",
     "themes": [
@@ -2074,7 +2074,7 @@
     "name": "大億",
     "sector": "汽車工業",
     "market": "上市",
-    "group": "大億交通集團",
+    "group": "獨立/未歸類",
     "listed_date": "1997/10/06",
     "isin": "TW0001521003",
     "themes": [
@@ -2091,7 +2091,7 @@
     "name": "堤維西",
     "sector": "汽車工業",
     "market": "上市",
-    "group": "大億交通集團",
+    "group": "獨立/未歸類",
     "listed_date": "1997/10/06",
     "isin": "TW0001522001",
     "themes": [
@@ -2125,7 +2125,7 @@
     "name": "江申",
     "sector": "汽車工業",
     "market": "上市",
-    "group": "裕隆集團",
+    "group": "獨立/未歸類",
     "listed_date": "1999/05/15",
     "isin": "TW0001525004",
     "themes": [
@@ -2311,7 +2311,7 @@
     "name": "中宇",
     "sector": "電機機械",
     "market": "上市",
-    "group": "中鋼集團",
+    "group": "獨立/未歸類",
     "listed_date": "2001/09/17",
     "isin": "TW0001535003",
     "themes": [
@@ -2690,7 +2690,7 @@
     "name": "華新",
     "sector": "電器電纜",
     "market": "上市",
-    "group": "華新集團",
+    "group": "華新麗華集團",
     "listed_date": "1972/11/03",
     "isin": "TW0001605004",
     "themes": [
@@ -2707,7 +2707,7 @@
     "name": "華榮",
     "sector": "電器電纜",
     "market": "上市",
-    "group": "華榮集團",
+    "group": "獨立/未歸類",
     "listed_date": "1988/07/11",
     "isin": "TW0001608008",
     "themes": [
@@ -2972,7 +2972,7 @@
     "name": "東聯",
     "sector": "化學工業",
     "market": "上市",
-    "group": "亞東/遠東集團",
+    "group": "遠東集團",
     "listed_date": "1987/10/21",
     "isin": "TW0001710002",
     "themes": [
@@ -3080,7 +3080,7 @@
     "name": "中纖",
     "sector": "化學工業",
     "market": "上市",
-    "group": "中纖集團",
+    "group": "獨立/未歸類",
     "listed_date": "1963/12/02",
     "isin": "TW0001718005",
     "themes": [
@@ -3157,7 +3157,7 @@
     "name": "中碳",
     "sector": "化學工業",
     "market": "上市",
-    "group": "中鋼集團",
+    "group": "獨立/未歸類",
     "listed_date": "1998/11/27",
     "isin": "TW0001723005",
     "themes": [
@@ -3242,7 +3242,7 @@
     "name": "美吾華",
     "sector": "生技醫療業",
     "market": "上市",
-    "group": "美吾華集團",
+    "group": "獨立/未歸類",
     "listed_date": "2001/09/17",
     "isin": "TW0001731008",
     "themes": [
@@ -3510,7 +3510,7 @@
     "name": "美時",
     "sector": "生技醫療業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "晟德生技艦隊",
     "listed_date": "2019/12/16",
     "isin": "TW0001795003",
     "themes": [
@@ -3650,7 +3650,7 @@
     "name": "士紙",
     "sector": "造紙工業",
     "market": "上市",
-    "group": "士林紙業集團",
+    "group": "獨立/未歸類",
     "listed_date": "1963/12/09",
     "isin": "TW0001903003",
     "themes": [
@@ -3671,7 +3671,7 @@
     "name": "正隆",
     "sector": "造紙工業",
     "market": "上市",
-    "group": "正隆集團",
+    "group": "獨立/未歸類",
     "listed_date": "1971/09/10",
     "isin": "TW0001904001",
     "themes": [
@@ -3689,7 +3689,7 @@
     "name": "華紙",
     "sector": "造紙工業",
     "market": "上市",
-    "group": "永豐餘集團",
+    "group": "獨立/未歸類",
     "listed_date": "1975/02/07",
     "isin": "TW0001905008",
     "themes": [
@@ -3723,7 +3723,7 @@
     "name": "永豐餘",
     "sector": "造紙工業",
     "market": "上市",
-    "group": "永豐餘集團",
+    "group": "獨立/未歸類",
     "listed_date": "1977/02/22",
     "isin": "TW0001907004",
     "themes": [
@@ -3761,7 +3761,7 @@
     "name": "中鋼",
     "sector": "鋼鐵工業",
     "market": "上市",
-    "group": "中鋼集團",
+    "group": "獨立/未歸類",
     "listed_date": "1974/12/26",
     "isin": "TW0002002003",
     "themes": [
@@ -3803,7 +3803,7 @@
     "name": "燁興",
     "sector": "鋼鐵工業",
     "market": "上市",
-    "group": "義聯集團",
+    "group": "獨立/未歸類",
     "listed_date": "1988/10/04",
     "isin": "TW0002007002",
     "themes": [
@@ -3836,7 +3836,7 @@
     "name": "第一銅",
     "sector": "鋼鐵工業",
     "market": "上市",
-    "group": "華榮集團",
+    "group": "獨立/未歸類",
     "listed_date": "1989/10/20",
     "isin": "TW0002009008",
     "themes": [
@@ -3886,7 +3886,7 @@
     "name": "中鋼構",
     "sector": "鋼鐵工業",
     "market": "上市",
-    "group": "中鋼集團",
+    "group": "獨立/未歸類",
     "listed_date": "1992/01/21",
     "isin": "TW0002013000",
     "themes": [
@@ -3903,7 +3903,7 @@
     "name": "中鴻",
     "sector": "鋼鐵工業",
     "market": "上市",
-    "group": "中鋼集團",
+    "group": "獨立/未歸類",
     "listed_date": "1992/02/20",
     "isin": "TW0002014008",
     "themes": [
@@ -3992,7 +3992,7 @@
     "name": "燁輝",
     "sector": "鋼鐵工業",
     "market": "上市",
-    "group": "義聯集團",
+    "group": "獨立/未歸類",
     "listed_date": "1995/07/28",
     "isin": "TW0002023009",
     "themes": [
@@ -4331,7 +4331,7 @@
     "name": "國際中橡",
     "sector": "橡膠工業",
     "market": "上市",
-    "group": "和信集團",
+    "group": "獨立/未歸類",
     "listed_date": "1986/07/15",
     "isin": "TW0002104007",
     "themes": [
@@ -4401,7 +4401,7 @@
     "name": "南帝",
     "sector": "橡膠工業",
     "market": "上市",
-    "group": "台南幫集團",
+    "group": "獨立/未歸類",
     "listed_date": "1992/10/27",
     "isin": "TW0002108008",
     "themes": [
@@ -4528,7 +4528,7 @@
     "name": "和泰車",
     "sector": "汽車工業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "和泰集團",
     "listed_date": "1997/02/25",
     "isin": "TW0002207008",
     "themes": [
@@ -4578,7 +4578,7 @@
     "name": "裕日車",
     "sector": "汽車工業",
     "market": "上市",
-    "group": "裕隆集團",
+    "group": "和泰集團",
     "listed_date": "2004/12/21",
     "isin": "TW0002227006",
     "themes": [
@@ -4615,7 +4615,7 @@
     "name": "為升",
     "sector": "汽車工業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "裕隆集團",
     "listed_date": "2010/11/19",
     "isin": "TW0002231008",
     "themes": [
@@ -4632,7 +4632,7 @@
     "name": "宇隆",
     "sector": "汽車工業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "和泰集團",
     "listed_date": "2019/09/17",
     "isin": "TW0002233004",
     "themes": [
@@ -4771,7 +4771,7 @@
     "name": "光寶科",
     "sector": "電腦及週邊設備業",
     "market": "上市",
-    "group": "光寶集團",
+    "group": "獨立/未歸類",
     "listed_date": "1995/11/17",
     "isin": "TW0002301009",
     "themes": [
@@ -4862,7 +4862,7 @@
     "name": "台達電",
     "sector": "電子零組件業",
     "market": "上市",
-    "group": "台達電集團",
+    "group": "獨立/未歸類",
     "listed_date": "1988/12/19",
     "isin": "TW0002308004",
     "themes": [
@@ -4914,7 +4914,7 @@
     "name": "金寶",
     "sector": "其他電子業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "金仁寶集團",
     "listed_date": "1989/11/07",
     "isin": "TW0002312006",
     "themes": [
@@ -4945,7 +4945,7 @@
     "name": "華通",
     "sector": "電子零組件業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "神達/聯華神通集團",
     "listed_date": "1990/07/24",
     "isin": "TW0002313004",
     "themes": [
@@ -5057,7 +5057,7 @@
     "name": "東訊",
     "sector": "通信網路業",
     "market": "上市",
-    "group": "東元集團",
+    "group": "獨立/未歸類",
     "listed_date": "1991/11/08",
     "isin": "TW0002321007",
     "themes": [
@@ -5126,7 +5126,7 @@
     "name": "國巨*",
     "sector": "電子零組件業",
     "market": "上市",
-    "group": "國巨集團",
+    "group": "獨立/未歸類",
     "listed_date": "1993/10/22",
     "isin": "TW0002327004",
     "themes": [
@@ -5183,7 +5183,7 @@
     "name": "台積電",
     "sector": "半導體業",
     "market": "上市",
-    "group": "台積電集團",
+    "group": "台積電供應鏈/生態圈",
     "listed_date": "1994/09/05",
     "isin": "TW0002330008",
     "themes": [
@@ -5225,7 +5225,7 @@
     "name": "友訊",
     "sector": "通信網路業",
     "market": "上市",
-    "group": "友訊集團",
+    "group": "獨立/未歸類",
     "listed_date": "1994/10/17",
     "isin": "TW0002332004",
     "themes": [
@@ -5266,7 +5266,7 @@
     "name": "光罩",
     "sector": "半導體業",
     "market": "上市",
-    "group": "裕隆集團",
+    "group": "獨立/未歸類",
     "listed_date": "1995/04/17",
     "isin": "TW0002338001",
     "themes": [
@@ -5303,7 +5303,7 @@
     "name": "茂矽",
     "sector": "半導體業",
     "market": "上市",
-    "group": "茂矽集團",
+    "group": "獨立/未歸類",
     "listed_date": "1995/09/19",
     "isin": "TW0002342003",
     "themes": [
@@ -5321,7 +5321,7 @@
     "name": "華邦電",
     "sector": "半導體業",
     "market": "上市",
-    "group": "華新集團",
+    "group": "華新麗華集團",
     "listed_date": "1995/10/18",
     "isin": "TW0002344009",
     "themes": [
@@ -5361,7 +5361,7 @@
     "name": "聯強",
     "sector": "電子通路業",
     "market": "上市",
-    "group": "神達集團",
+    "group": "神達/聯華神通集團",
     "listed_date": "1995/12/13",
     "isin": "TW0002347002",
     "themes": [
@@ -5379,7 +5379,7 @@
     "name": "海悅",
     "sector": "其他業",
     "market": "上市",
-    "group": "力晶集團",
+    "group": "獨立/未歸類",
     "listed_date": "1996/01/05",
     "isin": "TW0002348000",
     "themes": [
@@ -5395,7 +5395,7 @@
     "name": "錸德",
     "sector": "光電業",
     "market": "上市",
-    "group": "錸德集團",
+    "group": "獨立/未歸類",
     "listed_date": "1996/04/23",
     "isin": "TW0002349008",
     "themes": [
@@ -5431,7 +5431,7 @@
     "name": "佳世達",
     "sector": "電腦及週邊設備業",
     "market": "上市",
-    "group": "明基集團",
+    "group": "明基佳世達集團",
     "listed_date": "1996/07/22",
     "isin": "TW0002352002",
     "themes": [
@@ -5549,7 +5549,7 @@
     "name": "華碩",
     "sector": "電腦及週邊設備業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "華碩/和碩集團",
     "listed_date": "1996/11/14",
     "isin": "TW0002357001",
     "themes": [
@@ -5643,7 +5643,7 @@
     "name": "矽統",
     "sector": "半導體業",
     "market": "上市",
-    "group": "聯電集團",
+    "group": "獨立/未歸類",
     "listed_date": "1997/08/01",
     "isin": "TW0002363009",
     "themes": [
@@ -5695,7 +5695,7 @@
     "name": "燿華",
     "sector": "電子零組件業",
     "market": "上市",
-    "group": "金錸集團",
+    "group": "獨立/未歸類",
     "listed_date": "1997/12/13",
     "isin": "TW0002367000",
     "themes": [
@@ -5748,7 +5748,7 @@
     "name": "大同",
     "sector": "電機機械",
     "market": "上市",
-    "group": "大同集團",
+    "group": "金仁寶集團",
     "listed_date": "1962/02/09",
     "isin": "TW0002371002",
     "themes": [
@@ -5822,7 +5822,7 @@
     "name": "凱美",
     "sector": "電子零組件業",
     "market": "上市",
-    "group": "國巨集團",
+    "group": "獨立/未歸類",
     "listed_date": "1998/08/29",
     "isin": "TW0002375003",
     "themes": [
@@ -5959,7 +5959,7 @@
     "name": "台光電",
     "sector": "電子零組件業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "金仁寶集團",
     "listed_date": "1998/11/27",
     "isin": "TW0002383007",
     "themes": [
@@ -6011,7 +6011,7 @@
     "name": "威盛",
     "sector": "半導體業",
     "market": "上市",
-    "group": "威盛集團",
+    "group": "獨立/未歸類",
     "listed_date": "1999/03/05",
     "isin": "TW0002388006",
     "themes": [
@@ -6051,7 +6051,7 @@
     "name": "正崴",
     "sector": "電子零組件業",
     "market": "上市",
-    "group": "鴻海集團",
+    "group": "獨立/未歸類",
     "listed_date": "1999/09/20",
     "isin": "TW0002392008",
     "themes": [
@@ -6075,7 +6075,7 @@
     "name": "億光",
     "sector": "光電業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "華碩/和碩集團",
     "listed_date": "1999/11/04",
     "isin": "TW0002393006",
     "themes": [
@@ -6212,7 +6212,7 @@
     "name": "國碩",
     "sector": "光電業",
     "market": "上市",
-    "group": "錸德集團",
+    "group": "獨立/未歸類",
     "listed_date": "2000/04/29",
     "isin": "TW0002406006",
     "themes": [
@@ -6247,7 +6247,7 @@
     "name": "友達",
     "sector": "光電業",
     "market": "上市",
-    "group": "明基集團",
+    "group": "明基佳世達集團",
     "listed_date": "2000/09/08",
     "isin": "TW0002409000",
     "themes": [
@@ -6499,7 +6499,7 @@
     "name": "三商電",
     "sector": "資訊服務業",
     "market": "上市",
-    "group": "三商行集團",
+    "group": "獨立/未歸類",
     "listed_date": "2000/09/11",
     "isin": "TW0002427002",
     "themes": [
@@ -6566,7 +6566,7 @@
     "name": "聯昌",
     "sector": "電子零組件業",
     "market": "上市",
-    "group": "東元集團",
+    "group": "獨立/未歸類",
     "listed_date": "2000/09/11",
     "isin": "TW0002431004",
     "themes": [
@@ -6598,7 +6598,7 @@
     "name": "統懋",
     "sector": "半導體業",
     "market": "上市",
-    "group": "統一集團",
+    "group": "獨立/未歸類",
     "listed_date": "2000/09/11",
     "isin": "TW0002434008",
     "themes": [
@@ -6711,7 +6711,7 @@
     "name": "新美齊",
     "sector": "建材營造業",
     "market": "上市",
-    "group": "大同集團",
+    "group": "獨立/未歸類",
     "listed_date": "2000/11/22",
     "isin": "TW0002442001",
     "themes": [
@@ -6727,7 +6727,7 @@
     "name": "兆勁",
     "sector": "通信網路業",
     "market": "上市",
-    "group": "友訊集團",
+    "group": "獨立/未歸類",
     "listed_date": "2000/12/08",
     "isin": "TW0002444007",
     "themes": [
@@ -7059,7 +7059,7 @@
     "name": "資通",
     "sector": "資訊服務業",
     "market": "上市",
-    "group": "聯華神通集團",
+    "group": "獨立/未歸類",
     "listed_date": "2001/09/17",
     "isin": "TW0002471000",
     "themes": [
@@ -7342,7 +7342,7 @@
     "name": "華新科",
     "sector": "電子零組件業",
     "market": "上市",
-    "group": "華新集團",
+    "group": "華新麗華集團",
     "listed_date": "2001/09/17",
     "isin": "TW0002492006",
     "themes": [
@@ -7427,7 +7427,7 @@
     "name": "宏達電",
     "sector": "通信網路業",
     "market": "上市",
-    "group": "威盛集團",
+    "group": "獨立/未歸類",
     "listed_date": "2002/03/26",
     "isin": "TW0002498003",
     "themes": [
@@ -7450,7 +7450,7 @@
     "name": "國建",
     "sector": "建材營造業",
     "market": "上市",
-    "group": "霖園/國泰集團",
+    "group": "國泰金控集團",
     "listed_date": "1967/10/28",
     "isin": "TW0002501004",
     "themes": [
@@ -7466,7 +7466,7 @@
     "name": "國產",
     "sector": "建材營造業",
     "market": "上市",
-    "group": "國產集團",
+    "group": "獨立/未歸類",
     "listed_date": "1978/03/14",
     "isin": "TW0002504008",
     "themes": [
@@ -7515,7 +7515,7 @@
     "name": "太子",
     "sector": "建材營造業",
     "market": "上市",
-    "group": "台南幫集團",
+    "group": "獨立/未歸類",
     "listed_date": "1991/04/24",
     "isin": "TW0002511003",
     "themes": [
@@ -7533,7 +7533,7 @@
     "name": "龍邦",
     "sector": "其他業",
     "market": "上市",
-    "group": "龍邦集團",
+    "group": "中信金控集團",
     "listed_date": "1992/09/26",
     "isin": "TW0002514007",
     "themes": [
@@ -7550,7 +7550,7 @@
     "name": "中工",
     "sector": "建材營造業",
     "market": "上市",
-    "group": "威京集團",
+    "group": "獨立/未歸類",
     "listed_date": "1993/03/02",
     "isin": "TW0002515004",
     "themes": [
@@ -7621,7 +7621,7 @@
     "name": "宏璟",
     "sector": "建材營造業",
     "market": "上市",
-    "group": "日月光集團",
+    "group": "獨立/未歸類",
     "listed_date": "1995/03/06",
     "isin": "TW0002527009",
     "themes": [
@@ -7669,7 +7669,7 @@
     "name": "宏盛",
     "sector": "建材營造業",
     "market": "上市",
-    "group": "宏泰集團",
+    "group": "獨立/未歸類",
     "listed_date": "1996/02/12",
     "isin": "TW0002534005",
     "themes": [
@@ -7719,7 +7719,7 @@
     "name": "聯上發",
     "sector": "建材營造業",
     "market": "上市",
-    "group": "威京集團",
+    "group": "獨立/未歸類",
     "listed_date": "1996/09/06",
     "isin": "TW0002537008",
     "themes": [
@@ -7937,7 +7937,7 @@
     "name": "新興",
     "sector": "航運業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "陽明/海運集團",
     "listed_date": "1989/12/08",
     "isin": "TW0002605003",
     "themes": [
@@ -7954,7 +7954,7 @@
     "name": "裕民",
     "sector": "航運業",
     "market": "上市",
-    "group": "亞東/遠東集團",
+    "group": "遠東集團",
     "listed_date": "1990/12/08",
     "isin": "TW0002606001",
     "themes": [
@@ -8014,7 +8014,7 @@
     "name": "陽明",
     "sector": "航運業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "陽明/海運集團",
     "listed_date": "1992/04/20",
     "isin": "TW0002609005",
     "themes": [
@@ -8030,7 +8030,7 @@
     "name": "華航",
     "sector": "航運業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "中信金控集團",
     "listed_date": "1993/02/26",
     "isin": "TW0002610003",
     "themes": [
@@ -8069,7 +8069,7 @@
     "name": "中航",
     "sector": "航運業",
     "market": "上市",
-    "group": "偉聯集團",
+    "group": "獨立/未歸類",
     "listed_date": "1994/10/20",
     "isin": "TW0002612009",
     "themes": [
@@ -8124,7 +8124,7 @@
     "name": "萬海",
     "sector": "航運業",
     "market": "上市",
-    "group": "士林紙業集團",
+    "group": "陽明/海運集團",
     "listed_date": "1996/05/16",
     "isin": "TW0002615002",
     "themes": [
@@ -8140,7 +8140,7 @@
     "name": "山隆",
     "sector": "油電燃氣業",
     "market": "上市",
-    "group": "正隆集團",
+    "group": "獨立/未歸類",
     "listed_date": "1997/11/08",
     "isin": "TW0002616000",
     "themes": [
@@ -8158,7 +8158,7 @@
     "name": "台航",
     "sector": "航運業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "陽明/海運集團",
     "listed_date": "1998/06/24",
     "isin": "TW0002617008",
     "themes": [
@@ -8225,7 +8225,7 @@
     "name": "漢翔",
     "sector": "航運業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "長榮集團",
     "listed_date": "2014/08/25",
     "isin": "TW0002634003",
     "themes": [
@@ -8332,7 +8332,7 @@
     "name": "萬企",
     "sector": "觀光餐旅",
     "market": "上市",
-    "group": "萬華集團",
+    "group": "獨立/未歸類",
     "listed_date": "1965/03/22",
     "isin": "TW0002701000",
     "themes": [
@@ -8366,7 +8366,7 @@
     "name": "國賓",
     "sector": "觀光餐旅",
     "market": "上市",
-    "group": "仰德集團",
+    "group": "獨立/未歸類",
     "listed_date": "1982/11/10",
     "isin": "TW0002704004",
     "themes": [
@@ -8402,7 +8402,7 @@
     "name": "第一店",
     "sector": "觀光餐旅",
     "market": "上市",
-    "group": "萬華集團",
+    "group": "獨立/未歸類",
     "listed_date": "1991/06/25",
     "isin": "TW0002706009",
     "themes": [
@@ -8585,7 +8585,7 @@
     "name": "彰銀",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "兆豐/公股金控集團",
     "listed_date": "1962/02/15",
     "isin": "TW0002801008",
     "themes": [
@@ -8601,7 +8601,7 @@
     "name": "台中銀",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "中纖集團",
+    "group": "獨立/未歸類",
     "listed_date": "1984/05/15",
     "isin": "TW0002812005",
     "themes": [
@@ -8617,7 +8617,7 @@
     "name": "旺旺保",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "富邦金控集團",
     "listed_date": "1992/05/05",
     "isin": "TW0002816006",
     "themes": [
@@ -8666,7 +8666,7 @@
     "name": "臺企銀",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "兆豐/公股金控集團",
     "listed_date": "1998/01/03",
     "isin": "TW0002834009",
     "themes": [
@@ -8714,7 +8714,7 @@
     "name": "遠東銀",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "亞東/遠東集團",
+    "group": "遠東集團",
     "listed_date": "1998/11/27",
     "isin": "TW0002845005",
     "themes": [
@@ -8730,7 +8730,7 @@
     "name": "安泰銀",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "宏泰集團",
+    "group": "獨立/未歸類",
     "listed_date": "1999/09/27",
     "isin": "TW0002849007",
     "themes": [
@@ -8746,7 +8746,7 @@
     "name": "新產",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "新光集團",
+    "group": "獨立/未歸類",
     "listed_date": "2000/05/22",
     "isin": "TW0002850005",
     "themes": [
@@ -8762,7 +8762,7 @@
     "name": "中再保",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "長榮集團",
+    "group": "獨立/未歸類",
     "listed_date": "2000/07/06",
     "isin": "TW0002851003",
     "themes": [
@@ -8797,7 +8797,7 @@
     "name": "統一證",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "台南幫集團",
+    "group": "獨立/未歸類",
     "listed_date": "2002/09/16",
     "isin": "TW0002855004",
     "themes": [
@@ -8829,7 +8829,7 @@
     "name": "華南金",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "兆豐/公股金控集團",
     "listed_date": "2001/12/19",
     "isin": "TW0002880002",
     "themes": [
@@ -8851,7 +8851,7 @@
     "name": "富邦金",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "富邦集團",
+    "group": "富邦金控集團",
     "listed_date": "2001/12/19",
     "isin": "TW0002881000",
     "themes": [
@@ -8876,7 +8876,7 @@
     "name": "國泰金",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "霖園/國泰集團",
+    "group": "國泰金控集團",
     "listed_date": "2001/12/31",
     "isin": "TW0002882008",
     "themes": [
@@ -8901,7 +8901,7 @@
     "name": "凱基金",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "潤泰集團",
+    "group": "凱基金集團",
     "listed_date": "2001/12/28",
     "isin": "TW0002883006",
     "themes": [
@@ -8969,7 +8969,7 @@
     "name": "兆豐金",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "兆豐/公股金控集團",
     "listed_date": "2002/02/04",
     "isin": "TW0002886009",
     "themes": [
@@ -8993,7 +8993,7 @@
     "name": "台新新光金",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "新光集團",
+    "group": "台新新光金集團",
     "listed_date": "2002/02/18",
     "isin": "TW0002887007",
     "themes": [
@@ -9017,7 +9017,7 @@
     "name": "國票金",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "耐斯集團",
+    "group": "獨立/未歸類",
     "listed_date": "2002/03/26",
     "isin": "TW0002889003",
     "themes": [
@@ -9036,7 +9036,7 @@
     "name": "永豐金",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "永豐餘集團",
+    "group": "獨立/未歸類",
     "listed_date": "2002/05/09",
     "isin": "TW0002890001",
     "themes": [
@@ -9058,7 +9058,7 @@
     "name": "中信金",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "中信銀/中信集團",
+    "group": "中信金控集團",
     "listed_date": "2002/05/17",
     "isin": "TW0002891009",
     "themes": [
@@ -9085,7 +9085,7 @@
     "name": "第一金",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "兆豐/公股金控集團",
     "listed_date": "2003/01/02",
     "isin": "TW0002892007",
     "themes": [
@@ -9143,7 +9143,7 @@
     "name": "遠百",
     "sector": "貿易百貨業",
     "market": "上市",
-    "group": "亞東/遠東集團",
+    "group": "遠東集團",
     "listed_date": "1978/10/11",
     "isin": "TW0002903002",
     "themes": [
@@ -9178,7 +9178,7 @@
     "name": "三商",
     "sector": "貿易百貨業",
     "market": "上市",
-    "group": "三商行集團",
+    "group": "獨立/未歸類",
     "listed_date": "1988/09/19",
     "isin": "TW0002905007",
     "themes": [
@@ -9268,7 +9268,7 @@
     "name": "統一超",
     "sector": "貿易百貨業",
     "market": "上市",
-    "group": "台南幫集團",
+    "group": "統一集團",
     "listed_date": "1997/08/22",
     "isin": "TW0002912003",
     "themes": [
@@ -9305,7 +9305,7 @@
     "name": "潤泰全",
     "sector": "貿易百貨業",
     "market": "上市",
-    "group": "潤泰集團",
+    "group": "凱基金集團",
     "listed_date": "1977/07/20",
     "isin": "TW0002915006",
     "themes": [
@@ -9445,7 +9445,7 @@
     "name": "神基",
     "sector": "電腦及週邊設備業",
     "market": "上市",
-    "group": "神達集團",
+    "group": "神達/聯華神通集團",
     "listed_date": "2002/02/25",
     "isin": "TW0003005005",
     "themes": [
@@ -9586,7 +9586,7 @@
     "name": "嘉晶",
     "sector": "半導體業",
     "market": "上市",
-    "group": "裕隆集團",
+    "group": "獨立/未歸類",
     "listed_date": "2002/12/24",
     "isin": "TW0003016002",
     "themes": [
@@ -9605,7 +9605,7 @@
     "name": "奇鋐",
     "sector": "電腦及週邊設備業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "緯創集團",
     "listed_date": "2002/09/27",
     "isin": "TW0003017000",
     "themes": [
@@ -9844,7 +9844,7 @@
     "name": "德律",
     "sector": "其他電子業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "廣達集團",
     "listed_date": "2002/10/29",
     "isin": "TW0003030003",
     "themes": [
@@ -10027,7 +10027,7 @@
     "name": "揚智",
     "sector": "半導體業",
     "market": "上市",
-    "group": "宏碁集團",
+    "group": "獨立/未歸類",
     "listed_date": "2002/08/26",
     "isin": "TW0003041000",
     "themes": [
@@ -10093,7 +10093,7 @@
     "name": "台灣大",
     "sector": "通信網路業",
     "market": "上市",
-    "group": "富邦集團",
+    "group": "富邦金控集團",
     "listed_date": "2002/08/26",
     "isin": "TW0003045001",
     "themes": [
@@ -10119,7 +10119,7 @@
     "name": "建��",
     "sector": "電腦及週邊設備業",
     "market": "上市",
-    "group": "宏碁集團",
+    "group": "獨立/未歸類",
     "listed_date": "2002/08/26",
     "isin": "TW0003046009",
     "themes": [
@@ -10183,7 +10183,7 @@
     "name": "鈺德",
     "sector": "光電業",
     "market": "上市",
-    "group": "錸德集團",
+    "group": "獨立/未歸類",
     "listed_date": "2002/10/29",
     "isin": "TW0003050001",
     "themes": [
@@ -10203,7 +10203,7 @@
     "name": "力特",
     "sector": "光電業",
     "market": "上市",
-    "group": "力晶集團",
+    "group": "獨立/未歸類",
     "listed_date": "2002/10/28",
     "isin": "TW0003051009",
     "themes": [
@@ -10320,7 +10320,7 @@
     "name": "華晶科",
     "sector": "光電業",
     "market": "上市",
-    "group": "裕隆集團",
+    "group": "獨立/未歸類",
     "listed_date": "2002/12/24",
     "isin": "TW0003059002",
     "themes": [
@@ -10360,7 +10360,7 @@
     "name": "建漢",
     "sector": "通信網路業",
     "market": "上市",
-    "group": "鴻海集團",
+    "group": "獨立/未歸類",
     "listed_date": "2003/07/28",
     "isin": "TW0003062006",
     "themes": [
@@ -10486,7 +10486,7 @@
     "name": "正達",
     "sector": "光電業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "鴻海集團",
     "listed_date": "2011/11/23",
     "isin": "TW0003149001",
     "themes": [
@@ -10618,7 +10618,7 @@
     "name": "緯創",
     "sector": "電腦及週邊設備業",
     "market": "上市",
-    "group": "宏碁集團",
+    "group": "緯創集團",
     "listed_date": "2003/08/19",
     "isin": "TW0003231007",
     "themes": [
@@ -10838,7 +10838,7 @@
     "name": "明泰",
     "sector": "通信網路業",
     "market": "上市",
-    "group": "友訊集團",
+    "group": "獨立/未歸類",
     "listed_date": "2004/12/20",
     "isin": "TW0003380002",
     "themes": [
@@ -10958,7 +10958,7 @@
     "name": "創意",
     "sector": "半導體業",
     "market": "上市",
-    "group": "台積電集團",
+    "group": "台積電供應鏈/生態圈",
     "listed_date": "2006/11/03",
     "isin": "TW0003443008",
     "themes": [
@@ -11015,7 +11015,7 @@
     "name": "群創",
     "sector": "光電業",
     "market": "上市",
-    "group": "鴻海集團",
+    "group": "獨立/未歸類",
     "listed_date": "2006/10/24",
     "isin": "TW0003481008",
     "themes": [
@@ -11094,7 +11094,7 @@
     "name": "華擎",
     "sector": "電腦及週邊設備業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "華碩/和碩集團",
     "listed_date": "2007/11/08",
     "isin": "TW0003515003",
     "themes": [
@@ -11217,7 +11217,7 @@
     "name": "敦泰",
     "sector": "半導體業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "聯電集團",
     "listed_date": "2007/07/03",
     "isin": "TW0003545000",
     "themes": [
@@ -11301,7 +11301,7 @@
     "name": "辛耘",
     "sector": "半導體業",
     "market": "上市",
-    "group": "台積電集團",
+    "group": "台積電供應鏈/生態圈",
     "listed_date": "2013/03/12",
     "isin": "TW0003583001",
     "themes": [
@@ -11510,7 +11510,7 @@
     "name": "健策",
     "sector": "電子零組件業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "華新麗華集團",
     "listed_date": "2009/11/18",
     "isin": "TW0003653002",
     "themes": [
@@ -11528,7 +11528,7 @@
     "name": "世芯-KY",
     "sector": "半導體業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "聯發科集團",
     "listed_date": "2014/10/28",
     "isin": "KYG022421088",
     "themes": [
@@ -11548,7 +11548,7 @@
     "name": "貿聯-KY",
     "sector": "其他電子業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "鴻海集團",
     "listed_date": "2011/04/21",
     "isin": "KYG114741062",
     "themes": [
@@ -11658,7 +11658,7 @@
     "name": "大眾控",
     "sector": "電腦及週邊設備業",
     "market": "上市",
-    "group": "大眾集團",
+    "group": "獨立/未歸類",
     "listed_date": "2004/08/30",
     "isin": "TW0003701009",
     "themes": [
@@ -11765,7 +11765,7 @@
     "name": "神達",
     "sector": "電腦及週邊設備業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "神達/聯華神通集團",
     "listed_date": "2013/09/12",
     "isin": "TW0003706008",
     "themes": [
@@ -11809,7 +11809,7 @@
     "name": "日月光投控",
     "sector": "半導體業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "日月光集團",
     "listed_date": "2018/04/30",
     "isin": "TW0003711008",
     "themes": [
@@ -11959,7 +11959,7 @@
     "name": "懷特",
     "sector": "生技醫療業",
     "market": "上市",
-    "group": "美吾華集團",
+    "group": "獨立/未歸類",
     "listed_date": "2008/07/16",
     "isin": "TW0004108006",
     "themes": [
@@ -11980,7 +11980,7 @@
     "name": "旭富",
     "sector": "生技醫療業",
     "market": "上市",
-    "group": "三商行集團",
+    "group": "獨立/未歸類",
     "listed_date": "2004/01/07",
     "isin": "TW0004119003",
     "themes": [
@@ -12894,7 +12894,7 @@
     "name": "遠傳",
     "sector": "通信網路業",
     "market": "上市",
-    "group": "亞東/遠東集團",
+    "group": "遠東集團",
     "listed_date": "2005/08/24",
     "isin": "TW0004904008",
     "themes": [
@@ -12916,7 +12916,7 @@
     "name": "正文",
     "sector": "通信網路業",
     "market": "上市",
-    "group": "聯華神通集團",
+    "group": "獨立/未歸類",
     "listed_date": "2003/06/30",
     "isin": "TW0004906003",
     "themes": [
@@ -12951,7 +12951,7 @@
     "name": "致伸",
     "sector": "電子零組件業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "明基佳世達集團",
     "listed_date": "2012/10/05",
     "isin": "TW0004915004",
     "themes": [
@@ -12985,7 +12985,7 @@
     "name": "新唐",
     "sector": "半導體業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "華新麗華集團",
     "listed_date": "2010/09/27",
     "isin": "TW0004919006",
     "themes": [
@@ -13074,7 +13074,7 @@
     "name": "和碩",
     "sector": "電腦及週邊設備業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "華碩/和碩集團",
     "listed_date": "2010/06/24",
     "isin": "TW0004938006",
     "themes": [
@@ -13299,7 +13299,7 @@
     "name": "眾達-KY",
     "sector": "通信網路業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "明基佳世達集團",
     "listed_date": "2013/11/20",
     "isin": "KYG6956N1034",
     "themes": [
@@ -13469,7 +13469,7 @@
     "name": "乙盛-KY",
     "sector": "光電業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "鴻海集團",
     "listed_date": "2013/11/25",
     "isin": "KYG312361051",
     "themes": [
@@ -13642,7 +13642,7 @@
     "name": "中磊",
     "sector": "通信網路業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "廣達集團",
     "listed_date": "2007/12/03",
     "isin": "TW0005388003",
     "themes": [
@@ -13680,7 +13680,7 @@
     "name": "瀚宇博",
     "sector": "電子零組件業",
     "market": "上市",
-    "group": "華新集團",
+    "group": "華新麗華集團",
     "listed_date": "2003/08/25",
     "isin": "TW0005469001",
     "themes": [
@@ -13783,7 +13783,7 @@
     "name": "遠雄",
     "sector": "建材營造業",
     "market": "上市",
-    "group": "遠雄集團",
+    "group": "獨立/未歸類",
     "listed_date": "2007/08/06",
     "isin": "TW0005522007",
     "themes": [
@@ -13899,7 +13899,7 @@
     "name": "遠雄港",
     "sector": "航運業",
     "market": "上市",
-    "group": "遠雄集團",
+    "group": "獨立/未歸類",
     "listed_date": "2004/12/02",
     "isin": "TW0005607006",
     "themes": [
@@ -13985,7 +13985,7 @@
     "name": "合庫金",
     "sector": "金融保險業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "兆豐/公股金控集團",
     "listed_date": "2011/12/01",
     "isin": "TW0005880009",
     "themes": [
@@ -14121,7 +14121,7 @@
     "name": "彩晶",
     "sector": "光電業",
     "market": "上市",
-    "group": "華新集團",
+    "group": "華新麗華集團",
     "listed_date": "2004/09/06",
     "isin": "TW0006116007",
     "themes": [
@@ -14260,7 +14260,7 @@
     "name": "友勁",
     "sector": "通信網路業",
     "market": "上市",
-    "group": "友訊集團",
+    "group": "獨立/未歸類",
     "listed_date": "2003/08/04",
     "isin": "TW0006142003",
     "themes": [
@@ -14278,7 +14278,7 @@
     "name": "百一",
     "sector": "通信網路業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "明基佳世達集團",
     "listed_date": "2009/12/08",
     "isin": "TW0006152002",
     "themes": [
@@ -14472,7 +14472,7 @@
     "name": "精成科",
     "sector": "電子零組件業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "神達/聯華神通集團",
     "listed_date": "2007/10/19",
     "isin": "TW0006191000",
     "themes": [
@@ -14787,7 +14787,7 @@
     "name": "力成",
     "sector": "半導體業",
     "market": "上市",
-    "group": "力晶集團",
+    "group": "獨立/未歸類",
     "listed_date": "2004/11/08",
     "isin": "TW0006239007",
     "themes": [
@@ -14824,7 +14824,7 @@
     "name": "矽格",
     "sector": "半導體業",
     "market": "上市",
-    "group": "矽品集團",
+    "group": "日月光集團",
     "listed_date": "2003/08/25",
     "isin": "TW0006257009",
     "themes": [
@@ -14931,7 +14931,7 @@
     "name": "全國電",
     "sector": "電子通路業",
     "market": "上市",
-    "group": "宏碁集團",
+    "group": "獨立/未歸類",
     "listed_date": "2005/12/08",
     "isin": "TW0006281009",
     "themes": [
@@ -14984,7 +14984,7 @@
     "name": "啟��",
     "sector": "通信網路業",
     "market": "上市",
-    "group": "宏碁集團",
+    "group": "緯創集團",
     "listed_date": "2003/09/22",
     "isin": "TW0006285000",
     "themes": [
@@ -15192,7 +15192,7 @@
     "name": "藥華藥",
     "sector": "生技醫療業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "晟德生技艦隊",
     "listed_date": "2024/01/25",
     "isin": "TW0006446008",
     "themes": [
@@ -15362,7 +15362,7 @@
     "name": "穎崴",
     "sector": "半導體業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "台積電供應鏈/生態圈",
     "listed_date": "2021/01/20",
     "isin": "TW0006515000",
     "themes": [
@@ -15394,7 +15394,7 @@
     "name": "達發",
     "sector": "半導體業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "聯發科集團",
     "listed_date": "2023/10/19",
     "isin": "TW0006526007",
     "themes": [
@@ -15433,7 +15433,7 @@
     "name": "晶心科",
     "sector": "半導體業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "聯發科集團",
     "listed_date": "2017/03/14",
     "isin": "TW0006533003",
     "themes": [
@@ -15563,7 +15563,7 @@
     "name": "申豐",
     "sector": "橡膠工業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "台塑集團",
     "listed_date": "2017/06/14",
     "isin": "TW0006582000",
     "themes": [
@@ -15835,7 +15835,7 @@
     "name": "緯穎",
     "sector": "電腦及週邊設備業",
     "market": "上市",
-    "group": "鴻海集團",
+    "group": "緯創集團",
     "listed_date": "2019/03/27",
     "isin": "TW0006669005",
     "themes": [
@@ -15956,7 +15956,7 @@
     "name": "芯鼎",
     "sector": "半導體業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "聯發科集團",
     "listed_date": "2022/11/04",
     "isin": "TW0006695000",
     "themes": [
@@ -16122,7 +16122,7 @@
     "name": "威鋒電子",
     "sector": "半導體業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "華碩/和碩集團",
     "listed_date": "2020/12/24",
     "isin": "TW0006756000",
     "themes": [
@@ -16190,7 +16190,7 @@
     "name": "展�眥篕�",
     "sector": "電子通路業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "宏碁集團",
     "listed_date": "2021/03/31",
     "isin": "TW0006776008",
     "themes": [
@@ -16337,7 +16337,7 @@
     "name": "來頡",
     "sector": "半導體業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "聯電集團",
     "listed_date": "2022/05/12",
     "isin": "TW0006799000",
     "themes": [
@@ -16352,7 +16352,7 @@
     "name": "富世達",
     "sector": "電子零組件業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "鴻海集團",
     "listed_date": "2023/11/09",
     "isin": "TW0006805005",
     "themes": [
@@ -17325,7 +17325,7 @@
     "name": "台通",
     "sector": "通信網路業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "鴻海集團",
     "listed_date": "2011/09/19",
     "isin": "TW0008011008",
     "themes": [
@@ -17606,7 +17606,7 @@
     "name": "華東",
     "sector": "半導體業",
     "market": "上市",
-    "group": "華新集團",
+    "group": "獨立/未歸類",
     "listed_date": "2007/10/31",
     "isin": "TW0008110008",
     "themes": [
@@ -17673,7 +17673,7 @@
     "name": "南茂",
     "sector": "半導體業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "聯電集團",
     "listed_date": "2014/04/11",
     "isin": "TW0008150004",
     "themes": [
@@ -17699,7 +17699,7 @@
     "name": "達方",
     "sector": "電腦及週邊設備業",
     "market": "上市",
-    "group": "明基集團",
+    "group": "獨立/未歸類",
     "listed_date": "2007/11/28",
     "isin": "TW0008163007",
     "themes": [
@@ -17771,7 +17771,7 @@
     "name": "明基材",
     "sector": "光電業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "明基佳世達集團",
     "listed_date": "2010/11/12",
     "isin": "TW0008215005",
     "themes": [
@@ -17808,7 +17808,7 @@
     "name": "菱光",
     "sector": "電子零組件業",
     "market": "上市",
-    "group": "東元集團",
+    "group": "獨立/未歸類",
     "listed_date": "2005/05/17",
     "isin": "TW0008249004",
     "themes": [
@@ -18039,7 +18039,7 @@
     "name": "富邦媒",
     "sector": "數位雲端",
     "market": "上市",
-    "group": "富邦集團",
+    "group": "富邦金控集團",
     "listed_date": "2014/12/19",
     "isin": "TW0008454000",
     "themes": [
@@ -18405,7 +18405,7 @@
     "name": "統一實",
     "sector": "其他業",
     "market": "上市",
-    "group": "台南幫集團",
+    "group": "獨立/未歸類",
     "listed_date": "1991/01/29",
     "isin": "TW0009907006",
     "themes": [
@@ -18424,7 +18424,7 @@
     "name": "大台北",
     "sector": "油電燃氣業",
     "market": "上市",
-    "group": "新光集團",
+    "group": "獨立/未歸類",
     "listed_date": "1991/02/06",
     "isin": "TW0009908004",
     "themes": [
@@ -18476,7 +18476,7 @@
     "name": "偉聯",
     "sector": "電腦及週邊設備業",
     "market": "上市",
-    "group": "偉聯集團",
+    "group": "獨立/未歸類",
     "listed_date": "1992/08/08",
     "isin": "TW0009912006",
     "themes": [
@@ -18510,7 +18510,7 @@
     "name": "中保科",
     "sector": "其他業",
     "market": "上市",
-    "group": "國產集團",
+    "group": "獨立/未歸類",
     "listed_date": "1993/12/08",
     "isin": "TW0009917005",
     "themes": [
@@ -18543,7 +18543,7 @@
     "name": "康那香",
     "sector": "其他業",
     "market": "上市",
-    "group": "台南幫集團",
+    "group": "獨立/未歸類",
     "listed_date": "1994/11/04",
     "isin": "TW0009919001",
     "themes": [
@@ -18595,7 +18595,7 @@
     "name": "新保",
     "sector": "其他業",
     "market": "上市",
-    "group": "新光集團",
+    "group": "獨立/未歸類",
     "listed_date": "1995/12/09",
     "isin": "TW0009925008",
     "themes": [
@@ -18612,7 +18612,7 @@
     "name": "新海",
     "sector": "油電燃氣業",
     "market": "上市",
-    "group": "新光集團",
+    "group": "獨立/未歸類",
     "listed_date": "1998/04/08",
     "isin": "TW0009926006",
     "themes": [
@@ -18675,7 +18675,7 @@
     "name": "中聯資源",
     "sector": "綠能環保",
     "market": "上市",
-    "group": "中鋼集團",
+    "group": "獨立/未歸類",
     "listed_date": "1999/11/22",
     "isin": "TW0009930008",
     "themes": [
@@ -18825,7 +18825,7 @@
     "name": "裕融",
     "sector": "其他業",
     "market": "上市",
-    "group": "裕隆集團",
+    "group": "國泰金控集團",
     "listed_date": "2001/09/17",
     "isin": "TW0009941005",
     "themes": [
@@ -19130,7 +19130,7 @@
     "name": "錼創科技-KY創",
     "sector": "半導體業",
     "market": "上市",
-    "group": "獨立/未歸類",
+    "group": "宏碁集團",
     "listed_date": "2022/08/18",
     "isin": "KYG7148D1025",
     "themes": [
@@ -19466,7 +19466,7 @@
     "name": "泰金寶-DR",
     "sector": "海外存託憑證",
     "market": "上市",
-    "group": "金仁寶集團",
+    "group": "獨立/未歸類",
     "listed_date": "2003/09/22",
     "isin": "TW0009105007",
     "themes": [
@@ -20076,7 +20076,7 @@
     "name": "富喬",
     "sector": "電子零組件業",
     "market": "上櫃",
-    "group": "金錸集團",
+    "group": "獨立/未歸類",
     "listed_date": "2006/01/23",
     "isin": "TW0001815009",
     "themes": [
@@ -21089,7 +21089,7 @@
     "name": "弘塑",
     "sector": "半導體業",
     "market": "上櫃",
-    "group": "台積電集團",
+    "group": "台積電供應鏈/生態圈",
     "listed_date": "2011/01/17",
     "isin": "TW0003131009",
     "themes": [
@@ -22246,7 +22246,7 @@
     "name": "精材",
     "sector": "半導體業",
     "market": "上櫃",
-    "group": "台積電集團",
+    "group": "台積電供應鏈/生態圈",
     "listed_date": "2015/03/30",
     "isin": "TW0003374005",
     "themes": [
@@ -23459,7 +23459,7 @@
     "name": "家登",
     "sector": "半導體業",
     "market": "上櫃",
-    "group": "獨立/未歸類",
+    "group": "台積電供應鏈/生態圈",
     "listed_date": "2011/08/31",
     "isin": "TW0003680005",
     "themes": [
@@ -23852,7 +23852,7 @@
     "name": "晟德",
     "sector": "生技醫療業",
     "market": "上櫃",
-    "group": "獨立/未歸類",
+    "group": "晟德生技艦隊",
     "listed_date": "2003/10/07",
     "isin": "TW0004123005",
     "themes": [
@@ -23907,7 +23907,7 @@
     "name": "中天",
     "sector": "生技醫療業",
     "market": "上櫃",
-    "group": "獨立/未歸類",
+    "group": "晟德生技艦隊",
     "listed_date": "2006/06/09",
     "isin": "TW0004128004",
     "themes": [
@@ -24013,7 +24013,7 @@
     "name": "中裕",
     "sector": "生技醫療業",
     "market": "上櫃",
-    "group": "獨立/未歸類",
+    "group": "潤泰集團",
     "listed_date": "2015/11/23",
     "isin": "TW0004147004",
     "themes": [
@@ -24083,7 +24083,7 @@
     "name": "訊聯基因",
     "sector": "生技醫療業",
     "market": "上櫃",
-    "group": "獨立/未歸類",
+    "group": "晟德生技艦隊",
     "listed_date": "2012/09/17",
     "isin": "TW0004160007",
     "themes": [
@@ -24243,7 +24243,7 @@
     "name": "浩鼎",
     "sector": "生技醫療業",
     "market": "上櫃",
-    "group": "獨立/未歸類",
+    "group": "潤泰集團",
     "listed_date": "2015/03/23",
     "isin": "TW0004174008",
     "themes": [
@@ -24702,7 +24702,7 @@
     "name": "福裕",
     "sector": "電機機械",
     "market": "上櫃",
-    "group": "力山集團",
+    "group": "獨立/未歸類",
     "listed_date": "1998/03/25",
     "isin": "TW0004513007",
     "themes": [
@@ -24722,7 +24722,7 @@
     "name": "永彰",
     "sector": "電機機械",
     "market": "上櫃",
-    "group": "永大機電集團",
+    "group": "獨立/未歸類",
     "listed_date": "1999/11/22",
     "isin": "TW0004523006",
     "themes": [
@@ -24786,7 +24786,7 @@
     "name": "淳紳",
     "sector": "其他業",
     "market": "上櫃",
-    "group": "力山集團",
+    "group": "獨立/未歸類",
     "listed_date": "2001/05/04",
     "isin": "TW0004529003",
     "themes": [
@@ -25205,7 +25205,7 @@
     "name": "磐亞",
     "sector": "化學工業",
     "market": "上櫃",
-    "group": "中纖集團",
+    "group": "獨立/未歸類",
     "listed_date": "1998/05/20",
     "isin": "TW0004707005",
     "themes": [
@@ -25827,7 +25827,7 @@
     "name": "緯軟",
     "sector": "資訊服務業",
     "market": "上櫃",
-    "group": "獨立/未歸類",
+    "group": "緯創集團",
     "listed_date": "2014/01/08",
     "isin": "TW0004953005",
     "themes": [
@@ -26110,7 +26110,7 @@
     "name": "力新",
     "sector": "資訊服務業",
     "market": "上櫃",
-    "group": "力晶集團",
+    "group": "獨立/未歸類",
     "listed_date": "2000/10/18",
     "isin": "TW0005202006",
     "themes": [
@@ -26182,7 +26182,7 @@
     "name": "寶碩",
     "sector": "資訊服務業",
     "market": "上櫃",
-    "group": "寶來集團",
+    "group": "獨立/未歸類",
     "listed_date": "2002/04/25",
     "isin": "TW0005210009",
     "themes": [
@@ -26703,7 +26703,7 @@
     "name": "建榮",
     "sector": "電子零組件業",
     "market": "上櫃",
-    "group": "金仁寶集團",
+    "group": "獨立/未歸類",
     "listed_date": "1998/01/20",
     "isin": "TW0005340004",
     "themes": [
@@ -26718,7 +26718,7 @@
     "name": "立衛",
     "sector": "半導體業",
     "market": "上櫃",
-    "group": "威盛集團",
+    "group": "獨立/未歸類",
     "listed_date": "1998/03/23",
     "isin": "TW0005344006",
     "themes": [
@@ -26752,7 +26752,7 @@
     "name": "世界",
     "sector": "半導體業",
     "market": "上櫃",
-    "group": "台積電集團",
+    "group": "台積電供應鏈/生態圈",
     "listed_date": "1998/03/25",
     "isin": "TW0005347009",
     "themes": [
@@ -26931,7 +26931,7 @@
     "name": "能率",
     "sector": "光電業",
     "market": "上櫃",
-    "group": "能率集團",
+    "group": "獨立/未歸類",
     "listed_date": "1999/06/14",
     "isin": "TW0005392005",
     "themes": [
@@ -26984,7 +26984,7 @@
     "name": "國眾",
     "sector": "資訊服務業",
     "market": "上櫃",
-    "group": "大眾集團",
+    "group": "獨立/未歸類",
     "listed_date": "1999/11/26",
     "isin": "TW0005410005",
     "themes": [
@@ -27057,7 +27057,7 @@
     "name": "東友",
     "sector": "電腦及週邊設備業",
     "market": "上櫃",
-    "group": "東元集團",
+    "group": "獨立/未歸類",
     "listed_date": "2000/06/17",
     "isin": "TW0005438006",
     "themes": [
@@ -27090,7 +27090,7 @@
     "name": "均豪",
     "sector": "半導體業",
     "market": "上櫃",
-    "group": "明基集團",
+    "group": "獨立/未歸類",
     "listed_date": "1998/02/09",
     "isin": "TW0005443006",
     "themes": [
@@ -27459,7 +27459,7 @@
     "name": "力麒",
     "sector": "建材營造業",
     "market": "上櫃",
-    "group": "力麗集團",
+    "group": "獨立/未歸類",
     "listed_date": "1998/12/04",
     "isin": "TW0005512008",
     "themes": [
@@ -27719,7 +27719,7 @@
     "name": "劍湖山",
     "sector": "觀光餐旅",
     "market": "上櫃",
-    "group": "耐斯集團",
+    "group": "獨立/未歸類",
     "listed_date": "1998/03/12",
     "isin": "TW0005701007",
     "themes": [
@@ -27801,7 +27801,7 @@
     "name": "德記",
     "sector": "居家生活",
     "market": "上櫃",
-    "group": "統一集團",
+    "group": "獨立/未歸類",
     "listed_date": "1998/02/07",
     "isin": "TW0005902001",
     "themes": [
@@ -27821,7 +27821,7 @@
     "name": "全家",
     "sector": "居家生活",
     "market": "上櫃",
-    "group": "泰山集團",
+    "group": "獨立/未歸類",
     "listed_date": "2002/02/25",
     "isin": "TW0005903009",
     "themes": [
@@ -27937,7 +27937,7 @@
     "name": "元大期",
     "sector": "金融保險業",
     "market": "上櫃",
-    "group": "寶來集團",
+    "group": "獨立/未歸類",
     "listed_date": "2007/11/28",
     "isin": "TW0006023005",
     "themes": [
@@ -28105,7 +28105,7 @@
     "name": "建達",
     "sector": "電子通路業",
     "market": "上櫃",
-    "group": "威盛集團",
+    "group": "獨立/未歸類",
     "listed_date": "2001/10/25",
     "isin": "TW0006118003",
     "themes": [
@@ -28120,7 +28120,7 @@
     "name": "新普",
     "sector": "電腦及週邊設備業",
     "market": "上櫃",
-    "group": "鴻海集團",
+    "group": "獨立/未歸類",
     "listed_date": "2001/11/27",
     "isin": "TW0006121007",
     "themes": [
@@ -28159,7 +28159,7 @@
     "name": "上奇",
     "sector": "資訊服務業",
     "market": "上櫃",
-    "group": "能率集團",
+    "group": "獨立/未歸類",
     "listed_date": "2002/01/23",
     "isin": "TW0006123003",
     "themes": [
@@ -28302,7 +28302,7 @@
     "name": "茂達",
     "sector": "半導體業",
     "market": "上櫃",
-    "group": "台達電集團",
+    "group": "獨立/未歸類",
     "listed_date": "2002/01/18",
     "isin": "TW0006138001",
     "themes": [
@@ -28390,7 +28390,7 @@
     "name": "頎邦",
     "sector": "半導體業",
     "market": "上櫃",
-    "group": "聯電集團",
+    "group": "獨立/未歸類",
     "listed_date": "2002/01/31",
     "isin": "TW0006147002",
     "themes": [
@@ -28631,7 +28631,7 @@
     "name": "信昌電",
     "sector": "電子零組件業",
     "market": "上櫃",
-    "group": "和信集團",
+    "group": "獨立/未歸類",
     "listed_date": "2002/04/19",
     "isin": "TW0006173008",
     "themes": [
@@ -28764,7 +28764,7 @@
     "name": "萬潤",
     "sector": "半導體業",
     "market": "上櫃",
-    "group": "台積電集團",
+    "group": "台積電供應鏈/生態圈",
     "listed_date": "2002/09/27",
     "isin": "TW0006187008",
     "themes": [
@@ -29102,7 +29102,7 @@
     "name": "茂綸",
     "sector": "電子通路業",
     "market": "上櫃",
-    "group": "茂迪集團",
+    "group": "獨立/未歸類",
     "listed_date": "2003/01/14",
     "isin": "TW0006227002",
     "themes": [
@@ -29290,7 +29290,7 @@
     "name": "茂迪",
     "sector": "光電業",
     "market": "上櫃",
-    "group": "茂迪集團",
+    "group": "獨立/未歸類",
     "listed_date": "2003/05/15",
     "isin": "TW0006244007",
     "themes": [
@@ -29555,7 +29555,7 @@
     "name": "佳邦",
     "sector": "電子零組件業",
     "market": "上櫃",
-    "group": "獨立/未歸類",
+    "group": "華新麗華集團",
     "listed_date": "2004/06/29",
     "isin": "TW0006284003",
     "themes": [
@@ -30362,7 +30362,7 @@
     "name": "是方",
     "sector": "通信網路業",
     "market": "上櫃",
-    "group": "獨立/未歸類",
+    "group": "華碩/和碩集團",
     "listed_date": "2018/06/05",
     "isin": "TW0006561004",
     "themes": [
@@ -30993,7 +30993,7 @@
     "name": "雍智科技",
     "sector": "半導體業",
     "market": "上櫃",
-    "group": "獨立/未歸類",
+    "group": "台積電供應鏈/生態圈",
     "listed_date": "2019/04/23",
     "isin": "TW0006683006",
     "themes": [
@@ -33250,7 +33250,7 @@
     "name": "全達",
     "sector": "電子通路業",
     "market": "上櫃",
-    "group": "威盛集團",
+    "group": "獨立/未歸類",
     "listed_date": "2004/03/25",
     "isin": "TW0008068008",
     "themes": [
@@ -33267,7 +33267,7 @@
     "name": "元太",
     "sector": "光電業",
     "market": "上櫃",
-    "group": "永豐餘集團",
+    "group": "獨立/未歸類",
     "listed_date": "2004/03/30",
     "isin": "TW0008069006",
     "themes": [
@@ -33401,7 +33401,7 @@
     "name": "福華",
     "sector": "其他電子業",
     "market": "上櫃",
-    "group": "大同集團",
+    "group": "獨立/未歸類",
     "listed_date": "2004/03/01",
     "isin": "TW0008085002",
     "themes": [
@@ -33588,7 +33588,7 @@
     "name": "大世科",
     "sector": "資訊服務業",
     "market": "上櫃",
-    "group": "大同集團",
+    "group": "獨立/未歸類",
     "listed_date": "2004/03/29",
     "isin": "TW0008099003",
     "themes": [
@@ -33622,7 +33622,7 @@
     "name": "大億金茂",
     "sector": "電機機械",
     "market": "上櫃",
-    "group": "大億交通集團",
+    "group": "獨立/未歸類",
     "listed_date": "2005/11/15",
     "isin": "TW0008107004",
     "themes": [
@@ -33669,7 +33669,7 @@
     "name": "越峰",
     "sector": "電子零組件業",
     "market": "上櫃",
-    "group": "台聚集團",
+    "group": "獨立/未歸類",
     "listed_date": "2005/02/17",
     "isin": "TW0008121005",
     "themes": [
@@ -33700,7 +33700,7 @@
     "name": "博智",
     "sector": "電子零組件業",
     "market": "上櫃",
-    "group": "獨立/未歸類",
+    "group": "華新麗華集團",
     "listed_date": "2012/12/18",
     "isin": "TW0008155003",
     "themes": [
@@ -34489,7 +34489,7 @@
     "name": "裕國",
     "sector": "其他業",
     "market": "上櫃",
-    "group": "統一集團",
+    "group": "獨立/未歸類",
     "listed_date": "1996/01/31",
     "isin": "TW0008905001",
     "themes": [
@@ -34688,7 +34688,7 @@
     "name": "大汽電",
     "sector": "油電燃氣業",
     "market": "上櫃",
-    "group": "正隆集團",
+    "group": "獨立/未歸類",
     "listed_date": "2001/05/10",
     "isin": "TW0008931007",
     "themes": [
@@ -34723,7 +34723,7 @@
     "name": "愛地雅",
     "sector": "運動休閒",
     "market": "上櫃",
-    "group": "金錸集團",
+    "group": "獨立/未歸類",
     "listed_date": "2001/03/28",
     "isin": "TW0008933003",
     "themes": [

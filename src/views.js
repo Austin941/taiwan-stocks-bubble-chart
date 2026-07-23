@@ -2,6 +2,7 @@
 // VIEWS — showBubbleChart, showTechChart, renderTvWidget
 // ============================================================
 import { state } from './state.js';
+import { getConglomeratesByStockCode } from './stock_api.js';
 
 // Lazy showChart to avoid circular dependency (views ↔ chart)
 async function _showChart(id, mode) {
@@ -74,6 +75,28 @@ export function showTechChart(stockData) {
       const t = Object.assign(document.createElement('span'), { className: 'drawer-tag', textContent: stock['產業別'] });
       t.addEventListener('click', () => _showChart(stock['產業別'], 'sector'));
       sectorTags.appendChild(t);
+    }
+  }
+
+  // Group tag
+  const groupTags = document.getElementById('tech-group-tags');
+  if (groupTags) {
+    groupTags.innerHTML = '';
+    const gName = stock.group || stock['集團別'] || getConglomeratesByStockCode(stock['股票代號']);
+    if (gName && gName !== '獨立/未歸類') {
+      const t = Object.assign(document.createElement('span'), {
+        className: 'drawer-tag badge-group',
+        style: 'background:rgba(168,85,247,0.25);color:#c084fc;border:1px solid rgba(168,85,247,0.5);cursor:pointer;padding:3px 10px;border-radius:4px;font-weight:bold;',
+        textContent: gName
+      });
+      t.addEventListener('click', () => _showChart(gName, 'group'));
+      groupTags.appendChild(t);
+    } else {
+      const t = Object.assign(document.createElement('span'), {
+        style: 'color:#64748b;font-size:0.85em;padding:2px 6px;',
+        textContent: '獨立/未歸類'
+      });
+      groupTags.appendChild(t);
     }
   }
 
