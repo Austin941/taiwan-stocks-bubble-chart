@@ -90,10 +90,12 @@
                       <table class="ranking-table detail-table">
                         <thead>
                           <tr>
+                            <th style="width:30px">#</th>
                             <th class="sortable detail-sortable" data-sort="symbol">股票名稱 <span class="sort-icon" id="detail-sort-symbol"></span></th>
                             <th class="text-right sortable detail-sortable" data-sort="return">漲跌幅(%) <span class="sort-icon" id="detail-sort-return"></span></th>
                             <th class="text-right sortable detail-sortable" data-sort="volume">成交量(張) <span class="sort-icon" id="detail-sort-volume"></span></th>
                             <th class="text-right sortable detail-sortable" data-sort="amount" data-active="true" data-order="desc">資金變化(億) <span class="sort-icon desc" id="detail-sort-amount">↓</span></th>
+                            <th class="text-right sortable detail-sortable" data-sort="amount_abs">成交金額(億) <span class="sort-icon" id="detail-sort-amount-abs"></span></th>
                           </tr>
                         </thead>
                         <tbody id="detailTableBody"></tbody>
@@ -196,6 +198,7 @@
                    <th class="text-right sortable" data-sort="return">漲跌<span class="sort-icon" id="sort-return"></span></th>
                    <th class="text-right sortable" data-sort="volume">總量<span class="sort-icon" id="sort-volume"></span></th>
                    <th class="text-right sortable" data-sort="amount" data-active="true" data-order="desc">資金變化(億)<span class="sort-icon desc" id="sort-amount">↓</span></th>
+                   <th class="text-right sortable" data-sort="amount_abs">成交金額(億)<span class="sort-icon" id="sort-amount-abs"></span></th>
                  </tr>
                </thead>
                 <tbody id="rankingTableBody_1"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
@@ -225,6 +228,7 @@
                    <th class="text-right theme-sortable" data-sort="return">漲跌<span class="sort-icon" id="theme-sort-return"></span></th>
                    <th class="text-right theme-sortable" data-sort="volume">總量<span class="sort-icon" id="theme-sort-volume"></span></th>
                    <th class="text-right theme-sortable" data-sort="amount" data-active="true" data-order="desc">資金變化(億)<span class="sort-icon desc" id="theme-sort-amount">↓</span></th>
+                   <th class="text-right theme-sortable" data-sort="amount_abs">成交金額(億)<span class="sort-icon" id="theme-sort-amount-abs"></span></th>
                  </tr>
                </thead>
                 <tbody id="themeRankingTableBody_1"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
@@ -247,6 +251,7 @@
                    <th class="text-right group-sortable" data-sort="return">漲跌<span class="sort-icon" id="group-sort-return"></span></th>
                    <th class="text-right group-sortable" data-sort="volume">總量<span class="sort-icon" id="group-sort-volume"></span></th>
                    <th class="text-right group-sortable" data-sort="amount" data-active="true" data-order="desc">資金變化(億)<span class="sort-icon desc" id="group-sort-amount">↓</span></th>
+                   <th class="text-right group-sortable" data-sort="amount_abs">成交金額(億)<span class="sort-icon" id="group-sort-amount-abs"></span></th>
                  </tr>
                </thead>
                 <tbody id="groupRankingTableBody_1"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>
@@ -270,6 +275,7 @@
                    <th class="text-right radar-sortable" data-sort="return">漲跌<span class="sort-icon" id="radar-sort-return"></span></th>
                    <th class="text-right radar-sortable" data-sort="volume">總量<span class="sort-icon" id="radar-sort-volume"></span></th>
                    <th class="text-right radar-sortable" data-sort="amount" data-active="true" data-order="desc">資金變化(億)<span class="sort-icon desc" id="radar-sort-amount">↓</span></th>
+                   <th class="text-right radar-sortable" data-sort="amount_abs">成交金額(億)<span class="sort-icon" id="radar-sort-amount-abs"></span></th>
                  </tr>
                </thead>
                 <tbody id="radarTableBody_1"><tr><td colspan="3" class="text-center">載入中...</td></tr></tbody>

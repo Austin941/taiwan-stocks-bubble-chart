@@ -74,6 +74,7 @@ export function renderRanking(subTitle = '', targetDays = state.currentPeriodDay
       </td>
       <td class="text-right">${Math.round(d.totalVolume).toLocaleString()}</td>
       ${amtCell}
+      <td class="text-right" style="color:#94a3b8">${(d.totalAmount / 1e8).toFixed(2)}</td>
     `;
     tr.onclick = () => _showChart(d.sector, 'sector');
     tr.setAttribute('data-amount', d.totalAmount);
@@ -127,6 +128,7 @@ export function renderThemeRanking(subTitle = '', targetDays = state.currentPeri
       </td>
       <td class="text-right">${Math.round(d.totalVolume).toLocaleString()}</td>
       ${amtCell}
+      <td class="text-right" style="color:#94a3b8">${(d.totalAmount / 1e8).toFixed(2)}</td>
     `;
     tr.onclick = () => _showChart(d.theme, 'theme');
     tr.setAttribute('data-amount', d.totalAmount);
@@ -241,14 +243,9 @@ export function renderFlowRanking(targetDays = state.currentPeriodDays) {
       const ret    = d.dailyReturn;
       const cls    = ret > 0 ? 'color-positive' : ret < 0 ? 'color-negative' : '';
       const sign   = ret > 0 ? '+' : '';
-      
-      const diffVal  = (d.amountDiff ?? d.amount) / 1e8;
-      const diffSign = diffVal > 0 ? '+' : '';
-      const diffCls  = diffVal > 0 ? 'color-positive' : diffVal < 0 ? 'color-negative' : '';
-      const amtDisplay = state.flowMetricMode === 'diff'
-        ? `<span class="${diffCls} font-bold">${diffSign}${diffVal.toFixed(2)}</span>`
-        : `<span class="font-bold" style="color:#facc15">${(d.amount / 1e8).toFixed(2)}</span>`;
-
+      const maxVal = Math.max(...sorted.map(d => Math.abs(d.amountDiff ?? d.amount))) || 1;
+      const amtCell = renderAmountCell(d.amount, d.amountDiff, maxVal);
+      const absAmount = (d.amount / 1e8).toFixed(2);
       const mktTag = (stock['市場別'] || '').includes('上市') ? '👑上市' : '💎上櫃';
 
       tr.innerHTML = `
@@ -257,9 +254,10 @@ export function renderFlowRanking(targetDays = state.currentPeriodDays) {
           <a href="#" class="stock-link"><strong>${stock['股票名稱']}</strong></a>
           <span class="stock-symbol">${stock['股票代號']} <small style="font-size:0.75em;color:#cbd5e1">${mktTag}</small></span>
         </div></td>
-        <td><span class="badge-sector">${sector}</span></td>
         <td class="text-right ${cls}">${sign}${ret.toFixed(2)}%</td>
-        <td class="text-right">${amtDisplay}</td>
+        <td class="text-right">${Math.round(d.volume).toLocaleString()}</td>
+        ${amtCell}
+        <td class="text-right font-bold" style="color:#facc15">${absAmount}</td>
       `;
       if (!tr.hasAttribute('data-amount')) {
         tr.addEventListener('click', () => {
@@ -300,16 +298,17 @@ export function renderDetailTable(data) {
     return 0;
   });
 
-  const maxVal = state.flowMetricMode === 'diff'
-    ? (Math.max(...sorted.map(d => Math.abs(d.amountDiff ?? d.amount))) || 1)
-    : (sorted[0]?.amount || 1);
+  const maxVal = Math.max(...sorted.map(d => Math.abs(d.amountDiff ?? d.amount))) || 1;
 
-  updateTableDelta(tbody, sorted, item => item.symbol, (tr, item) => {
+  updateTableDelta(tbody, sorted, item => item.symbol, (tr, item, idx) => {
     const oldAmt = tr.getAttribute('data-amount');
     if (item.isMissing) {
       tr.innerHTML = `
+        <td>${idx + 1}</td>
         <td>${item.stock['股票名稱']} (${item.symbol})</td>
+        <td>-</td>
         <td class="text-right text-slate-500">無資料</td>
+        <td class="text-right text-slate-500">-</td>
         <td class="text-right text-slate-500">-</td>
         <td class="text-right text-slate-500">-</td>
       `;
@@ -320,20 +319,19 @@ export function renderDetailTable(data) {
       if (ret <= -9.8) cls += ' badge-limit-down';
       const sign = ret > 0 ? '+' : '';
 
-      const diffVal  = (item.amountDiff ?? item.amount) / 1e8;
-      const diffSign = diffVal > 0 ? '+' : '';
-      const diffCls  = diffVal > 0 ? 'color-positive' : diffVal < 0 ? 'color-negative' : '';
-      const amtDisplay = state.flowMetricMode === 'diff'
-        ? `<span class="${diffCls} font-bold">${diffSign}${diffVal.toFixed(2)}</span>`
-        : `${(item.amount / 1e8).toFixed(2)}`;
+      const amtCell = renderAmountCell(item.amount, item.amountDiff, maxVal);
+      const absAmount = (item.amount / 1e8).toFixed(2);
 
       tr.innerHTML = `
+        <td>${idx + 1}</td>
         <td><a href="#" class="stock-link">
-          ${item.stock['股票名稱']} <span style="color:#94a3b8;font-size:0.9em">(${item.symbol})</span>
+          <strong style="color:#facc15">${item.stock['股票名稱']}</strong> <span style="color:#94a3b8;font-size:0.85em">${item.symbol}</span>
         </a></td>
+        <td><span class="badge-sector" style="font-size:0.75em">${item.stock['產業別'] || '無'}</span></td>
         <td class="text-right font-bold"><span class="${cls}">${sign}${ret.toFixed(2)}%</span></td>
         <td class="text-right">${Math.round(item.volume).toLocaleString()}</td>
-        <td class="text-right">${amtDisplay}</td>
+        ${amtCell}
+        <td class="text-right" style="color:#94a3b8">${absAmount}</td>
       `;
       tr.setAttribute('data-symbol', item.symbol);
       if (!tr.hasAttribute('data-amount')) {
@@ -392,6 +390,7 @@ export function renderGroupRanking(subTitle = '', targetDays = state.currentPeri
       </td>
       <td class="text-right">${Math.round(d.totalVolume).toLocaleString()}</td>
       ${amtCell}
+      <td class="text-right" style="color:#94a3b8">${(d.totalAmount / 1e8).toFixed(2)}</td>
     `;
     tr.onclick = () => _showChart(d.group, 'group');
     tr.setAttribute('data-amount', d.totalAmount);

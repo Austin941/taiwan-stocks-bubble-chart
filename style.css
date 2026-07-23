@@ -578,16 +578,35 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* Tables */
+/* Excel-like Freeze Panes (Sticky First & Second Columns) */
 .table-responsive {
   width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.4) rgba(0, 0, 0, 0.3);
+}
+
+.table-responsive::-webkit-scrollbar {
+  height: 5px;
+}
+.table-responsive::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+.table-responsive::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.35);
+  border-radius: 4px;
+}
+.table-responsive::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.7);
 }
 
 .ranking-table {
   font-variant-numeric: tabular-nums;
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.85rem;
 }
 
@@ -600,25 +619,41 @@ body {
   white-space: nowrap;
   position: sticky;
   top: 0;
-  background: rgba(15, 23, 42, 0.92);
+  background: #0f172a;
   z-index: 10;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 .ranking-table td {
-  padding: 10px;
-  border-bottom: 1px solid rgba(255,255,255,0.02);
+  padding: 9px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
   vertical-align: middle;
   white-space: nowrap;
   transition: background 0.2s;
   cursor: pointer;
+  background: #0f172a;
 }
 
-.ranking-table tbody tr:hover {
+/* Excel Sticky Freeze Column 1 (#) and Column 2 (Stock/Name) */
+.ranking-table th:nth-child(1),
+.ranking-table td:nth-child(1) {
+  position: sticky;
+  left: 0;
+  z-index: 12;
+  background: #0f172a;
+  width: 32px;
+}
+
+.ranking-table th:nth-child(2),
+.ranking-table td:nth-child(2) {
+  position: sticky;
+  left: 32px;
+  z-index: 12;
+  background: #0f172a;
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.4);
+}
+
+.ranking-table tbody tr:hover td {
   background: rgba(56, 189, 248, 0.08) !important;
-  transform: translateX(2px);
-  transition: all 0.15s ease-out;
 }
 .ranking-table tbody tr.active-row {
   background: rgba(56, 189, 248, 0.1);
