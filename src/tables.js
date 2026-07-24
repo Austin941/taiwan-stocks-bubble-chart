@@ -295,11 +295,22 @@ export function renderDetailTable(data) {
   const sorted = [...data].sort((a, b) => {
     const col = state.currentDetailSort.column;
     let vA, vB;
-    if (col === 'return')  { vA = a.dailyReturn; vB = b.dailyReturn; }
-    else if (col === 'volume') { vA = a.volume; vB = b.volume; }
+    if (col === 'return')  { vA = a.dailyReturn || 0; vB = b.dailyReturn || 0; }
+    else if (col === 'volume') { vA = a.volume || 0; vB = b.volume || 0; }
     else if (col === 'amount') {
-      vA = state.flowMetricMode === 'diff' ? (a.amountDiff ?? a.amount) : a.amount;
-      vB = state.flowMetricMode === 'diff' ? (b.amountDiff ?? b.amount) : b.amount;
+      vA = a.amountDiff ?? a.amount ?? 0;
+      vB = b.amountDiff ?? b.amount ?? 0;
+    }
+    else if (col === 'amount_abs') {
+      vA = a.amount || 0;
+      vB = b.amount || 0;
+    }
+    else if (col === 'sector') {
+      vA = a.stock ? (a.stock['產業別'] || '') : '';
+      vB = b.stock ? (b.stock['產業別'] || '') : '';
+      return state.currentDetailSort.order === 'desc'
+        ? vB.localeCompare(vA, 'zh-Hant')
+        : vA.localeCompare(vB, 'zh-Hant');
     }
     else { vA = a.symbol || ''; vB = b.symbol || ''; }
 
