@@ -1,93 +1,81 @@
+// api/branches.js — 主力分點分析 (重構版 + Bug 修復)
+// 修復：investTrustTrustNet → investTrustNet (undefined 變數導致 crash)
+// 改用 twseFetcher：與 banks.js 共用同一份 T86 快取
+import { fetchT86, parseT86Int } from './_lib/twseFetcher.js';
+import { cleanTWSymbol } from './_lib/finmindFetcher.js';
+
 export default async function handler(req, res) {
-  // Set CORS & Edge Cache headers (5 min cache)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
 
   const { symbol = '2330' } = req.query;
 
   try {
-    const cleanSymbol = symbol.replace('.TW', '').replace('.TWO', '').replace('TWSE:', '').replace('OTC:', '').trim();
+    const sym = cleanTWSymbol(symbol);
 
-    // Fetch daily T86 institutional investors and broker points summary
-    const tseRes = await fetch('https://www.twse.com.tw/rwd/zh/fund/T86?response=json', {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    });
+    // 共用 T86 快取 — banks.js 已抓過就直接命中，不打 TWSE
+    const { rows } = await fetchT86();
 
-    let topBuyBranches = [];
+    let topBuyBranches  = [];
     let topSellBranches = [];
-    let concentrationRatio = 0; // 主力分點集中度 (%)
+    let concentrationRatio = 0;
 
-    if (tseRes.ok) {
-      const tseData = await tseRes.json();
-      const rawRows = tseData.data || [];
+    const targetRow = rows.find(row => row[0]?.trim() === sym);
 
-      const targetStockRow = rawRows.find(row => row[0]?.trim() === cleanSymbol);
+    if (targetRow) {
+      const foreignNet    = parseT86Int(targetRow[4]);
+      const investTrustNet = parseT86Int(targetRow[10]); // ✅ Bug 修復：原本是 investTrustTrustNet
+      const dealerSelfNet  = parseT86Int(targetRow[14]);
 
-      if (targetStockRow) {
-        // Extract institutional net flows (外資, 投信, 自營商)
-        const foreignNet = parseInt((targetStockRow[4] || '0').replace(/,/g, ''), 10) || 0;
-        const investTrustNet = parseInt((targetStockRow[10] || '0').replace(/,/g, ''), 10) || 0;
-        const dealerSelfNet = parseInt((targetStockRow[14] || '0').replace(/,/g, ''), 10) || 0;
-        const dealerHedgingNet = parseInt((targetStockRow[17] || '0').replace(/,/g, ''), 10) || 0;
-
-        // Realistic Key Broker Branch Allocation Projections
-        if (foreignNet >= 0) {
-          topBuyBranches.push(
-            { branchName: '美商高盛 (Goldman Sachs)', netShares: Math.round(foreignNet * 0.35), type: '外資主力' },
-            { branchName: '台灣摩根士丹利 (Morgan Stanley)', netShares: Math.round(foreignNet * 0.30), type: '外資主力' },
-            { branchName: '港商野村 (Nomura)', netShares: Math.round(foreignNet * 0.20), type: '外資主力' }
-          );
-        } else {
-          topSellBranches.push(
-            { branchName: '美商高盛 (Goldman Sachs)', netShares: Math.round(Math.abs(foreignNet) * 0.35), type: '外資主力' },
-            { branchName: '台灣摩根士丹利 (Morgan Stanley)', netShares: Math.round(Math.abs(foreignNet) * 0.30), type: '外資主力' },
-            { branchName: '美亞摩根大通 (J.P. Morgan)', netShares: Math.round(Math.abs(foreignNet) * 0.25), type: '外資主力' }
-          );
-        }
-
-        if (investTrustNet >= 0) {
-          topBuyBranches.push({ branchName: '富邦-台北 (Fubon HQ)', netShares: Math.round(investTrustNet * 0.5), type: '本土投信分點' });
-        } else {
-          topSellBranches.push({ branchName: '群益金鼎-台北 (Capital HQ)', netShares: Math.round(Math.abs(investTrustTrustNet || investTrustNet) * 0.5), type: '投信出貨分點' });
-        }
-
-        if (dealerSelfNet >= 0) {
-          topBuyBranches.push({ branchName: '元大-總公司 (Yuanta HQ)', netShares: Math.round(dealerSelfNet * 0.6), type: '自營商買超分點' });
-        } else {
-          topSellBranches.push({ branchName: '凱基-台北 (KGI HQ)', netShares: Math.round(Math.abs(dealerSelfNet) * 0.6), type: '自營商調節分點' });
-        }
-
-        topBuyBranches = topBuyBranches.filter(b => b.netShares > 0).sort((a, b) => b.netShares - a.netShares);
-        topSellBranches = topSellBranches.filter(b => b.netShares > 0).sort((a, b) => b.netShares - a.netShares);
-
-        const totalBuyTop = topBuyBranches.reduce((acc, c) => acc + c.netShares, 0);
-        const totalSellTop = topSellBranches.reduce((acc, c) => acc + c.netShares, 0);
-        const netFlow = totalBuyTop - totalSellTop;
-
-        concentrationRatio = parseFloat((netFlow / 1000000).toFixed(2));
+      // 外資分點估算
+      if (foreignNet >= 0) {
+        topBuyBranches.push(
+          { branchName: '美商高盛 (Goldman Sachs)',           netShares: Math.round(foreignNet * 0.35), type: '外資主力' },
+          { branchName: '台灣摩根士丹利 (Morgan Stanley)',    netShares: Math.round(foreignNet * 0.30), type: '外資主力' },
+          { branchName: '港商野村 (Nomura)',                  netShares: Math.round(foreignNet * 0.20), type: '外資主力' },
+        );
+      } else {
+        topSellBranches.push(
+          { branchName: '美商高盛 (Goldman Sachs)',           netShares: Math.round(Math.abs(foreignNet) * 0.35), type: '外資主力' },
+          { branchName: '台灣摩根士丹利 (Morgan Stanley)',    netShares: Math.round(Math.abs(foreignNet) * 0.30), type: '外資主力' },
+          { branchName: '美亞摩根大通 (J.P. Morgan)',         netShares: Math.round(Math.abs(foreignNet) * 0.25), type: '外資主力' },
+        );
       }
+
+      // 投信分點估算 (✅ 已修復: investTrustNet 不再是 undefined)
+      if (investTrustNet >= 0) {
+        topBuyBranches.push({ branchName: '富邦-台北 (Fubon HQ)',    netShares: Math.round(investTrustNet * 0.5),              type: '本土投信分點' });
+      } else {
+        topSellBranches.push({ branchName: '群益金鼎-台北 (Capital HQ)', netShares: Math.round(Math.abs(investTrustNet) * 0.5), type: '投信出貨分點' });
+      }
+
+      // 自營分點估算
+      if (dealerSelfNet >= 0) {
+        topBuyBranches.push({ branchName: '元大-總公司 (Yuanta HQ)', netShares: Math.round(dealerSelfNet * 0.6),              type: '自營商買超分點' });
+      } else {
+        topSellBranches.push({ branchName: '凱基-台北 (KGI HQ)',     netShares: Math.round(Math.abs(dealerSelfNet) * 0.6),    type: '自營商調節分點' });
+      }
+
+      topBuyBranches  = topBuyBranches.filter(b => b.netShares > 0).sort((a, b) => b.netShares - a.netShares);
+      topSellBranches = topSellBranches.filter(b => b.netShares > 0).sort((a, b) => b.netShares - a.netShares);
+
+      const netFlow = topBuyBranches.reduce((s, b) => s + b.netShares, 0)
+                    - topSellBranches.reduce((s, b) => s + b.netShares, 0);
+      concentrationRatio = parseFloat((netFlow / 1_000_000).toFixed(2));
     }
 
     res.status(200).json({
-      success: true,
-      symbol: cleanSymbol,
-      topBuyBranches,
-      topSellBranches,
+      success: true, symbol: sym,
+      topBuyBranches, topSellBranches,
       concentrationSummary: {
         concentrationRatio,
-        mainPlayerStatus: concentrationRatio > 1.0 ? '🔥 主力極度集中強勢卡位' :
-                         concentrationRatio < -1.0 ? '⚠️ 主力顯著集中出貨' : '⚖️ 主力分點進出相對平衡'
-      }
+        mainPlayerStatus:
+          concentrationRatio >  1.0 ? '🔥 主力極度集中強勢卡位' :
+          concentrationRatio < -1.0 ? '⚠️ 主力顯著集中出貨'     : '⚖️ 主力分點進出相對平衡',
+      },
     });
-
-  } catch (error) {
-    console.error('Branches API Error:', error.message);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch broker branch trading data',
-      details: error.message
-    });
+  } catch (err) {
+    console.error('[branches] Error:', err.message);
+    res.status(500).json({ success: false, error: err.message });
   }
 }
