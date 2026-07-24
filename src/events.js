@@ -100,7 +100,7 @@ export function initEvents(historicalPromise) {
   // Back button
   backBtn?.addEventListener('click', () => showBubbleChart(state.currentSector, state.currentChartMode));
 
-  // Helper to sync bubble size mode from table header click
+  // Helper to sync X-axis mode and bubble size mode from table header click
   function syncBubbleSizeMode(sortCol) {
     let mode = 'amount_diff';
     if (sortCol === 'amount') mode = 'amount_diff';
@@ -109,6 +109,12 @@ export function initEvents(historicalPromise) {
     else if (sortCol === 'return') mode = 'return';
 
     state.currentSizeMode = mode;
+    if (mode === 'amount_diff' || mode === 'amount' || mode === 'volume') {
+      state.currentXAxisMode = mode;
+      document.querySelectorAll('#chart-xaxis-selector .xaxis-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-xaxis') === mode);
+      });
+    }
     if (state.currentSector) renderChart(state.currentSector, state.currentChartMode);
   }
 
@@ -223,6 +229,18 @@ export function initEvents(historicalPromise) {
       } else if (state.historicalRanking?.[String(state.currentPeriodDays)]) {
         renderHistoricalRanking(state.currentPeriodDays);
       }
+    });
+  });
+
+  // X-Axis Control 3-Box Selector Buttons
+  document.querySelectorAll('#chart-xaxis-selector .xaxis-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const xaxisMode = e.currentTarget.getAttribute('data-xaxis');
+      state.currentXAxisMode = xaxisMode;
+      document.querySelectorAll('#chart-xaxis-selector .xaxis-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-xaxis') === xaxisMode);
+      });
+      if (state.currentSector) renderChart(state.currentSector, state.currentChartMode);
     });
   });
 

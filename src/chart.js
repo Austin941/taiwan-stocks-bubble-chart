@@ -103,16 +103,17 @@ export async function renderChart(identifier, mode, isSilentRefresh = false) {
   // Build datasets split by market
   const twseData = chartPlotData.filter(d => (d.stock['市場別'] || '').includes('上市'));
   const tpexData = chartPlotData.filter(d => !(d.stock['市場別'] || '').includes('上市'));
-  const xAxisTitle = state.currentSizeMode === 'volume'
-    ? '成交張數 (張)'
-    : state.currentSizeMode === 'amount_diff'
-      ? '資金變化量 (億)'
-      : '成交金額 (億)';
+  const xAxisMode = state.currentXAxisMode || 'amount_diff';
+  const xAxisTitle = xAxisMode === 'volume'
+    ? '成交總量 (張)'
+    : xAxisMode === 'amount'
+      ? '成交金額 (億)'
+      : '資金變化量 (億)';
 
   const getX = d => {
-    if (state.currentSizeMode === 'volume') return Math.max(d.volume || 1, 1);
-    if (state.currentSizeMode === 'amount_diff') return (d.amountDiff || 0) / 1e8;
-    return Math.max((d.amount / 1e8) || 0.1, 0.1);
+    if (xAxisMode === 'volume') return Math.max(d.volume || 1, 1);
+    if (xAxisMode === 'amount') return Math.max((d.amount / 1e8) || 0.1, 0.1);
+    return (d.amountDiff || 0) / 1e8;
   };
 
   const getR = d => {

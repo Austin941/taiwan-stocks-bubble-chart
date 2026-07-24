@@ -537,6 +537,51 @@ body {
   box-shadow: 0 0 12px rgba(250, 204, 21, 0.4);
 }
 
+/* --- X-Axis Selector Group (Top Toolbar 3 Boxes) --- */
+.xaxis-selector-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.65);
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+}
+.xaxis-selector-label {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.xaxis-btn-container {
+  display: flex;
+  gap: 4px;
+}
+.xaxis-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+.xaxis-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #f8fafc;
+}
+.xaxis-btn.active {
+  background: #facc15;
+  color: #0f172a;
+  border-color: #facc15;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.35);
+}
+
 .interval-group {
   display: flex;
   gap: 4px;

@@ -23,6 +23,7 @@ export const state = {
   currentChartMode:     'sector',
   currentPeriodDays:    1,
   currentSizeMode:      'amount_diff', // 'amount_diff' (資金變化) | 'amount' | 'volume' | 'return'
+  currentXAxisMode:     'amount_diff', // 'amount_diff' (資金變化) | 'amount' (成交金額) | 'volume' (成交總量)
   currentDetailSort:    { column: 'amount', order: 'desc' },
   hideSingleStockThemes: true,  // 預設隱藏單兵題材 (家數 < 2)
   isMarketOpenNow:      false,
