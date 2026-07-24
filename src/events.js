@@ -100,6 +100,31 @@ export function initEvents(historicalPromise) {
   // Back button
   backBtn?.addEventListener('click', () => showBubbleChart(state.currentSector, state.currentChartMode));
 
+  // Helper to sync bubble size mode from table header click
+  function syncBubbleSizeMode(sortCol) {
+    let mode = 'amount_diff';
+    if (sortCol === 'amount') mode = 'amount_diff';
+    else if (sortCol === 'amount_abs') mode = 'amount';
+    else if (sortCol === 'volume') mode = 'volume';
+    else if (sortCol === 'return') mode = 'return';
+
+    state.currentSizeMode = mode;
+    if (state.currentSector) renderChart(state.currentSector, state.currentChartMode);
+  }
+
+  // Helper to re-render active table after sort column change
+  function rerenderActiveTable() {
+    const active = activeTabTarget();
+    if (state.currentPeriodDays === 1) {
+      if (active === 'view-ranking') renderRanking();
+      else if (active === 'view-theme') renderThemeRanking();
+      else if (active === 'view-group') renderGroupRanking();
+      else if (active === 'view-radar') renderRadar();
+    } else if (state.historicalRanking?.[String(state.currentPeriodDays)]) {
+      renderHistoricalRanking(state.currentPeriodDays);
+    }
+  }
+
   // Sector sort headers
   sortableHeaders.forEach(h => {
     h.addEventListener('click', () => {
@@ -107,14 +132,8 @@ export function initEvents(historicalPromise) {
       if (state.sortCol === col) state.sortDesc = !state.sortDesc;
       else { state.sortCol = col; state.sortDesc = true; }
       updateSortUI();
-      if (state.currentPeriodDays === 1) {
-        renderRanking();
-      } else if (state.historicalRanking?.[String(state.currentPeriodDays)]) {
-        const orig = [...state.sectorRankingData];
-        state.sectorRankingData = state.historicalRanking[String(state.currentPeriodDays)].sectors.filter(s => isFinite(s.avgReturn));
-        renderRanking(`近 ${state.currentPeriodDays} 日排行`);
-        state.sectorRankingData = orig;
-      }
+      syncBubbleSizeMode(col);
+      rerenderActiveTable();
     });
   });
 
@@ -125,14 +144,8 @@ export function initEvents(historicalPromise) {
       if (state.themeSortCol === col) state.themeSortDesc = !state.themeSortDesc;
       else { state.themeSortCol = col; state.themeSortDesc = true; }
       updateThemeSortUI();
-      if (state.currentPeriodDays === 1) {
-        renderThemeRanking();
-      } else if (state.historicalRanking?.[String(state.currentPeriodDays)]) {
-        const orig = [...state.themeRankingData];
-        state.themeRankingData = state.historicalRanking[String(state.currentPeriodDays)].themes.filter(t => isFinite(t.avgReturn));
-        renderThemeRanking(`近 ${state.currentPeriodDays} 日排行`);
-        state.themeRankingData = orig;
-      }
+      syncBubbleSizeMode(col);
+      rerenderActiveTable();
     });
   });
 
@@ -143,14 +156,8 @@ export function initEvents(historicalPromise) {
       if (state.groupSortCol === col) state.groupSortDesc = !state.groupSortDesc;
       else { state.groupSortCol = col; state.groupSortDesc = true; }
       updateGroupSortUI();
-      if (state.currentPeriodDays === 1) {
-        renderGroupRanking();
-      } else if (state.historicalRanking?.[String(state.currentPeriodDays)]) {
-        const orig = [...state.groupRankingData];
-        state.groupRankingData = (state.historicalRanking[String(state.currentPeriodDays)].groups || []).filter(g => isFinite(g.avgReturn));
-        renderGroupRanking(`近 ${state.currentPeriodDays} 日排行`);
-        state.groupRankingData = orig;
-      }
+      syncBubbleSizeMode(col);
+      rerenderActiveTable();
     });
   });
 
@@ -161,8 +168,8 @@ export function initEvents(historicalPromise) {
       if (state.radarSortCol === col) state.radarSortDesc = !state.radarSortDesc;
       else { state.radarSortCol = col; state.radarSortDesc = true; }
       updateRadarSortUI();
-      if (state.currentPeriodDays !== 1 && state.currentRadarData.length) resortRadar();
-      else renderRadar();
+      syncBubbleSizeMode(col);
+      rerenderActiveTable();
     });
   });
 
@@ -201,8 +208,6 @@ export function initEvents(historicalPromise) {
     });
   });
 
-
-
   // Theme count filter (cluster vs all)
   document.querySelectorAll('#theme-count-filter .size-btn').forEach(btn => {
     btn.addEventListener('click', e => {
@@ -221,18 +226,7 @@ export function initEvents(historicalPromise) {
     });
   });
 
-  // Bubble size buttons
-  document.querySelectorAll('#bubble-size-selector .size-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
-      const mode = e.currentTarget.getAttribute('data-size-mode');
-      if (state.currentSizeMode === mode) return;
-      state.currentSizeMode = mode;
-      document.querySelectorAll('#bubble-size-selector .size-btn').forEach(b => {
-        b.classList.toggle('active', b.getAttribute('data-size-mode') === mode);
-      });
-      if (state.currentSector) renderChart(state.currentSector, state.currentChartMode);
-    });
-  });
+
 
   // Detail table sort headers
   document.querySelectorAll('.detail-sortable').forEach(th => {

@@ -43,6 +43,9 @@ export function renderRanking(subTitle = '', targetDays = state.currentPeriodDay
     if (key === 'amount') {
       vA = a.totalAmountDiff ?? a.totalAmount;
       vB = b.totalAmountDiff ?? b.totalAmount;
+    } else if (key === 'amount_abs') {
+      vA = a.totalAmount;
+      vB = b.totalAmount;
     } else if (key === 'volume') {
       vA = a.totalVolume; vB = b.totalVolume;
     } else {
@@ -98,6 +101,9 @@ export function renderThemeRanking(subTitle = '', targetDays = state.currentPeri
     if (key === 'amount') {
       vA = a.totalAmountDiff ?? a.totalAmount;
       vB = b.totalAmountDiff ?? b.totalAmount;
+    } else if (key === 'amount_abs') {
+      vA = a.totalAmount;
+      vB = b.totalAmount;
     } else if (key === 'volume') {
       vA = a.totalVolume; vB = b.totalVolume;
     } else {
@@ -150,8 +156,11 @@ export function resortRadar(targetDays = state.currentPeriodDays) {
     const key = state.radarSortCol;
     let vA = 0, vB = 0;
     if (key === 'amount') {
-      vA = state.flowMetricMode === 'diff' ? (a.amountDiff ?? a.amount) : a.amount;
-      vB = state.flowMetricMode === 'diff' ? (b.amountDiff ?? b.amount) : b.amount;
+      vA = a.amountDiff ?? a.amount;
+      vB = b.amountDiff ?? b.amount;
+    } else if (key === 'amount_abs') {
+      vA = a.amount;
+      vB = b.amount;
     } else if (key === 'volume') {
       vA = a.volume; vB = b.volume;
     } else {
@@ -202,6 +211,7 @@ export function renderRadarFromData(data, targetDays = state.currentPeriodDays) 
         </td>
         <td class="text-right">${Math.round(d.volume).toLocaleString()}</td>
         ${amtCell}
+        <td class="text-right" style="color:#94a3b8">${(d.amount / 1e8).toFixed(2)}</td>
       `;
       const oldAmt = tr.getAttribute('data-amount');
       if (!tr.hasAttribute('data-amount')) {
@@ -358,6 +368,9 @@ export function renderGroupRanking(subTitle = '', targetDays = state.currentPeri
     if (key === 'amount') {
       vA = a.totalAmountDiff ?? a.totalAmount;
       vB = b.totalAmountDiff ?? b.totalAmount;
+    } else if (key === 'amount_abs') {
+      vA = a.totalAmount;
+      vB = b.totalAmount;
     } else if (key === 'volume') {
       vA = a.totalVolume; vB = b.totalVolume;
     } else {
