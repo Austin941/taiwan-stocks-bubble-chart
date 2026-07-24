@@ -227,7 +227,11 @@ export function initEvents(historicalPromise) {
       if (state.currentPeriodDays === 1) {
         renderThemeRanking();
       } else if (state.historicalRanking?.[String(state.currentPeriodDays)]) {
-        renderHistoricalRanking(state.currentPeriodDays);
+        const pd = state.historicalRanking[String(state.currentPeriodDays)];
+        const orig = [...state.themeRankingData];
+        state.themeRankingData = pd.themes.filter(t => isFinite(t.avgReturn));
+        renderThemeRanking(`近 ${state.currentPeriodDays} 日排行`);
+        state.themeRankingData = orig;
       }
     });
   });

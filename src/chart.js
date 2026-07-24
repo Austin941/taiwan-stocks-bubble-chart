@@ -236,11 +236,12 @@ export async function renderChart(identifier, mode, isSilentRefresh = false) {
               ticks: {
                 color: '#94a3b8',
                 callback(value) {
-                  if (state.currentSizeMode === 'volume')
+                  const mode = state.currentXAxisMode || 'amount_diff';
+                  if (mode === 'volume')
                     return value >= 10000 ? (value / 10000).toFixed(1) + '萬張' : value.toLocaleString() + '張';
-                  if (state.currentSizeMode === 'amount_diff')
+                  if (mode === 'amount_diff')
                     return (value > 0 ? '+' : '') + value.toFixed(1) + '億';
-                  return value + '億';
+                  return value.toFixed(1) + '億';
                 },
               },
             },

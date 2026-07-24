@@ -1,9 +1,9 @@
 {
-  "updated_at": "2026-07-23T09:39:03.552Z",
+  "updated_at": "2026-07-24T02:11:03.964Z",
   "total_stocks": 1979,
   "total_sectors": 35,
   "total_themes": 974,
-  "total_groups": 29,
+  "total_groups": 30,
   "total_clusters": 9,
   "groups": {
     "台塑集團": {
@@ -518,6 +518,38 @@
           "code": "6188",
           "name": "廣明",
           "sector": "電腦及週邊設備業",
+          "market": "上櫃"
+        }
+      ]
+    },
+    "國巨集團": {
+      "group": "國巨集團",
+      "description": "全球被動元件龍頭、MLCC與電感晶片巨擘",
+      "leader": "2327",
+      "count": 4,
+      "stocks": [
+        {
+          "code": "2327",
+          "name": "國巨*",
+          "sector": "電子零組件業",
+          "market": "上市"
+        },
+        {
+          "code": "2375",
+          "name": "凱美",
+          "sector": "電子零組件業",
+          "market": "上市"
+        },
+        {
+          "code": "6271",
+          "name": "同欣電",
+          "sector": "半導體業",
+          "market": "上市"
+        },
+        {
+          "code": "6173",
+          "name": "信昌電",
+          "sector": "電子零組件業",
           "market": "上櫃"
         }
       ]

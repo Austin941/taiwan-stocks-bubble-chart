@@ -142,6 +142,18 @@ const MODERN_CONGLOMERATES = {
       { code: "5388", name: "中磊", role: "網通" }
     ]
   },
+  "國巨集團": {
+    name: "國巨集團",
+    description: "全球被動元件龍頭、MLCC與電感晶片巨擘",
+    leader: "2327",
+    stocks: [
+      { code: "2327", name: "國巨", role: "被動元件/集團母公司" },
+      { code: "2375", name: "凱美", role: "鋁質電解電容" },
+      { code: "6271", name: "同欣電", role: "陶瓷基板/CIS封裝" },
+      { code: "6173", name: "信昌電", role: "瓷片電容/介電粉體" },
+      { code: "2492", name: "華新科", role: "MLCC/晶片電阻" }
+    ]
+  },
   "金仁寶集團": {
     name: "金仁寶集團",
     description: "仁寶筆電AI伺服器代工、金寶網通與康舒電源",
