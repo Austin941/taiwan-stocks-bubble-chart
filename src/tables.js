@@ -295,9 +295,10 @@ export function renderDetailTable(data) {
   const sorted = [...data].sort((a, b) => {
     const col = state.currentDetailSort.column;
     let vA, vB;
-    if (col === 'return')  { vA = a.dailyReturn || 0; vB = b.dailyReturn || 0; }
-    else if (col === 'volume') { vA = a.volume || 0; vB = b.volume || 0; }
-    else if (col === 'amount') {
+    if (col === 'price')        { vA = a.price || 0;          vB = b.price || 0; }
+    else if (col === 'return')  { vA = a.dailyReturn || 0;   vB = b.dailyReturn || 0; }
+    else if (col === 'volume')  { vA = a.volume || 0;         vB = b.volume || 0; }
+    else if (col === 'amount')  {
       vA = a.amountDiff ?? a.amount ?? 0;
       vB = b.amountDiff ?? b.amount ?? 0;
     }
@@ -328,14 +329,16 @@ export function renderDetailTable(data) {
         <td>${idx + 1}</td>
         <td>${item.stock['股票名稱']} (${item.symbol})</td>
         <td>-</td>
+        <td class="text-right text-slate-500">-</td>
         <td class="text-right text-slate-500">無資料</td>
         <td class="text-right text-slate-500">-</td>
         <td class="text-right text-slate-500">-</td>
         <td class="text-right text-slate-500">-</td>
       `;
     } else {
-      const ret  = item.dailyReturn;
-      let cls    = ret > 0 ? 'text-danger color-positive' : ret < 0 ? 'text-success color-negative' : '';
+      const ret    = item.dailyReturn;
+      const price  = item.price ? item.price.toFixed(2) : '-';
+      let cls      = ret > 0 ? 'text-danger color-positive' : ret < 0 ? 'text-success color-negative' : '';
       if (ret >= 9.8)  cls += ' badge-limit-up';
       if (ret <= -9.8) cls += ' badge-limit-down';
       const sign = ret > 0 ? '+' : '';
@@ -349,11 +352,13 @@ export function renderDetailTable(data) {
           <strong style="color:#facc15">${item.stock['股票名稱']}</strong> <span style="color:#94a3b8;font-size:0.85em">${item.symbol}</span>
         </a></td>
         <td><span class="badge-sector" style="font-size:0.75em">${item.stock['產業別'] || '無'}</span></td>
+        <td class="text-right font-bold" style="color:#f8fafc">${price}</td>
         <td class="text-right font-bold"><span class="${cls}">${sign}${ret.toFixed(2)}%</span></td>
         <td class="text-right">${Math.round(item.volume).toLocaleString()}</td>
         ${amtCell}
         <td class="text-right" style="color:#94a3b8">${absAmount}</td>
       `;
+
       tr.setAttribute('data-symbol', item.symbol);
       if (!tr.hasAttribute('data-amount')) {
         tr.addEventListener('click', e => {
