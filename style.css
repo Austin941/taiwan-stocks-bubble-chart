@@ -651,26 +651,28 @@ body {
 
 .ranking-table th {
   text-align: left;
-  padding: 10px 12px;
+  padding: 8px 10px;
   color: #94a3b8;
   font-weight: 600;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   white-space: nowrap;
   position: sticky;
   top: 0;
   background: #0f172a;
   z-index: 10;
+  font-size: 0.82rem;
 }
 
 .ranking-table td {
-  padding: 9px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   vertical-align: middle;
   white-space: nowrap;
   transition: background 0.2s;
   cursor: pointer;
   background: #0f172a;
 }
+
 
 /* Excel Sticky Freeze Column 1 (#) and Column 2 (Stock/Name) */
 .ranking-table th:nth-child(1),
