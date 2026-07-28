@@ -200,7 +200,7 @@ export function renderRadarFromData(data, targetDays = state.currentPeriodDays) 
           <span class="stock-symbol">${stock['股票代號']}</span>
         </div></td>
         <td><span class="badge-sector">${sector}</span></td>
-        <td class="text-right font-bold" style="color:#f8fafc">${price}</td>
+        <td class="text-right font-bold ${cls}">${price}</td>
         <td class="text-right ${cls} data-bar-cell">
           <div class="data-bar" style="width:${retPct}%;background:${retBar}"></div>
           <strong class="data-bar-text">${sign}${ret.toFixed(2)}%</strong>
@@ -209,6 +209,7 @@ export function renderRadarFromData(data, targetDays = state.currentPeriodDays) 
         ${amtCell}
         <td class="text-right" style="color:#94a3b8">${(d.amount / 1e8).toFixed(2)}</td>
       `;
+
 
       const oldAmt = tr.getAttribute('data-amount');
       if (!tr.hasAttribute('data-amount')) {
@@ -349,12 +350,13 @@ export function renderDetailTable(data) {
           <strong style="color:#facc15">${item.stock['股票名稱']}</strong> <span style="color:#94a3b8;font-size:0.85em">${item.symbol}</span>
         </a></td>
         <td><span class="badge-sector" style="font-size:0.75em">${item.stock['產業別'] || '無'}</span></td>
-        <td class="text-right font-bold" style="color:#f8fafc">${price}</td>
+        <td class="text-right font-bold ${cls}">${price}</td>
         <td class="text-right font-bold"><span class="${cls}">${sign}${ret.toFixed(2)}%</span></td>
         <td class="text-right">${Math.round(item.volume).toLocaleString()}</td>
         ${amtCell}
         <td class="text-right" style="color:#94a3b8">${absAmount}</td>
       `;
+
 
       tr.setAttribute('data-symbol', item.symbol);
       if (!tr.hasAttribute('data-amount')) {
