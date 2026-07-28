@@ -156,6 +156,10 @@ export function resortRadar(targetDays = state.currentPeriodDays) {
     const key = state.radarSortCol;
     let vA = 0, vB = 0;
     if (key === 'price')        { vA = a.price || 0;             vB = b.price || 0; }
+    else if (key === 'change')  {
+      vA = (a.price && a.prevClose) ? (a.price - a.prevClose) : 0;
+      vB = (b.price && b.prevClose) ? (b.price - b.prevClose) : 0;
+    }
     else if (key === 'amount')  { vA = a.amountDiff ?? a.amount; vB = b.amountDiff ?? b.amount; }
     else if (key === 'amount_abs') { vA = a.amount; vB = b.amount; }
     else if (key === 'volume') { vA = a.volume; vB = b.volume; }
@@ -172,7 +176,7 @@ export function renderRadarFromData(data, targetDays = state.currentPeriodDays) 
   const tbody = getTbody('view-radar', targetDays);
   if (!tbody) return;
   if (data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center">暫無交易資料</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center">暫無交易資料</td></tr>';
     return;
   }
   const maxVal = state.flowMetricMode === 'diff'
@@ -182,16 +186,18 @@ export function renderRadarFromData(data, targetDays = state.currentPeriodDays) 
   updateTableDelta(tbody, data,
     d => d.stock ? d.stock['股票代號'] : d.symbol,
     (tr, d, index) => {
-      const stock   = d.stock;
+      const stock      = d.stock;
       if (!stock) return;
-      const sector  = stock['產業別'] || '無';
-      const ret     = d.dailyReturn;
-      const price   = d.price ? d.price.toFixed(2) : '-';
-      const cls     = ret > 0 ? 'color-positive' : ret < 0 ? 'color-negative' : '';
-      const sign    = ret > 0 ? '+' : '';
-      const retPct  = Math.min(Math.abs(ret) / 10 * 100, 100);
-      const retBar  = ret > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)';
-      const amtCell = renderAmountCell(d.amount, d.amountDiff, maxVal);
+      const sector     = stock['產業別'] || '無';
+      const ret        = d.dailyReturn;
+      const price      = d.price ? d.price.toFixed(2) : '-';
+      const changeVal  = (d.price && d.prevClose) ? (d.price - d.prevClose) : 0;
+      const changeStr  = changeVal > 0 ? `+${changeVal.toFixed(2)}` : changeVal < 0 ? `${changeVal.toFixed(2)}` : '0.00';
+      const cls        = ret > 0 ? 'color-positive' : ret < 0 ? 'color-negative' : '';
+      const sign       = ret > 0 ? '+' : '';
+      const retPct     = Math.min(Math.abs(ret) / 10 * 100, 100);
+      const retBar     = ret > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)';
+      const amtCell    = renderAmountCell(d.amount, d.amountDiff, maxVal);
 
       tr.innerHTML = `
         <td>${index + 1}</td>
@@ -201,6 +207,7 @@ export function renderRadarFromData(data, targetDays = state.currentPeriodDays) 
         </div></td>
         <td><span class="badge-sector">${sector}</span></td>
         <td class="text-right font-bold ${cls}">${price}</td>
+        <td class="text-right font-bold ${cls}">${changeStr}</td>
         <td class="text-right ${cls} data-bar-cell">
           <div class="data-bar" style="width:${retPct}%;background:${retBar}"></div>
           <strong class="data-bar-text">${sign}${ret.toFixed(2)}%</strong>
@@ -286,7 +293,7 @@ export function renderDetailTable(data) {
   if (!tbody) return;
 
   if (!data?.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center" data-ignore="true">無資料</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center" data-ignore="true">無資料</td></tr>';
     return;
   }
 
@@ -294,6 +301,10 @@ export function renderDetailTable(data) {
     const col = state.currentDetailSort.column;
     let vA, vB;
     if (col === 'price')        { vA = a.price || 0;          vB = b.price || 0; }
+    else if (col === 'change')  {
+      vA = (a.price && a.prevClose) ? (a.price - a.prevClose) : 0;
+      vB = (b.price && b.prevClose) ? (b.price - b.prevClose) : 0;
+    }
     else if (col === 'return')  { vA = a.dailyReturn || 0;   vB = b.dailyReturn || 0; }
     else if (col === 'volume')  { vA = a.volume || 0;         vB = b.volume || 0; }
     else if (col === 'amount')  {
@@ -328,20 +339,23 @@ export function renderDetailTable(data) {
         <td>${item.stock['股票名稱']} (${item.symbol})</td>
         <td>-</td>
         <td class="text-right text-slate-500">-</td>
+        <td class="text-right text-slate-500">-</td>
         <td class="text-right text-slate-500">無資料</td>
         <td class="text-right text-slate-500">-</td>
         <td class="text-right text-slate-500">-</td>
         <td class="text-right text-slate-500">-</td>
       `;
     } else {
-      const ret    = item.dailyReturn;
-      const price  = item.price ? item.price.toFixed(2) : '-';
-      let cls      = ret > 0 ? 'text-danger color-positive' : ret < 0 ? 'text-success color-negative' : '';
+      const ret        = item.dailyReturn;
+      const price      = item.price ? item.price.toFixed(2) : '-';
+      const changeVal  = (item.price && item.prevClose) ? (item.price - item.prevClose) : 0;
+      const changeStr  = changeVal > 0 ? `+${changeVal.toFixed(2)}` : changeVal < 0 ? `${changeVal.toFixed(2)}` : '0.00';
+      let cls          = ret > 0 ? 'text-danger color-positive' : ret < 0 ? 'text-success color-negative' : '';
       if (ret >= 9.8)  cls += ' badge-limit-up';
       if (ret <= -9.8) cls += ' badge-limit-down';
       const sign = ret > 0 ? '+' : '';
 
-      const amtCell = renderAmountCell(item.amount, item.amountDiff, maxVal);
+      const amtCell   = renderAmountCell(item.amount, item.amountDiff, maxVal);
       const absAmount = (item.amount / 1e8).toFixed(2);
 
       tr.innerHTML = `
@@ -351,6 +365,7 @@ export function renderDetailTable(data) {
         </a></td>
         <td><span class="badge-sector" style="font-size:0.75em">${item.stock['產業別'] || '無'}</span></td>
         <td class="text-right font-bold ${cls}">${price}</td>
+        <td class="text-right font-bold ${cls}">${changeStr}</td>
         <td class="text-right font-bold"><span class="${cls}">${sign}${ret.toFixed(2)}%</span></td>
         <td class="text-right">${Math.round(item.volume).toLocaleString()}</td>
         ${amtCell}
