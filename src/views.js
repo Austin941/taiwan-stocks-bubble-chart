@@ -60,11 +60,13 @@ export function showTechChart(stockData) {
     if (marketEl) marketEl.textContent = (stock['市場別'] || '').includes('上市') ? '👑上市' : '💎上櫃';
 
     const dReturn = stockData.dailyReturn;
+    const dPrice  = stockData.price;
     if (returnEl && dReturn !== undefined && isFinite(dReturn)) {
       const sign = dReturn > 0 ? '+' : '';
-      returnEl.textContent = `${sign}${dReturn.toFixed(2)}%`;
-      returnEl.className   = dReturn > 0 ? 'color-positive' : dReturn < 0 ? 'color-negative' : '';
+      const priceText = dPrice ? `<span style="color:#f8fafc;font-size:0.95rem;margin-right:8px">${dPrice.toFixed(2)}元</span>` : '';
+      returnEl.innerHTML = `${priceText}<span class="${dReturn > 0 ? 'color-positive' : dReturn < 0 ? 'color-negative' : ''}">${sign}${dReturn.toFixed(2)}%</span>`;
     }
+
   }
 
   // Sector tag

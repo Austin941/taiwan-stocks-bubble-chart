@@ -203,11 +203,13 @@ export async function renderChart(identifier, mode, isSilentRefresh = false) {
                     <span style="margin-left:6px;font-size:0.75rem;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.1);color:#38bdf8">${mkt}</span>
                   </div>
                   <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:0.95rem">
+                    <span style="color:#94a3b8">成交價:</span><span style="color:#f8fafc;font-weight:bold;text-align:right">${d.price ? d.price.toFixed(2) : '-'} 元</span>
                     <span style="color:#94a3b8">報酬率:</span><span style="color:${col};font-weight:bold;text-align:right">${sign}${d.dailyReturn.toFixed(2)}%</span>
                     <span style="color:#94a3b8">資金變化:</span><span style="color:${diffCol};font-weight:bold;text-align:right">${diffSign}${diffVal.toFixed(2)} 億</span>
                     <span style="color:#94a3b8">成交量:</span><span style="color:#fff;text-align:right">${Math.round(d.volume).toLocaleString()} 張</span>
                     <span style="color:#94a3b8">成交額:</span><span style="color:#fff;text-align:right">${amt} 億</span>
                   </div>
+
                 `;
                 const pos  = context.chart.canvas.getBoundingClientRect();
                 let left   = pos.left + window.scrollX + model.caretX + 15;
