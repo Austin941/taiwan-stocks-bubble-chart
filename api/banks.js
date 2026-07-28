@@ -1,15 +1,14 @@
-// api/banks.js — 公股行庫護盤偵測 (重構版)
-// 改用 twseFetcher：與 branches.js 共用同一份 T86 快取
+// api/banks.js — 公股行庫護盤偵測 (智慧 20:00 時間快取控制版)
 import { fetchT86, parseT86Int } from './_lib/twseFetcher.js';
+import { buildTimeBasedCacheHeader } from './_lib/cacheControl.js';
 
 const DEFENSE_STOCKS = new Set(['2330', '2454', '2317', '2881', '2882', '2886', '2303']);
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1200');
+  res.setHeader('Cache-Control', buildTimeBasedCacheHeader(20, 0, 1800));
 
   try {
-    // 共用 T86 快取 — branches.js 同時請求不重複打 TWSE
     const { date, rows } = await fetchT86();
 
     let foreignSum = 0;
@@ -61,14 +60,13 @@ export default async function handler(req, res) {
       success: true,
       overview: {
         date, foreignTotalNetShares: foreignSum,
-        estimatedStateBankNetShares: Math.round(stateBankNetEst),
+        estimatedStateBankNetShares: Math.round(stateBankBankNetEst || stateBankNetEst),
         defenseIndex, status, statusText,
       },
       topDefenseTargets,
     });
   } catch (err) {
     console.error('[banks] Error:', err.message);
-    // Graceful fallback on T86 failure
     res.status(200).json({
       success: false,
       overview: { date: new Date().toISOString().split('T')[0], defenseIndex: 50, status: 'NORMAL', statusText: '⚖️ 資料暫時無法取得' },

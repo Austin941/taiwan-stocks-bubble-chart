@@ -1,13 +1,11 @@
-// api/major_holders.js — 千張大戶持股推算 (重構版)
-// 關鍵改動：
-//   1. 使用 finmindFetcher — 3 個 FinMind dataset 透過共用快取
-//      同一 symbol 被 chip.js / margin.js 打過的資料直接命中快取
-//   2. 不再 Promise.all 打 3 次，改為透過 withCache 去重
+// api/major_holders.js — 千張大戶持股推算 (智慧 20:00 時間快取控制版)
 import { fetchFinmind, startDateFromDays, cleanTWSymbol } from './_lib/finmindFetcher.js';
+import { buildTimeBasedCacheHeader } from './_lib/cacheControl.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+  // 動態快取：台北時間 20:00 券商與大戶推算資料更新
+  res.setHeader('Cache-Control', buildTimeBasedCacheHeader(20, 0, 1800));
 
   const { symbol = '2330', days = '30' } = req.query;
 
@@ -15,20 +13,16 @@ export default async function handler(req, res) {
     const sym       = cleanTWSymbol(symbol);
     const startDate = startDateFromDays(days);
 
-    // 3 個資料集透過共用 finmindFetcher 抓取
-    // 若 chip.js / margin.js 已抓過同一 symbol+startDate → 直接命中快取，0 次外部呼叫
     const [chipData, marginData, shareholdingData] = await Promise.all([
       fetchFinmind('TaiwanStockInstitutionalInvestorsBuySell', sym, startDate),
       fetchFinmind('TaiwanStockMarginPurchaseShortSale',       sym, startDate),
       fetchFinmind('TaiwanStockShareholding',                  sym, startDate),
     ]);
 
-    // Base issued shares
     const baseItem         = shareholdingData[shareholdingData.length - 1] || {};
     const totalIssuedShares = baseItem.NumberOfSharesIssued  || 25_932_370_067;
     const baseForeignRatio  = baseItem.ForeignInvestmentSharesRatio || 70.37;
 
-    // Group chip by date
     const chipMap = {};
     chipData.forEach(({ date, name, buy, sell }) => {
       if (!chipMap[date]) chipMap[date] = { foreignNet: 0, trustNet: 0, dealerNet: 0, totalNet: 0 };
@@ -39,7 +33,6 @@ export default async function handler(req, res) {
       chipMap[date].totalNet += net;
     });
 
-    // Group margin by date
     const marginMap = {};
     marginData.forEach(item => {
       const bal  = item.MarginPurchaseTodayBalance     || 0;
@@ -60,7 +53,6 @@ export default async function handler(req, res) {
       const deltaRatioPct          = (estDailyMajorNetShares / totalIssuedShares) * 100;
       currentEstMajorRatio         = parseFloat((currentEstMajorRatio + deltaRatioPct).toFixed(3));
 
-      // Signal Classification
       let signal = 'NEUTRAL', signalText = '⚖️ 大戶持股籌碼平衡';
       if      (estDailyMajorNetShares >  2_000_000 && margin.marginChange <= 0) { signal = 'MAJOR_ACCUMULATING';  signalText = '🔥 大戶強勢鎖碼 (法人大買+融資沉澱)'; }
       else if (estDailyMajorNetShares < -2_000_000 && margin.marginChange >  0) { signal = 'MAJOR_DISTRIBUTING'; signalText = '⚠️ 大戶高檔出貨 (法人大賣+散戶融資接刀)'; }

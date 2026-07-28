@@ -1,10 +1,11 @@
-// api/margin.js — 融資融券 (重構版)
-// 改用 finmindFetcher：與 major_holders.js 共用快取，不再重複打 FinMind
+// api/margin.js — 融資融券 (智慧 21:30 時間快取控制版)
 import { fetchFinmind, startDateFromDays, cleanTWSymbol } from './_lib/finmindFetcher.js';
+import { buildTimeBasedCacheHeader } from './_lib/cacheControl.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+  // 動態快取：台北時間 21:30 融資券餘額數據公布
+  res.setHeader('Cache-Control', buildTimeBasedCacheHeader(21, 30, 1800));
 
   const { symbol = '2330', days = '30' } = req.query;
 
@@ -12,7 +13,6 @@ export default async function handler(req, res) {
     const sym       = cleanTWSymbol(symbol);
     const startDate = startDateFromDays(days);
 
-    // 共用快取 — major_holders.js 請求同一個 symbol 時不重複打
     const rawData = await fetchFinmind(
       'TaiwanStockMarginPurchaseShortSale', sym, startDate
     );

@@ -1,10 +1,11 @@
-// api/chip.js — 三大法人籌碼 (重構版)
-// 改用 finmindFetcher：共用快取，不再重複打 FinMind
+// api/chip.js — 三大法人籌碼 (智慧 17:00 時間快取控制版)
 import { fetchFinmind, startDateFromDays, cleanTWSymbol } from './_lib/finmindFetcher.js';
+import { buildTimeBasedCacheHeader } from './_lib/cacheControl.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+  // 動態快取：台北時間 17:00 三大法人資料公布
+  res.setHeader('Cache-Control', buildTimeBasedCacheHeader(17, 0, 1800));
 
   const { symbol = '2330', days = '30' } = req.query;
 
@@ -12,12 +13,10 @@ export default async function handler(req, res) {
     const sym       = cleanTWSymbol(symbol);
     const startDate = startDateFromDays(days);
 
-    // 使用共享抓取器 — major_holders.js 同時請求不會重複打 FinMind
     const rawData = await fetchFinmind(
       'TaiwanStockInstitutionalInvestorsBuySell', sym, startDate
     );
 
-    // Group by date
     const dateMap = {};
     rawData.forEach(({ date, name, buy, sell }) => {
       if (!dateMap[date]) dateMap[date] = {

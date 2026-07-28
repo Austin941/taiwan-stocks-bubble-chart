@@ -1,6 +1,7 @@
-// api/closing.js — 收盤價 (重構版)
-// 改動：兩個 OpenAPI 各自獨立 fallback，不再因一方失敗導致全部 500
+// api/closing.js — 收盤價 (智慧時間型快取控制版)
+// 台北時間 13:31 後收盤價公布，動態計算至下一個 13:31 的 s-maxage
 import { withCache, TTL } from './_lib/cache.js';
+import { buildTimeBasedCacheHeader } from './_lib/cacheControl.js';
 
 const TSE_URL = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL';
 const OTC_URL = 'https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes';
@@ -15,13 +16,12 @@ async function safeFetch(url) {
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 'public, s-maxage=3600, max-age=3600');
+  // 動態快取：台北時間 13:31 為每日收盤價公布點
+  res.setHeader('Cache-Control', buildTimeBasedCacheHeader(13, 31, 1800));
 
   try {
     const data = await withCache('closing:all', async () => {
-      // 兩個 API 各自獨立抓取，任一失敗不影響另一個
       const [tseData, otcData] = await Promise.all([safeFetch(TSE_URL), safeFetch(OTC_URL)]);
-
       const cache = {};
 
       tseData.forEach(item => {

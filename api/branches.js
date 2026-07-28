@@ -1,19 +1,17 @@
-// api/branches.js — 主力分點分析 (重構版 + Bug 修復)
-// 修復：investTrustTrustNet → investTrustNet (undefined 變數導致 crash)
-// 改用 twseFetcher：與 banks.js 共用同一份 T86 快取
+// api/branches.js — 主力分點分析 (智慧 20:00 時間快取控制版)
 import { fetchT86, parseT86Int } from './_lib/twseFetcher.js';
 import { cleanTWSymbol } from './_lib/finmindFetcher.js';
+import { buildTimeBasedCacheHeader } from './_lib/cacheControl.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+  // 動態快取：台北時間 20:00 券商分點進出資料更新
+  res.setHeader('Cache-Control', buildTimeBasedCacheHeader(20, 0, 1800));
 
   const { symbol = '2330' } = req.query;
 
   try {
     const sym = cleanTWSymbol(symbol);
-
-    // 共用 T86 快取 — banks.js 已抓過就直接命中，不打 TWSE
     const { rows } = await fetchT86();
 
     let topBuyBranches  = [];
@@ -23,11 +21,10 @@ export default async function handler(req, res) {
     const targetRow = rows.find(row => row[0]?.trim() === sym);
 
     if (targetRow) {
-      const foreignNet    = parseT86Int(targetRow[4]);
-      const investTrustNet = parseT86Int(targetRow[10]); // ✅ Bug 修復：原本是 investTrustTrustNet
+      const foreignNet     = parseT86Int(targetRow[4]);
+      const investTrustNet = parseT86Int(targetRow[10]);
       const dealerSelfNet  = parseT86Int(targetRow[14]);
 
-      // 外資分點估算
       if (foreignNet >= 0) {
         topBuyBranches.push(
           { branchName: '美商高盛 (Goldman Sachs)',           netShares: Math.round(foreignNet * 0.35), type: '外資主力' },
@@ -42,14 +39,12 @@ export default async function handler(req, res) {
         );
       }
 
-      // 投信分點估算 (✅ 已修復: investTrustNet 不再是 undefined)
       if (investTrustNet >= 0) {
         topBuyBranches.push({ branchName: '富邦-台北 (Fubon HQ)',    netShares: Math.round(investTrustNet * 0.5),              type: '本土投信分點' });
       } else {
         topSellBranches.push({ branchName: '群益金鼎-台北 (Capital HQ)', netShares: Math.round(Math.abs(investTrustNet) * 0.5), type: '投信出貨分點' });
       }
 
-      // 自營分點估算
       if (dealerSelfNet >= 0) {
         topBuyBranches.push({ branchName: '元大-總公司 (Yuanta HQ)', netShares: Math.round(dealerSelfNet * 0.6),              type: '自營商買超分點' });
       } else {
