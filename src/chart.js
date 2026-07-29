@@ -60,6 +60,7 @@ export async function renderChart(identifier, mode, isSilentRefresh = false) {
       symbol: d.stock['股票代號'], name: d.stock['股票名稱'], stock: d.stock,
       dailyReturn: d.dailyReturn || 0, volume: d.volume, amount: d.amount,
       amountDiff: d.amountDiff || 0, volumeDiff: d.volumeDiff || 0,
+      price: d.price || 0, prevClose: d.prevClose || 0,
     }));
   } else {
     overlay.classList.add('hidden');
@@ -79,10 +80,12 @@ export async function renderChart(identifier, mode, isSilentRefresh = false) {
             symbol: sym, name: d.stock['股票名稱'], stock: d.stock,
             dailyReturn: p.dailyReturn || 0, volume: p.volume, amount: p.amount,
             amountDiff: p.amountDiff || 0, volumeDiff: p.volumeDiff || 0,
+            price: d.price || p.price || 0, prevClose: d.prevClose || p.prevClose || 0,
           }
         : {
             symbol: sym, name: d.stock['股票名稱'], stock: d.stock,
-            dailyReturn: 0, volume: 0, amount: 0, amountDiff: 0, volumeDiff: 0, isMissing: true,
+            dailyReturn: 0, volume: 0, amount: 0, amountDiff: 0, volumeDiff: 0,
+            price: d.price || 0, prevClose: d.prevClose || 0, isMissing: true,
           };
     });
     sectorData = sectorData.sort((a, b) => b.amount - a.amount).slice(0, 50);
